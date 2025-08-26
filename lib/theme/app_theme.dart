@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 // ========== COLORS ==========
 class AppColors {
-  static const primary = Color(0xFF16A34A); // brand green color
+  static const primary = Color.fromARGB(255, 18, 148, 65); // brand green color
   static const onPrimary = Colors.white; // text/icon on primary color
   static const background = Color(0xFFF7F7F7); // app background
   static const text = Color(0xFF0F172A); // main text color (dark)

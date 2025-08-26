@@ -39,7 +39,14 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_gen: ^5.11.0
+  http: ^1.2.2
   shared_preferences: ^2.3.2 
+  country_picker: ^2.0.25
+  phone_numbers_parser: ^8.0.0   # parses & validates phones (pure Dart)
+  email_validator: ^2.1.0        # simple email format validator
+  flutter_multi_formatter: ^2.12.10   # works with Flutter 3.35.x
+  intl_phone_field: ^3.2.0   # use latest compatible
+  dio: ^5.7.0
 
 flutter_localizations:
   sdk: flutter
@@ -72,7 +79,8 @@ flutter:
   generate: true         # this tells Flutter to use gen-l10n
 
   assets:
-    - assets/images/              # we will put logo.png here
+    - assets/images/  
+    - lib/config/hostIp.json            # we will put logo.png here
 
   # To add assets to your application, add an assets section, like this:
   # assets:

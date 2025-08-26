@@ -1,0 +1,14 @@
+{ 
+    "serverURI": "http://192.168.1.4:8080",
+
+    "role": "both", // or "business" , "user" or "both"
+   
+    "locationIq": {
+      
+    "autocomplete": "https://api.locationiq.com/v1/autocomplete?key=pk.14ea0e02d4685f88a3ec5ea23dd898b9",
+    "search": "https://api.locationiq.com/v1/search?key=pk.14ea0e02d4685f88a3ec5ea23dd898b9",
+    "reverse": "https://us1.locationiq.com/v1/reverse?key=pk.14ea0e02d4685f88a3ec5ea23dd898b9"
+  }
+
+  
+}

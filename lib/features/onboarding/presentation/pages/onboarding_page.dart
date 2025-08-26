@@ -1,11 +1,12 @@
+// ===== Flutter 3.35.x =====
 import 'package:flutter/material.dart'; // core
 import 'package:shared_preferences/shared_preferences.dart'; // remember seen onboarding
 import 'package:hobby_sphere/l10n/app_localizations.dart'
     show AppLocalizations; // i18n
-import 'package:hobby_sphere/theme/app_theme.dart'; // AppColors / AppTypography
+import 'package:hobby_sphere/ui/widgets/app_button.dart'; // reusable AppButton
 
 class OnboardingPage extends StatefulWidget {
-  const OnboardingPage({super.key}); // stateful
+  const OnboardingPage({super.key}); // constructor
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState(); // create state
@@ -13,76 +14,99 @@ class OnboardingPage extends StatefulWidget {
 
 class _OnboardingPageState extends State<OnboardingPage>
     with SingleTickerProviderStateMixin {
-  final PageController _pageCtrl = PageController(); // controls pages
+  final PageController _pageCtrl = PageController(); // pager controller
   int _index = 0; // current page index
 
-  late final AnimationController _bgCtrl; // gradient motion
+  late final AnimationController _bgCtrl; // background gradient animator
 
   @override
   void initState() {
     super.initState(); // call parent
     _bgCtrl = AnimationController(
       vsync: this, // ticker
-      duration: const Duration(seconds: 8), // slow premium loop
+      duration: const Duration(seconds: 8), // slow loop
     )..repeat(reverse: true); // back & forth
   }
 
   @override
   void dispose() {
-    _bgCtrl.dispose(); // free bg controller
-    _pageCtrl.dispose(); // free page controller
-    super.dispose(); // parent
+    _bgCtrl.dispose(); // free anim
+    _pageCtrl.dispose(); // free pager
+    super.dispose(); // call parent
   }
 
-  // lighten/darken a color a bit (keeps hue/saturation) – used for gradient
+  // clamp helper: keep v within [min..max]
+  double _clamp(double v, double min, double max) {
+    if (v < min) return min; // lower bound
+    if (v > max) return max; // upper bound
+    return v; // in range
+  }
+
+  // lighten/darken color a bit using HSL (for gradient)
   Color _tint(Color c, double delta) {
     final hsl = HSLColor.fromColor(c); // convert to HSL
-    final l = (hsl.lightness + delta).clamp(0.0, 1.0); // adjust lightness
+    final l = (hsl.lightness + delta).clamp(0.0, 1.0); // new lightness
     return hsl.withLightness(l).toColor(); // back to Color
   }
 
-  // mark onboarding as seen
+  // mark onboarding as seen in SharedPreferences
   Future<void> _markSeen() async {
     final sp = await SharedPreferences.getInstance(); // prefs
     await sp.setBool('seen_onboarding', true); // save flag
   }
 
-  // primary action on last page → continue as guest (home)
+  // primary continue action (after last page)
   Future<void> _continueAsGuest() async {
-    await _markSeen(); // store once
+    await _markSeen(); // set flag
     if (!mounted) return; // safety
-    Navigator.pushReplacementNamed(
-      context,
-      '/onboardingScreen',
-    ); // go to home (guest)
+    Navigator.pushReplacementNamed(context, '/onboardingScreen'); // go next
   }
 
-  // next page or (if last) continue as guest
+  // go to next page or finish if last
   void _next() {
     if (_index < 2) {
+      // not last page
       _pageCtrl.nextPage(
-        // go next
-        duration: const Duration(milliseconds: 300), // duration
-        curve: Curves.easeOut, // curve
+        duration: const Duration(milliseconds: 300), // anim dur
+        curve: Curves.easeOut, // easing
       );
     } else {
-      _continueAsGuest(); // last → continue
+      _continueAsGuest(); // finish onboarding
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!; // i18n
-    final theme = Theme.of(context); // current theme
-    final cs = theme.colorScheme; // color scheme (light/dark aware)
+    final theme = Theme.of(context); // theme
+    final cs = theme.colorScheme; // color scheme
 
-    // use theme’s primary (not hardcoded) so it adapts to brand + mode
-    final primary = cs.primary; // brand primary
-    final onPrimary = cs.onPrimary; // readable text on primary
-    final lighter = _tint(primary, 0.16); // lighter shade of primary
-    final darker = _tint(primary, -0.12); // darker shade of primary
+    final size = MediaQuery.sizeOf(context); // screen size
+    final w = size.width; // width
+    final h = size.height; // height
 
-    // slides with icons
+    // responsive paddings / sizes (clamped to keep nice feel)
+    final sidePad = _clamp(w * 0.05, 16, 24); // horizontal padding
+    final topPad = _clamp(h * 0.02, 8, 20); // top safe space
+    final cardDia = _clamp(w * 0.42, 120, 220); // icon circle diameter
+    final iconSize = _clamp(w * 0.20, 64, 110); // icon size
+    final dotHeight = _clamp(h * 0.010, 8, 10); // dot height
+    final dotWidthActive = _clamp(w * 0.06, 20, 28); // active dot width
+    final dotWidth = _clamp(w * 0.020, 6, 10); // normal dot width
+    final barVPad = _clamp(h * 0.012, 8, 14); // bottom bar vertical padding
+    final gapTitle = _clamp(h * 0.035, 22, 40); // gap under circle
+    final gapSubtitle = _clamp(h * 0.015, 10, 18); // gap under title
+    final gapAfterSubtitle = _clamp(h * 0.004, 6, 10); // tiny bottom gap
+    final btnHeight = _clamp(h * 0.058, 44, 52); // right button height
+    final radius = _clamp(w * 0.03, 10, 16); // button radius
+
+    // use theme primary based gradient that adapts to light/dark
+    final primary = cs.primary; // base primary
+    final onPrimary = cs.onPrimary; // contrast color
+    final lighter = _tint(primary, 0.16); // lighter shade
+    final darker = _tint(primary, -0.12); // darker shade
+
+    // slides content (icons + texts)
     final slides = [
       (icon: Icons.explore, title: t.onbTitle1, subtitle: t.onbSubtitle1),
       (
@@ -93,107 +117,89 @@ class _OnboardingPageState extends State<OnboardingPage>
       (icon: Icons.people_alt, title: t.onbTitle3, subtitle: t.onbSubtitle3),
     ];
 
-    // ---------- animated gradient background (from theme.primary shades) ----------
+    // ---------- animated gradient background ----------
     Widget buildBg() => AnimatedBuilder(
-      animation: _bgCtrl, // listen to bg
+      animation: _bgCtrl, // listen to controller
       builder: (context, _) {
         final v = _bgCtrl.value; // 0..1..0
-        final c1 = Color.lerp(primary, lighter, v)!; // primary→lighter
-        final c2 = Color.lerp(primary, darker, 1 - v)!; // primary→darker
-        final begin = Alignment(-0.9 + v * 0.5, -1.0); // subtle motion
-        final end = Alignment(0.9 - v * 0.5, 1.0); // subtle motion
+        final c1 = Color.lerp(primary, lighter, v)!; // blend 1
+        final c2 = Color.lerp(primary, darker, 1 - v)!; // blend 2
+        final begin = Alignment(-0.9 + v * 0.5, -1.0); // move start
+        final end = Alignment(0.9 - v * 0.5, 1.0); // move end
         return Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: begin, // start
-              end: end, // end
-              colors: [c1, c2], // two brand shades
-            ),
+              begin: begin,
+              end: end,
+              colors: [c1, c2],
+            ), // animated gradient
           ),
         );
       },
     );
 
-    // ---------- dots indicator (uses onPrimary for contrast) ----------
+    // ---------- dots indicator (responsive) ----------
     Widget buildDots() => Row(
-      mainAxisAlignment: MainAxisAlignment.center, // center
+      mainAxisAlignment: MainAxisAlignment.center, // center row
       children: List.generate(slides.length, (i) {
-        final active = i == _index; // current?
+        final active = i == _index; // is current index?
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 250), // animate change
-          margin: const EdgeInsets.symmetric(horizontal: 4), // spacing
-          width: active ? 24 : 8, // pill vs dot
-          height: 8, // height
+          duration: const Duration(milliseconds: 250), // smooth
+          margin: EdgeInsets.symmetric(
+            horizontal: _clamp(w * 0.01, 3, 6),
+          ), // space
+          width: active ? dotWidthActive : dotWidth, // active wider
+          height: dotHeight, // height
           decoration: BoxDecoration(
-            color: onPrimary.withOpacity(
-              active ? 0.95 : 0.45,
-            ), // use themed contrast color
-            borderRadius: BorderRadius.circular(999), // capsule
+            color: onPrimary.withOpacity(active ? 0.95 : 0.45), // opacity
+            borderRadius: BorderRadius.circular(999), // pill
           ),
         );
       }),
     );
 
-    // ---------- bottom bar (buttons styled from theme) ----------
+    // ---------- bottom bar (uses AppButton + responsive) ----------
     Widget buildBottomBar() {
       final isLast = _index == slides.length - 1; // last page?
       return SafeArea(
-        // avoid insets
-        top: false, // only bottom
+        top: false, // only bottom safe
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8), // padding
-          child: Column(
-            mainAxisSize: MainAxisSize.min, // compact
+          padding: EdgeInsets.fromLTRB(
+            sidePad - 4,
+            barVPad,
+            sidePad - 4,
+            barVPad,
+          ), // responsive padding
+          child: Row(
             children: [
-              Row(
-                children: [
-                  // SKIP (left) – visible on pages 0/1
-                  if (!isLast)
-                    TextButton(
-                      onPressed: _continueAsGuest, // skip → home guest
-                      style: TextButton.styleFrom(
-                        foregroundColor: onPrimary, // themed contrast color
-                      ),
-                      child: Text(
-                        t.onbSkip, // "Skip"
-                        style: AppTypography.textTheme.labelLarge?.copyWith(
-                          color: onPrimary, // text uses onPrimary
-                          fontWeight: FontWeight.w600, // semi-bold
-                        ),
-                      ),
-                    )
-                  else
-                    const SizedBox(width: 8), // align when hidden
-                  // DOTS (center)
-                  Expanded(child: buildDots()), // dots row
-                  // NEXT / GET STARTED (right)
-                  SizedBox(
-                    height: 44, // button height
-                    child: ElevatedButton(
-                      onPressed: _next, // action
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            cs.surface, // surface bg (respects theme)
-                        foregroundColor: cs.primary, // brand text/icon
-                        elevation: 0, // flat
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: AnimatedSwitcher(
-                        // switch label
-                        duration: const Duration(milliseconds: 180),
-                        transitionBuilder: (c, a) =>
-                            FadeTransition(opacity: a, child: c),
-                        child: Text(
-                          isLast ? t.onbGetStarted : t.onbNext, // label
-                          key: ValueKey<bool>(isLast), // key for switch
-                          style: AppTypography.textTheme.labelLarge,
-                        ),
-                      ),
-                    ),
+              // SKIP on left (hidden on last page)
+              if (!isLast)
+                AppButton(
+                  onPressed: _continueAsGuest, // skip action
+                  type: AppButtonType.text, // text style
+                  size: AppButtonSize.md, // medium
+                  label: t.onbSkip, // text
+                  // make text visible on primary background
+                  textStyle: theme.textTheme.labelLarge?.copyWith(
+                    color: onPrimary, // contrast
+                    fontWeight: FontWeight.w600, // semi-bold
                   ),
-                ],
+                )
+              else
+                SizedBox(width: _clamp(w * 0.02, 8, 12)), // keep layout aligned
+              // DOTS in center
+              Expanded(child: buildDots()), // dots grow
+              // NEXT / GET STARTED button on right
+              SizedBox(
+                height: btnHeight, // responsive height
+                child: AppButton(
+                  onPressed: _next, // next or finish
+                  type: AppButtonType.secondary, // neutral on top of primary bg
+                  size: AppButtonSize.md, // medium
+                  label: isLast ? t.onbGetStarted : t.onbNext, // dynamic text
+                  // override to fit neutral chip look
+                  borderRadius: radius, // responsive radius
+                ),
               ),
             ],
           ),
@@ -201,89 +207,91 @@ class _OnboardingPageState extends State<OnboardingPage>
       );
     }
 
-    // ---------- single slide with icon + texts (uses theme colors) ----------
+    // ---------- single slide (responsive sizes) ----------
     Widget buildSlide(int i) {
-      final s = slides[i]; // slide data
+      final s = slides[i]; // slide tuple
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20), // side padding
+        padding: EdgeInsets.symmetric(horizontal: sidePad), // responsive sides
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center, // vertical center
+          mainAxisAlignment: MainAxisAlignment.center, // center slide
           children: [
-            // Icon inside circular card (subtle scale-in)
+            // circular card with main icon (scale-in)
             TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.92, end: 1.0), // 92% → 100%
-              duration: const Duration(milliseconds: 400), // time
-              curve: Curves.easeOut, // easing
+              tween: Tween(begin: 0.92, end: 1.0), // small pop
+              duration: const Duration(milliseconds: 400), // fast
+              curve: Curves.easeOut, // ease
               builder: (_, scale, child) =>
-                  Transform.scale(scale: scale, child: child),
+                  Transform.scale(scale: scale, child: child), // apply scale
               child: Container(
-                width: 160,
-                height: 160, // circle size
+                width: cardDia, // responsive diameter
+                height: cardDia, // responsive diameter
                 decoration: BoxDecoration(
-                  color: onPrimary.withOpacity(
-                    0.15,
-                  ), // soft tint from onPrimary
+                  color: onPrimary.withOpacity(0.15), // soft fill
                   shape: BoxShape.circle, // circle
                   border: Border.all(
-                    color: onPrimary.withOpacity(0.25), // ring using onPrimary
+                    color: onPrimary.withOpacity(0.25),
                     width: 2,
-                  ),
+                  ), // subtle ring
                   boxShadow: [
                     BoxShadow(
-                      color: cs.shadow.withOpacity(0.25), // theme shadow
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
+                      color: theme.shadowColor.withOpacity(0.25), // soft shadow
+                      blurRadius: _clamp(w * 0.06, 16, 26), // blur responsive
+                      offset: const Offset(0, 8), // drop
                     ),
                   ],
                 ),
                 child: Icon(
                   s.icon,
-                  size: 80,
+                  size: iconSize,
                   color: onPrimary,
-                ), // icon color from theme
+                ), // responsive icon
               ),
             ),
 
-            const SizedBox(height: 28), // spacing
-            // Title (fade‑in) – use theme text with onPrimary color
+            SizedBox(height: gapTitle), // gap under circle
+            // Title (fade-in)
             TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 350),
-              curve: Curves.easeOut,
-              builder: (_, o, child) => Opacity(opacity: o, child: child),
+              tween: Tween(begin: 0, end: 1), // fade
+              duration: const Duration(milliseconds: 350), // fast
+              curve: Curves.easeOut, // ease
+              builder: (_, o, child) =>
+                  Opacity(opacity: o, child: child), // apply fade
               child: Text(
-                s.title,
-                textAlign: TextAlign.center,
-                style:
-                    (theme.textTheme.headlineSmall ??
-                            AppTypography.textTheme.headlineSmall)
-                        ?.copyWith(
-                          color: onPrimary, // text uses onPrimary
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
-                        ),
+                s.title, // title text
+                textAlign: TextAlign.center, // center
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: onPrimary, // contrast on primary bg
+                  fontWeight: FontWeight.w700, // bold
+                  letterSpacing: 0.3, // tiny tracking
+                  fontSize: _clamp(w * 0.055, 18, 24), // responsive title size
+                ),
               ),
             ),
 
-            const SizedBox(height: 12), // spacing
-            // Subtitle (fade‑in) – use theme text with softer onPrimary
+            SizedBox(height: gapSubtitle), // gap
+            // Subtitle (fade-in)
             TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 450),
-              curve: Curves.easeOut,
-              builder: (_, o, child) => Opacity(opacity: o, child: child),
+              tween: Tween(begin: 0, end: 1), // fade
+              duration: const Duration(milliseconds: 450), // slower
+              curve: Curves.easeOut, // ease
+              builder: (_, o, child) =>
+                  Opacity(opacity: o, child: child), // apply fade
               child: Text(
-                s.subtitle,
-                textAlign: TextAlign.center,
-                style:
-                    (theme.textTheme.bodyMedium ??
-                            AppTypography.textTheme.bodyMedium)
-                        ?.copyWith(
-                          color: onPrimary.withOpacity(0.95), // soft contrast
-                          height: 1.45,
-                        ),
+                s.subtitle, // subtitle text
+                textAlign: TextAlign.center, // center
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: onPrimary.withOpacity(0.95), // almost white
+                  height: 1.45, // line height
+                  fontSize: _clamp(
+                    w * 0.04,
+                    13,
+                    16,
+                  ), // responsive subtitle size
+                ),
               ),
             ),
+
+            SizedBox(height: gapAfterSubtitle), // tiny gap
           ],
         ),
       );
@@ -292,21 +300,22 @@ class _OnboardingPageState extends State<OnboardingPage>
     // ---------- UI tree ----------
     return Scaffold(
       body: Stack(
-        fit: StackFit.expand, // fill
+        fit: StackFit.expand, // fill screen
         children: [
-          buildBg(), // animated gradient (primary shades)
-          // content: pages + bottom actions
+          buildBg(), // animated primary gradient
           Column(
             children: [
+              SizedBox(height: topPad), // top breathing
               Expanded(
                 child: PageView.builder(
                   controller: _pageCtrl, // controller
-                  itemCount: slides.length, // three slides
-                  onPageChanged: (i) => setState(() => _index = i), // update
-                  itemBuilder: (_, i) => buildSlide(i), // build slide
+                  itemCount: slides.length, // 3 slides
+                  onPageChanged: (i) =>
+                      setState(() => _index = i), // update index
+                  itemBuilder: (_, i) => buildSlide(i), // slide builder
                 ),
               ),
-              buildBottomBar(), // actions
+              buildBottomBar(), // responsive bottom bar with AppButton
             ],
           ),
         ],
