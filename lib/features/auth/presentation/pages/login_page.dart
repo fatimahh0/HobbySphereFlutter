@@ -452,7 +452,8 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
                             // ⚠️ don't show "login failed" here; use a specific message or leave empty
-                            invalidNumberMessage: t.loginPhoneInvalid, // e.g. "Invalid phone number"
+                            invalidNumberMessage: t
+                                .loginPhoneInvalid, // e.g. "Invalid phone number"
                             onChanged: (p) {
                               setState(() {
                                 _phoneE164 =

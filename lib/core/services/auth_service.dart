@@ -1,65 +1,77 @@
-// ===== Flutter 3.35.x =====
+// ===== Flutter 3.35.x / Dart 3.9 =====
 // services/auth_service.dart
-// Clean + resilient Auth APIs for: user/business login (email/phone),
-// Google (optional), and reactivate. Always returns a Map with backend JSON
-// and never hides server error messages.
+// Clean Auth API service: user/business login (email/phone), social, reactivate.
+// Always returns a Map with keys: _ok (bool) and _status (int).
 
-// NOTE: This file assumes you have a Dio wrapper ApiFetch that exposes:
-//   Future<Response> fetch(HttpMethod method, String path, {dynamic data})
-// If your wrapper throws on non-2xx, we catch that and still extract response.
-
-import 'package:dio/dio.dart'; // to read DioException safely
-import 'package:hobby_sphere/core/network/api_fetch.dart'; // your Dio wrapper
+import 'package:dio/dio.dart'; // HTTP client + DioException
+import 'package:hobby_sphere/core/network/api_fetch.dart'; // your Dio wrapper (fetch)
 import 'package:hobby_sphere/core/network/api_methods.dart'; // HttpMethod enum
 
 class AuthService {
-  // shared HTTP client
-  final _fetch = ApiFetch(); // uses baseUrl from ApiClient / ApiConfig
-  // base path (your ApiClient baseUrl should already include /api)
+  // create one ApiFetch instance (reuses baseUrl from your ApiClient/ApiConfig)
+  final _fetch = ApiFetch();
+
+  // base path for auth endpoints (your baseUrl should already include /api)
   static const _base = '/auth';
 
-  // ---------- small helpers ----------
+  // ---------- helpers ----------
 
-  // normalize any response (success or error) into a Map<String,dynamic>
+  // normalize email: trim spaces (you can add .toLowerCase() if backend ignores case)
+  String _normalizeEmail(String email) => email.trim();
+
+  // central POST helper: returns Map for both success and error
   Future<Map<String, dynamic>> _post(
-    String path,
-    Map<String, dynamic> body,
+    String path, // endpoint path like /auth/user/login
+    Map<String, dynamic> body, // request JSON body
   ) async {
     try {
-      // do the request
+      // send request using your wrapper (does JSON by default)
       final res = await _fetch.fetch(
-        HttpMethod.post,
-        path,
-        data: body,
-      ); // call API
-      final data = res.data; // backend JSON/body
-      // ensure we always return a map
+        HttpMethod.post, // HTTP method: POST
+        path, // endpoint path
+        data: body, // JSON body
+      );
+
+      // read response data
+      final data = res.data;
+
+      // ensure a Map is returned even if server returns non-map
       final map = (data is Map)
           ? Map<String, dynamic>.from(data)
           : <String, dynamic>{};
-      // annotate with status + ok flag
+
+      // add status code if not present
       map.putIfAbsent('_status', () => res.statusCode ?? 200);
-      map.putIfAbsent(
-        '_ok',
-        () => (res.statusCode ?? 200) >= 200 && (res.statusCode ?? 200) < 300,
-      );
-      return map; // return normalized map
+
+      // add ok flag (true if 2xx)
+      map.putIfAbsent('_ok', () {
+        final code = res.statusCode ?? 200;
+        return code >= 200 && code < 300;
+      });
+
+      // return normalized map
+      return map;
     } on DioException catch (e) {
-      // when backend returns 4xx/5xx, Dio may throw. Extract body if present.
-      final status = e.response?.statusCode ?? 0; // http status or 0
+      // handle HTTP errors (4xx/5xx) thrown by Dio or your wrapper
+      final status = e.response?.statusCode ?? 0; // status or 0
       final data = e.response?.data; // server body
       final map = (data is Map)
           ? Map<String, dynamic>.from(data)
           : <String, dynamic>{};
-      // if backend used "message" or "error", keep them; otherwise add readable text
+
+      // keep server message if any, else add readable message
       map.putIfAbsent('message', () => e.message ?? 'Request failed');
-      map['_status'] = status; // expose status code
-      map['_ok'] = false; // mark as not OK
-      return map; // IMPORTANT: return map instead of throwing to keep UX smooth
+
+      // expose status + ok=false
+      map['_status'] = status;
+      map['_ok'] = false;
+
+      // return error map (do not throw to keep UI flow smooth)
+      return map;
     } catch (e) {
-      // any other unexpected error
+      // handle non-HTTP unexpected errors
       return <String, dynamic>{
-        '_status': 0, // unknown
+        '_status': 0, // unknown status
         '_ok': false, // failed
         'message': 'Unexpected error: $e', // readable message
       };
@@ -69,13 +81,13 @@ class AuthService {
   // ---------- USER LOGIN (EMAIL) ----------
   // POST /api/auth/user/login
   Future<Map<String, dynamic>> loginWithEmailPassword({
-    required String email, // user email
-    required String password, // plain password
+    required String email, // user email (plain)
+    required String password, // user password (plain)
   }) async {
-    // backend expects a Users-like payload with "email" + "passwordHash"
+    // IMPORTANT: backend expects "password" here (NOT "passwordHash")
     return _post('$_base/user/login', {
-      'email': email, // email string
-      'passwordHash': password, // plain is fine; backend encodes/compares
+      'email': _normalizeEmail(email), // trim spaces
+      'password': password, // correct key for email login
     });
   }
 
@@ -83,25 +95,25 @@ class AuthService {
   // POST /api/auth/user/login-phone
   Future<Map<String, dynamic>> loginWithPhonePassword({
     required String phoneNumber, // +E.164 like +9617xxxxxx
-    required String password, // plain password
+    required String password, // user password (plain)
   }) async {
-    // backend expects "phoneNumber" + "passwordHash"
+    // Your backend expects "passwordHash" for phone login (keep as-is)
     return _post('$_base/user/login-phone', {
-      'phoneNumber': phoneNumber, // phone
-      'passwordHash': password, // password
+      'phoneNumber': phoneNumber, // phone input
+      'passwordHash': password, // backend reads this field on phone login
     });
   }
 
   // ---------- BUSINESS LOGIN (EMAIL) ----------
   // POST /api/auth/business/login
   Future<Map<String, dynamic>> loginBusiness({
-    required String email, // business email
-    required String password, // plain password
+    required String email, // business email (plain)
+    required String password, // business password (plain)
   }) async {
-    // backend reads from a Users-like object too: "email" + "passwordHash"
+    // IMPORTANT: backend expects "password" here (NOT "passwordHash")
     return _post('$_base/business/login', {
-      'email': email, // email
-      'passwordHash': password, // password
+      'email': _normalizeEmail(email), // trim spaces
+      'password': password, // correct key for email login
     });
   }
 
@@ -109,21 +121,21 @@ class AuthService {
   // POST /api/auth/business/login-phone
   Future<Map<String, dynamic>> loginBusinessWithPhone({
     required String phoneNumber, // +E.164 like +9617xxxxxx
-    required String password, // plain password
+    required String password, // business password (plain)
   }) async {
+    // Your backend expects "passwordHash" for phone login (keep as-is)
     return _post('$_base/business/login-phone', {
-      'phoneNumber': phoneNumber, // phone
-      'passwordHash': password, // password
+      'phoneNumber': phoneNumber, // phone input
+      'passwordHash': password, // backend reads this field on phone login
     });
   }
 
   // ---------- GOOGLE LOGIN (OPTIONAL) ----------
   // POST /api/auth/google
-  // IMPORTANT: Your AuthController (shared above) does NOT yet expose this path.
-  // Add it server-side first; until then this will likely return 404.
+  // Note: Ensure backend endpoint exists; otherwise you get 404.
   Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {
     return _post('$_base/google', {
-      'idToken': idToken, // Google ID Token (JWT)
+      'idToken': idToken, // Google ID token (JWT)
     });
   }
 
@@ -136,17 +148,18 @@ class AuthService {
   }
 
   // ---------- REACTIVATE (USER or BUSINESS) ----------
-  // POST /api/auth/reactivate      (for user)
-  // POST /api/auth/business/reactivate  (for business)
+  // POST /api/auth/reactivate              (user)
+  // POST /api/auth/business/reactivate     (business)
   Future<Map<String, dynamic>> reactivateAccount({
-    required int id, // entity id (user.id or business.id)
-    required String role, // "user" or "business"
+    required int id, // user.id or business.id
+    required String role, // 'user' or 'business'
   }) async {
+    // choose endpoint based on role
     final endpoint = (role == 'user')
-        ? '$_base/reactivate' // user endpoint
-        : '$_base/business/reactivate'; // business endpoint
+        ? '$_base/reactivate'
+        : '$_base/business/reactivate';
 
-    // backend expects body { "id": <Long> }
+    // backend expects { "id": <Long> }
     return _post(endpoint, {
       'id': id, // pass id
     });
