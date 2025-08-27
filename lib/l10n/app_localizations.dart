@@ -2515,6 +2515,12 @@ abstract class AppLocalizations {
   /// **'Welcome Back'**
   String get loginTitle;
 
+  /// No description provided for @loginPhoneInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid phone number'**
+  String get loginPhoneInvalid;
+
   /// No description provided for @loginUseEmailInstead.
   ///
   /// In en, this message translates to:
@@ -2532,6 +2538,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'User'**
   String get loginUser;
+
+  /// No description provided for @loginInactiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account inactive'**
+  String get loginInactiveTitle;
+
+  /// No description provided for @loginInactiveMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This account is inactive.Would you like to reactivate it?'**
+  String get loginInactiveMessage;
 
   /// No description provided for @loginWarningInactive.
   ///
@@ -2626,7 +2644,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingAlreadyHaveAccount.
   ///
   /// In en, this message translates to:
-  /// **'Already have an account?'**
+  /// **'Already have an account?login'**
   String get onboardingAlreadyHaveAccount;
 
   /// No description provided for @onboardingCreateAccount.
@@ -3054,6 +3072,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Let’s grow your business with HobbySphere..'**
   String get profilebusinessTagline;
+
+  /// No description provided for @reactivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Reactivate'**
+  String get reactivate;
 
   /// No description provided for @registerAddProfilePhoto.
   ///

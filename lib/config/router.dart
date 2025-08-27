@@ -1,15 +1,18 @@
 // config/router.dart
 import 'package:flutter/material.dart';
-import 'package:hobby_sphere/features/auth/presentation/pages/login_page.dart';
-import 'package:hobby_sphere/features/onboarding/presentation/pages/OnboardingScreen.dart';
 
-import 'package:hobby_sphere/features/onboarding/presentation/pages/onboarding_page.dart';
-import 'package:hobby_sphere/features/splash/presentation/pages/splash_page.dart';
+// existing imports
+import 'package:hobby_sphere/features/auth/presentation/pages/login_page.dart';
+import 'package:hobby_sphere/features/presentation/pages/OnboardingScreen.dart';
+import 'package:hobby_sphere/features/presentation/pages/onboarding_page.dart';
+import 'package:hobby_sphere/features/presentation/pages/splash_page.dart';
+import 'package:hobby_sphere/features/presentation/pages/UserHome.dart';
+import 'package:hobby_sphere/features/presentation/pages/BusinessHome.dart';
 
 class AppRouter {
-  final VoidCallback onToggleTheme;
-  final void Function(Locale) onChangeLocale;
-  final Locale Function() getCurrentLocale;
+  final VoidCallback onToggleTheme; // theme toggle
+  final void Function(Locale) onChangeLocale; // language change
+  final Locale Function() getCurrentLocale; // get locale
 
   AppRouter({
     required this.onToggleTheme,
@@ -23,15 +26,9 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const SplashPage());
 
       case '/onboarding':
-      
-        return MaterialPageRoute(
-          builder: (_) => OnboardingPage(
-           
-          ),
-        );
+        return MaterialPageRoute(builder: (_) => const OnboardingPage());
 
       case '/onboardingScreen':
-      
         return MaterialPageRoute(
           builder: (_) => OnboardingScreen(
             onToggleTheme: onToggleTheme,
@@ -42,6 +39,13 @@ class AppRouter {
 
       case '/login':
         return MaterialPageRoute(builder: (_) => const LoginPage());
+
+      //  NEW ROUTES
+      case '/user/home':
+        return MaterialPageRoute(builder: (_) => const UserHome());
+
+      case '/business/home':
+        return MaterialPageRoute(builder: (_) => const BusinessHome());
 
       default:
         return MaterialPageRoute(builder: (_) => const SplashPage());

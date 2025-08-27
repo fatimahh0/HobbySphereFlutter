@@ -47,6 +47,7 @@ dependencies:
   flutter_multi_formatter: ^2.12.10   # works with Flutter 3.35.x
   intl_phone_field: ^3.2.0   # use latest compatible
   dio: ^5.7.0
+  google_sign_in: ^6.2.1       # Google login
 
 flutter_localizations:
   sdk: flutter

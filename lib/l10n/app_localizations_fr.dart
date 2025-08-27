@@ -1228,6 +1228,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get loginTitle => 'Welcome Back';
 
   @override
+  String get loginPhoneInvalid => 'Invalid phone number';
+
+  @override
   String get loginUseEmailInstead => 'Use Email Instead';
 
   @override
@@ -1235,6 +1238,12 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get loginUser => 'User';
+
+  @override
+  String get loginInactiveTitle => 'Account inactive';
+
+  @override
+  String get loginInactiveMessage => 'This account is inactive.Would you like to reactivate it?';
 
   @override
   String get loginWarningInactive => 'This account was previously inactive and has been reactivated. Please review your settings.';
@@ -1496,6 +1505,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profilebusinessTagline => 'Let’s grow your business with HobbySphere..';
+
+  @override
+  String get reactivate => 'Reactivate';
 
   @override
   String get registerAddProfilePhoto => 'Tap to choose profile photo';

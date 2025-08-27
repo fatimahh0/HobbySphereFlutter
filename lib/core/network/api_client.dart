@@ -1,45 +1,47 @@
-import 'package:dio/dio.dart'; // HTTP client
-import 'api_config.dart'; // baseUrl source
+// ===== Flutter 3.35.x =====
+// lib/core/network/api_client.dart
+// One Dio client for all requests. Bigger timeouts. Base URL from ApiConfig.
+
+import 'package:dio/dio.dart'; // http client
+import 'package:hobby_sphere/core/network/api_config.dart'; // loads hostIp.json
 
 class ApiClient {
-  static final ApiClient _i = ApiClient._internal(); // singleton instance
-  factory ApiClient() => _i; // factory constructor
-  late final Dio dio; // shared Dio client
+  // singleton pattern (one instance)
+  static final ApiClient _i = ApiClient._(); // private instance
+  factory ApiClient() => _i; // factory getter
+  ApiClient._(); // private ctor
 
-  ApiClient._internal() {
-    dio = Dio(
-      BaseOptions(
-        baseUrl: ApiConfig.baseUrl, // set base url
-        connectTimeout: const Duration(seconds: 15), // connect timeout
-        receiveTimeout: const Duration(seconds: 15), // read timeout
-        headers: {
-          'Content-Type': 'application/json', // default header
-          'Accept': 'application/json', // accept json
-        },
-      ),
-    );
+  late final Dio dio =
+      Dio(
+          BaseOptions(
+            baseUrl:
+                ApiConfig.baseUrl, // base url (ex: http://10.0.2.2:8080/api)
+            connectTimeout: const Duration(seconds: 30), // connect timeout 30s
+            receiveTimeout: const Duration(seconds: 60), // receive timeout 60s
+            sendTimeout: const Duration(seconds: 30), // send timeout 30s
+            headers: const {
+              'Content-Type': 'application/json', // send json by default
+              'Accept': 'application/json', // expect json back
+            },
+          ),
+        )
+        // optional: simple logging to console
+        ..interceptors.add(
+          LogInterceptor(
+            requestBody: true, // log request body
+            responseBody: true, // log response body
+            requestHeader: false, // no need headers noise
+            responseHeader: false, // no headers
+          ),
+        );
 
-    dio.interceptors.add(
-      LogInterceptor(
-        // optional logs (dev)
-        requestBody: true,
-        responseBody: true,
-      ),
-    );
-  }
-
-  void refreshBaseUrl() {
-    // call after ApiConfig.load()
-    dio.options.baseUrl = ApiConfig.baseUrl; // update base url in-place
-  }
-
+  // set bearer token for all calls after login
   void setToken(String token) {
-    // set global Authorization
-    dio.options.headers['Authorization'] = 'Bearer $token';
+    dio.options.headers['Authorization'] = 'Bearer $token'; // attach JWT
   }
 
-  void clearToken() {
-    // remove Authorization
-    dio.options.headers.remove('Authorization');
+  // allow changing baseUrl at runtime after ApiConfig.load()
+  void refreshBaseUrl() {
+    dio.options.baseUrl = ApiConfig.baseUrl; // set new base url
   }
 }
