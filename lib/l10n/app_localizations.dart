@@ -319,6 +319,30 @@ abstract class AppLocalizations {
   /// **'Sign In'**
   String get signIn;
 
+  /// No description provided for @businessWelcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to your dashboard!'**
+  String get businessWelcomeTitle;
+
+  /// No description provided for @businessWelcomeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage your activities and engage with users easily.'**
+  String get businessWelcomeSubtitle;
+
+  /// No description provided for @createNewActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Create New Activity'**
+  String get createNewActivity;
+
+  /// No description provided for @activitiesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No activities yet'**
+  String get activitiesEmpty;
+
   /// No description provided for @authNotLoggedInTitle.
   ///
   /// In en, this message translates to:
@@ -3889,6 +3913,12 @@ abstract class AppLocalizations {
   /// **'Tickets'**
   String get tabTickets;
 
+  /// No description provided for @tabSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get tabSettings;
+
   /// No description provided for @tabnavigateActivities.
   ///
   /// In en, this message translates to:
@@ -3912,6 +3942,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Home'**
   String get tabnavigateHome;
+
+  /// No description provided for @tabActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'Activities'**
+  String get tabActivities;
+
+  /// No description provided for @tabAnalytics.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics'**
+  String get tabAnalytics;
+
+  /// No description provided for @tabBookings.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get tabBookings;
 
   /// No description provided for @tabnavigateProfile.
   ///

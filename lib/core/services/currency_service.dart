@@ -1,28 +1,36 @@
 // ===== Flutter 3.35.x =====
-// services/currency_service.dart
-// Currency API: get current currency of the system/user.
-//
+// Currency API: get current currency.
 // Uses ApiFetch (Dio wrapper). Clean and simple.
 
-import 'package:hobby_sphere/core/network/api_fetch.dart'; // universal fetch
-import 'package:hobby_sphere/core/network/api_methods.dart'; // GET
+import 'package:hobby_sphere/core/network/api_fetch.dart'; // axios-like fetch()
+import 'package:hobby_sphere/core/network/api_methods.dart'; // HttpMethod enum
 
 class CurrencyService {
-  final _fetch = ApiFetch(); // shared HTTP client
-  static const _base =
-      '/currencies'; // base path (Dio baseUrl already ends with /api)
+  // Reuse global ApiFetch (shared Dio)
+  final _fetch = ApiFetch(); // HTTP client
+  static const _base = '/currencies'; // -> <server>/api/currencies
 
-  // ------------------------------------------------------------
   // GET /api/currencies/current
   Future<Map<String, dynamic>> getCurrentCurrency(String token) async {
+    // Call GET with bearer token
     final res = await _fetch.fetch(
-      HttpMethod.get,
+      HttpMethod.get, // method
       '$_base/current', // endpoint
       headers: {'Authorization': 'Bearer $token'}, // auth header
     );
 
-    final data = res.data; // JSON payload
+    // Validate and return map
+    final data = res.data; // payload
     if (data is! Map) throw Exception('Invalid currency response'); // guard
-    return Map<String, dynamic>.from(data); // return map
+    return Map<String, dynamic>.from(data); // e.g. { "currencyType": "CAD" }
+  }
+
+  // Convenience: return just the code (e.g., "CAD") regardless of backend shape
+  Future<String> getCurrentCurrencyCode(String token) async {
+    // Fetch map once
+    final map = await getCurrentCurrency(token); // map payload
+    // Try common keys (currencyType / code / value)
+    return (map['currencyType'] ?? map['code'] ?? map['value'] ?? 'CAD')
+        .toString(); // normalize
   }
 }

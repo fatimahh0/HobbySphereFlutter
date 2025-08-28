@@ -1,144 +1,157 @@
 // ===== Flutter 3.35.x =====
-// services/business_activity_service.dart
-// Business items (activities): list by business, details, create (with image),
-// update (with optional imageRemoved), delete, and get activity types.
-//
-// We use our shared ApiFetch (Dio-based) so it feels like Axios.
-//
-// NOTE: Our global Dio baseUrl already ends with "/api",
-// so below we use "/items" and "/item-types" (NOT "/api/items").
+// Business items (activities): list, details, create (with image),
+// update (with optional imageRemoved), delete, and item types.
+// Uses a shared ApiFetch (Dio-based) so it feels like Axios.
 
-import 'package:dio/dio.dart'; // FormData/Multipart
-import 'package:hobby_sphere/core/network/api_fetch.dart'; // axios-like helper
-import 'package:hobby_sphere/core/network/api_methods.dart'; // HTTP method names
+import 'package:dio/dio.dart'; // FormData / MultipartFile
+import 'package:path/path.dart' as p; // safe file name (Windows/macOS/Linux)
+import 'package:http_parser/http_parser.dart'; // MediaType for multipart
+import 'package:hobby_sphere/core/network/api_fetch.dart'; // axios-like fetch()
+import 'package:hobby_sphere/core/network/api_methods.dart'; // HttpMethod enum
 
 class BusinessActivityService {
-  // create one ApiFetch instance to reuse the same Dio client
-  final _fetch = ApiFetch(); // shared helper
+  // Reuse one ApiFetch (shared Dio instance under the hood)
+  final _fetch = ApiFetch(); // shared HTTP helper
 
-  // base paths (final URL => <server>/api/items ...)
-  static const _itemsBase = '/items'; // items base
-  static const _typesBase = '/item-types'; // item-types base
+  // Base paths (global Dio baseUrl already ends with "/api")
+  static const _itemsBase = '/items'; // -> <server>/api/items
+  static const _typesBase = '/item-types'; // -> <server>/api/item-types
 
-  // small helper: extract file name from a path like ".../foo.jpg"
-  String _fileName(String path) => path.split('/').last; // last segment
+  // ---------- helpers --------------------------------------------------------
 
-  // small helper: naive mime from extension (png => image/png else image/jpeg)
-  String _mimeByExt(String fileName) {
-    final lower = fileName.toLowerCase(); // lower-case
-    return lower.endsWith('.png') ? 'image/png' : 'image/jpeg'; // basic guess
+  // Get file name from any OS path (uses 'path' package)
+  String _fileName(String path) =>
+      p.basename(path); // e.g. ".../foo.jpg" -> "foo.jpg"
+
+  // Very small mime guess by extension (good enough for PNG/JPEG)
+  String _mimeByExt(String name) => name.toLowerCase().endsWith('.png')
+      ? 'image/png'
+      : 'image/jpeg'; // default jpeg
+
+  // Add a string field to FormData only if value is not null/empty
+  void _addField(FormData form, String key, String? value) {
+    if (value != null && value.isNotEmpty)
+      form.fields.add(MapEntry(key, value)); // safe add
   }
 
-  // ------------------------------------------------------------
+  // Convert dynamic date (String or DateTime) to ISO 8601 string
+  String _toIso(dynamic v) {
+    // If already DateTime → to ISO
+    if (v is DateTime) return v.toIso8601String(); // convert
+    // If string → try parse then to ISO
+    if (v is String) {
+      final dt = DateTime.tryParse(v); // safe parse
+      if (dt != null) return dt.toIso8601String(); // convert
+    }
+    // Anything else → invalid input
+    throw Exception('Invalid date value'); // guard
+  }
+
+  // ---------- endpoints ------------------------------------------------------
+
   // GET /api/items/business/{businessId}
-  // same as: getActivitiesByBusiness(businessId, token)
   Future<List<dynamic>> getActivitiesByBusiness({
     required int businessId, // business id
-    required String token, // JWT token
+    required String token, // bearer token
   }) async {
+    // Send GET with Authorization header
     final res = await _fetch.fetch(
-      // send request
-      HttpMethod.get, // GET
+      HttpMethod.get, // method
       '$_itemsBase/business/$businessId', // path
-      headers: {'Authorization': 'Bearer $token'}, // auth header
+      headers: {'Authorization': 'Bearer $token'}, // auth
     );
-    final data = res.data; // response JSON
+    // Validate payload type
+    final data = res.data; // response json
     if (data is! List) throw Exception('Invalid list response'); // guard
-    return data; // list of items
+    return data; // list
   }
 
-  // ------------------------------------------------------------
   // GET /api/items/{id}
-  // same as: getActivityByIdForBusiness(id, token)
   Future<Map<String, dynamic>> getActivityByIdForBusiness({
     required int id, // item id
-    required String token, // JWT token
+    required String token, // bearer token
   }) async {
+    // Send GET
     final res = await _fetch.fetch(
-      // send request
-      HttpMethod.get, // GET
+      HttpMethod.get, // method
       '$_itemsBase/$id', // path
-      headers: {'Authorization': 'Bearer $token'}, // auth header
+      headers: {'Authorization': 'Bearer $token'}, // auth
     );
-    final data = res.data; // response JSON
+    // Validate map payload
+    final data = res.data; // response json
     if (data is! Map) throw Exception('Invalid item response'); // guard
     return Map<String, dynamic>.from(data); // typed map
   }
 
-  // ------------------------------------------------------------
+  // ALIAS: keep UI compatibility (if your UI calls getBusinessActivityById)
+  Future<Map<String, dynamic>> getBusinessActivityById(String token, int id) =>
+      getActivityByIdForBusiness(id: id, token: token); // simple forward
+
   // POST /api/items/create  (multipart/form-data)
-  // same as: createActivity(activity, businessId, token)
-  //
-  // activity map should contain keys (same as RN):
-  // activityName, activityType, description, location,
-  // latitude, longitude, maxParticipants, price,
-  // startDatetime, endDatetime, status, imageUri (optional).
   Future<Map<String, dynamic>> createActivity({
-    required Map<String, dynamic> activity, // form fields
+    required Map<String, dynamic> activity, // input fields
     required int businessId, // business id
-    required String token, // JWT token
+    required String token, // bearer token
   }) async {
-    // read fields from the map (simple, same names as RN object)
+    // Read basic fields from the map (loose typing to match RN)
     final String activityName = '${activity['activityName'] ?? ''}'; // name
     final dynamic activityType = activity['activityType']; // type id
     final String description = '${activity['description'] ?? ''}'; // desc
     final String location = '${activity['location'] ?? ''}'; // address
-    final String? imageUri = activity['imageUri'] as String?; // image path
-    final double? latitude = (activity['latitude'] == null)
-        ? null
-        : double.tryParse('${activity['latitude']}'); // to double
-    final double? longitude = (activity['longitude'] == null)
-        ? null
-        : double.tryParse('${activity['longitude']}'); // to double
+    final String? imageUri =
+        activity['imageUri'] as String?; // local image path
+    final String status = '${activity['status'] ?? ''}'; // status string
+
+    // Optional coords (nullable)
+    final String? latStr = activity['latitude']
+        ?.toString(); // latitude as string
+    final String? lonStr = activity['longitude']
+        ?.toString(); // longitude as string
+
+    // Required numbers
     final int maxParticipants = int.parse(
       '${activity['maxParticipants']}',
-    ); // to int
-    final num price = num.parse('${activity['price']}'); // accept int/double
-    // accept either DateTime or String; always convert to ISO 8601
-    String _toIso(dynamic v) => (v is DateTime)
-        ? v.toIso8601String()
-        : DateTime.parse('$v').toIso8601String(); // parse->ISO
+    ); // max
+    final num price = num.parse('${activity['price']}'); // price
+
+    // Dates (accept DateTime or String)
     final String startIso = _toIso(activity['startDatetime']); // start ISO
     final String endIso = _toIso(activity['endDatetime']); // end ISO
-    final String status = '${activity['status'] ?? ''}'; // status str
 
-    // build multipart form data (field names mapped like your RN code)
-    final form = FormData(); // init form
-    form.fields
-      ..add(MapEntry('itemName', activityName)) // itemName
-      ..add(MapEntry('itemTypeId', '$activityType')) // itemTypeId
-      ..add(MapEntry('description', description)) // description
-      ..add(MapEntry('location', location)) // location
-      ..add(MapEntry('latitude', latitude?.toString() ?? '')) // latitude
-      ..add(MapEntry('longitude', longitude?.toString() ?? '')) // longitude
-      ..add(MapEntry('maxParticipants', '$maxParticipants')) // maxParticipants
-      ..add(MapEntry('price', '$price')) // price
-      ..add(MapEntry('startDatetime', startIso)) // startDatetime
-      ..add(MapEntry('endDatetime', endIso)) // endDatetime
-      ..add(MapEntry('status', status)) // status
-      ..add(MapEntry('businessId', '$businessId')); // businessId
+    // Build multipart form
+    final form = FormData(); // new form
+    _addField(form, 'itemName', activityName); // itemName
+    _addField(form, 'itemTypeId', '$activityType'); // itemTypeId
+    _addField(form, 'description', description); // description
+    _addField(form, 'location', location); // location
+    _addField(form, 'latitude', latStr); // latitude (optional)
+    _addField(form, 'longitude', lonStr); // longitude (optional)
+    _addField(form, 'maxParticipants', '$maxParticipants'); // maxParticipants
+    _addField(form, 'price', '$price'); // price
+    _addField(form, 'startDatetime', startIso); // startDatetime
+    _addField(form, 'endDatetime', endIso); // endDatetime
+    _addField(form, 'status', status); // status
+    _addField(form, 'businessId', '$businessId'); // businessId
 
-    // if we have an imageUri, attach it as "image" part
+    // Attach image if present
     if (imageUri != null && imageUri.isNotEmpty) {
-      // has file?
       final name = _fileName(imageUri); // file name
-      final mime = _mimeByExt(name); // guess mime
+      final mime = _mimeByExt(name); // mime guess (e.g., image/jpeg)
       form.files.add(
         MapEntry(
-          'image', // field name
+          'image', // field name on backend
           await MultipartFile.fromFile(
-            // load file
             imageUri, // local path
-            filename: name, // name
-            // contentType is optional; Dio can infer from extension; omitted for simplicity
+            filename: name, // file name
+            contentType: MediaType.parse(mime), // proper content-type
           ),
         ),
       );
     }
 
-    // send request with multipart header + bearer token
+    // Send POST as multipart with bearer token
     final res = await _fetch.fetch(
-      HttpMethod.post, // POST
+      HttpMethod.post, // method
       '$_itemsBase/create', // path
       data: form, // multipart body
       headers: {
@@ -147,135 +160,129 @@ class BusinessActivityService {
       },
     );
 
-    // validate object response
-    final data = res.data; // JSON
+    // Validate map response
+    final data = res.data; // json
     if (data is! Map) throw Exception('Invalid create response'); // guard
     return Map<String, dynamic>.from(data); // created item
   }
 
-  // ------------------------------------------------------------
   // PUT /api/items/{id}/update-with-image  (multipart/form-data)
-  // same as: updateActivity(id, activity, token)
-  //
-  // activity map should contain:
-  // activityName, activityType, description, location,
-  // latitude, longitude, maxParticipants, price,
-  // startDatetime, endDatetime, status, businessId, imageRemoved (bool),
-  // imageUri (optional, ignored if imageRemoved == true).
   Future<Map<String, dynamic>> updateActivity({
     required int id, // item id
-    required Map<String, dynamic> activity, // fields
-    required String token, // JWT token
+    required Map<String, dynamic> activity, // input fields
+    required String token, // bearer token
   }) async {
-    // pull fields from map
+    // Read fields
     final String name = '${activity['activityName'] ?? ''}'; // name
     final dynamic typeId = activity['activityType']; // type id
     final String desc = '${activity['description'] ?? ''}'; // desc
     final String loc = '${activity['location'] ?? ''}'; // address
-    final double lat = double.parse('${activity['latitude']}'); // latitude
-    final double lon = double.parse('${activity['longitude']}'); // longitude
+
+    // Latitude/Longitude can be null in update → handle safely
+    final String? latStr = activity['latitude']?.toString(); // latitude
+    final String? lonStr = activity['longitude']?.toString(); // longitude
+
     final int max = int.parse(
       '${activity['maxParticipants']}',
     ); // max participants
     final num price = num.parse('${activity['price']}'); // price
-    String _toIso(dynamic v) => (v is DateTime)
-        ? v.toIso8601String()
-        : DateTime.parse('$v').toIso8601String(); // parse->ISO
     final String startIso = _toIso(activity['startDatetime']); // start ISO
     final String endIso = _toIso(activity['endDatetime']); // end ISO
     final String status = '${activity['status'] ?? ''}'; // status
     final int businessId = int.parse(
       '${activity['businessId']}',
     ); // business id
-    final bool imageRemoved = activity['imageRemoved'] == true; // removed flag
+    final bool imageRemoved = activity['imageRemoved'] == true; // remove flag
     final String? imageUri = activity['imageUri'] as String?; // optional path
 
-    // build multipart form
-    final form = FormData(); // init
-    form.fields
-      ..add(MapEntry('itemName', name)) // itemName
-      ..add(MapEntry('itemTypeId', '$typeId')) // itemTypeId
-      ..add(MapEntry('description', desc)) // description
-      ..add(MapEntry('location', loc)) // location
-      ..add(MapEntry('latitude', '$lat')) // latitude
-      ..add(MapEntry('longitude', '$lon')) // longitude
-      ..add(MapEntry('maxParticipants', '$max')) // max
-      ..add(MapEntry('price', '$price')) // price
-      ..add(MapEntry('startDatetime', startIso)) // start
-      ..add(MapEntry('endDatetime', endIso)) // end
-      ..add(MapEntry('status', status)) // status
-      ..add(MapEntry('businessId', '$businessId')) // businessId
-      ..add(
-        MapEntry('imageRemoved', imageRemoved ? 'true' : 'false'),
-      ); // required
+    // Build multipart form
+    final form = FormData(); // new form
+    _addField(form, 'itemName', name); // itemName
+    _addField(form, 'itemTypeId', '$typeId'); // itemTypeId
+    _addField(form, 'description', desc); // description
+    _addField(form, 'location', loc); // location
+    _addField(form, 'latitude', latStr); // latitude (optional)
+    _addField(form, 'longitude', lonStr); // longitude (optional)
+    _addField(form, 'maxParticipants', '$max'); // max
+    _addField(form, 'price', '$price'); // price
+    _addField(form, 'startDatetime', startIso); // start
+    _addField(form, 'endDatetime', endIso); // end
+    _addField(form, 'status', status); // status
+    _addField(form, 'businessId', '$businessId'); // businessId
+    _addField(
+      form,
+      'imageRemoved',
+      imageRemoved ? 'true' : 'false',
+    ); // send as "true"/"false"
 
-    // attach file only if NOT removed and imageUri present
+    // Attach file only when NOT removed and we have a path
     if (!imageRemoved && imageUri != null && imageUri.isNotEmpty) {
       final name = _fileName(imageUri); // file name
-      final mime = _mimeByExt(name); // guess mime
+      final mime = _mimeByExt(name); // mime guess
       form.files.add(
         MapEntry(
           'image', // field name
           await MultipartFile.fromFile(
-            // load file
             imageUri, // path
             filename: name, // name
-            // contentType optional
+            contentType: MediaType.parse(mime), // content-type
           ),
         ),
       );
     }
 
-    // send request with multipart + auth
+    // Send PUT as multipart
     final res = await _fetch.fetch(
-      HttpMethod.put, // PUT
+      HttpMethod.put, // method
       '$_itemsBase/$id/update-with-image', // path
-      data: form, // multipart
+      data: form, // multipart body
       headers: {
         'Authorization': 'Bearer $token', // auth
         'Content-Type': 'multipart/form-data', // multipart
       },
     );
 
-    // ensure object response
-    final data = res.data; // JSON
+    // Validate map response
+    final data = res.data; // json
     if (data is! Map) throw Exception('Invalid update response'); // guard
     return Map<String, dynamic>.from(data); // updated item
   }
 
-  // ------------------------------------------------------------
   // DELETE /api/items/{id}
-  // same as: deleteActivity(id, token)
   Future<Map<String, dynamic>> deleteActivity({
     required int id, // item id
-    required String token, // JWT token
+    required String token, // bearer token
   }) async {
+    // Send DELETE
     final res = await _fetch.fetch(
-      // send request
-      HttpMethod.delete, // DELETE
+      HttpMethod.delete, // method
       '$_itemsBase/$id', // path
       headers: {'Authorization': 'Bearer $token'}, // auth
     );
-    final data = res.data; // JSON
+    // Validate map payload
+    final data = res.data; // json
     if (data is! Map) throw Exception('Invalid delete response'); // guard
-    return Map<String, dynamic>.from(data); // backend payload
+    return Map<String, dynamic>.from(data); // payload (e.g. {success:true})
   }
 
-  // ------------------------------------------------------------
+  // ALIAS: keep UI compatibility (if your UI calls deleteBusinessActivity)
+  Future<Map<String, dynamic>> deleteBusinessActivity(String token, int id) =>
+      deleteActivity(id: id, token: token); // forward
+
   // GET /api/item-types
-  // same as: getActivityTypes(token)
   Future<List<dynamic>> getActivityTypes({
-    required String token, // JWT token
+    required String token, // bearer token
   }) async {
+    // Send GET
     final res = await _fetch.fetch(
-      // send request
-      HttpMethod.get, // GET
+      HttpMethod.get, // method
       _typesBase, // "/item-types"
       headers: {'Authorization': 'Bearer $token'}, // auth
     );
-    final data = res.data; // JSON
+    // Validate array payload
+    final data = res.data; // json
     if (data is! List)
       throw Exception('Invalid activity types response'); // guard
-    return data; // list
+    return data; // list of types
   }
 }

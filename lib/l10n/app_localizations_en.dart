@@ -120,6 +120,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signIn => 'Sign In';
 
   @override
+  String get businessWelcomeTitle => 'Welcome to your dashboard!';
+
+  @override
+  String get businessWelcomeSubtitle => 'Manage your activities and engage with users easily.';
+
+  @override
+  String get createNewActivity => 'Create New Activity';
+
+  @override
+  String get activitiesEmpty => 'No activities yet';
+
+  @override
   String get authNotLoggedInTitle => 'Not Logged In';
 
   @override
@@ -1917,6 +1929,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabTickets => 'Tickets';
 
   @override
+  String get tabSettings => 'Settings';
+
+  @override
   String get tabnavigateActivities => 'Activities';
 
   @override
@@ -1927,6 +1942,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tabnavigateHome => 'Home';
+
+  @override
+  String get tabActivities => 'Activities';
+
+  @override
+  String get tabAnalytics => 'Analytics';
+
+  @override
+  String get tabBookings => 'Bookings';
 
   @override
   String get tabnavigateProfile => 'Profile';

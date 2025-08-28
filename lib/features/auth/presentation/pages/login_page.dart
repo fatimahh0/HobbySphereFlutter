@@ -2,6 +2,7 @@
 // login_page.dart — Full login screen integrated with backend + Google Sign-In.
 
 import 'package:flutter/material.dart'; // UI widgets
+import 'package:hobby_sphere/core/auth/app_role.dart';
 import 'package:hobby_sphere/core/services/auth_service.dart'; // auth api service (your path)
 import 'package:intl_phone_field/intl_phone_field.dart'; // phone input
 import 'package:intl_phone_field/country_picker_dialog.dart'; // phone picker
@@ -13,6 +14,9 @@ import 'package:hobby_sphere/shared/utils/validators_auto.dart'; // email valida
 import 'package:google_sign_in/google_sign_in.dart'; // google sdk
 import 'package:hobby_sphere/core/auth/token_store.dart'; // save token
 import 'package:hobby_sphere/core/network/api_client.dart'; // set bearer
+// NEW: to send typed args to the shell route
+import 'package:hobby_sphere/config/router.dart'
+    show ShellRouteArgs; // args holder
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key}); // ctor
@@ -50,19 +54,29 @@ class _LoginPageState extends State<LoginPage> {
   void _setLoading(bool v) => setState(() => _loading = v); // toggle loader
 
   // helper: go to user or business home based on role
-  void _goHomeByRole(String role) {
-    // role = "user" or "business"
-    if (!mounted) return; // safety: widget still on screen?
-    final route =
-        role ==
-            'business' // choose route name
-        ? '/business/home' // business home route
-        : '/user/home'; // user home route
+  // NEW: navigate to the THEME-DRIVEN shell with all required parameters
+  void _goHomeByRole({
+    required String role, // "user" | "business"
+    required String token, // JWT token to persist/use
+    required int businessId, // business id (0 for user)
+  }) {
+    if (!mounted) return; // safety
 
+    // Map the string role to AppRole enum (used by the shell)
+    final appRole = (role == 'business')
+        ? AppRole.business
+        : AppRole.user; // enum
+
+    // Go to the shell route (it will pick bottom/top/drawer by theme)
     Navigator.of(context).pushNamedAndRemoveUntil(
-      // navigate & clear back stack
-      route, // target route
-      (r) => false, // remove all previous routes
+      '/shell', // shell route
+      (r) => false, // clear back stack
+      arguments: ShellRouteArgs(
+        // typed args for the shell
+        role: appRole, // enum role
+        token: token, // JWT
+        businessId: businessId, // business id (0 for user)
+      ),
     );
   }
 
@@ -164,6 +178,7 @@ class _LoginPageState extends State<LoginPage> {
           return; // stop
         }
 
+        // read token from reactivation payload
         final token = '${react['token'] ?? react['jwt'] ?? ''}'; // jwt
         if (token.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -172,12 +187,28 @@ class _LoginPageState extends State<LoginPage> {
           return; // stop
         }
 
+        // extract business id safely (use 0 for user)
+        final int businessId = switch (role) {
+          'business' => (() {
+            final b = react['business'] ?? react; // prefer nested object
+            final id = (b is Map && b['id'] != null)
+                ? b['id']
+                : (react['businessId'] ?? nestedId);
+            return (id is int) ? id : int.tryParse('$id') ?? 0; // to int
+          })(),
+          _ => 0, // user → 0
+        };
+
         ApiClient().setToken(token); // set bearer
         await TokenStore.save(token: token, role: role); // persist jwt+role
-        if (mounted)
+
+        if (mounted) {
           _goHomeByRole(
-            role,
-          ); // role is already passed into _handleLoginResponse
+            role: role, // "user" | "business"
+            token: token, // JWT
+            businessId: businessId, // id (0 for user)
+          ); // ✅ go to shell with full context
+        }
       } finally {
         _setLoading(false); // stop spinner
       }
@@ -189,7 +220,24 @@ class _LoginPageState extends State<LoginPage> {
     if (token.isNotEmpty) {
       ApiClient().setToken(token); // set bearer
       await TokenStore.save(token: token, role: role); // save jwt+role
-      if (mounted) _goHomeByRole(role); // go home
+      // extract business id safely (use 0 for user)
+      final int businessId = switch (role) {
+        'business' => (() {
+          final b = res['business'] ?? res; // prefer nested object
+          final id = (b is Map && b['id'] != null)
+              ? b['id']
+              : (res['businessId'] ?? res['id'] ?? res['userId']);
+          return (id is int) ? id : int.tryParse('$id') ?? 0; // to int
+        })(),
+        _ => 0, // user → 0
+      };
+
+      if (mounted)
+        _goHomeByRole(
+          role: role, // "user" | "business"
+          token: token, // JWT
+          businessId: businessId, // id (0 for user)
+        );
       return; // done
     }
 

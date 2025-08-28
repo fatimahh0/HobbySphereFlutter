@@ -1,205 +1,239 @@
-import 'package:flutter/material.dart'; // Flutter core
-import 'package:shared_preferences/shared_preferences.dart'; // local storage
-import 'package:hobby_sphere/l10n/app_localizations.dart'
-    show AppLocalizations; // i18n
-import 'package:hobby_sphere/theme/app_theme.dart'; // AppColors / AppTypography
+// ===== Flutter 3.35.x =====
+// Robust Splash → decide next → navigate once.
 
-// OPTIONAL but recommended: use the same TokenStore the login uses
-import 'package:hobby_sphere/core/auth/token_store.dart'; // read saved token/role
-import 'package:hobby_sphere/core/network/api_client.dart'; // set bearer on app start
+import 'package:flutter/material.dart';
+import 'package:hobby_sphere/core/auth/app_role.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
+import 'package:hobby_sphere/theme/app_theme.dart';
+
+import 'package:hobby_sphere/core/auth/token_store.dart';
+import 'package:hobby_sphere/core/network/api_client.dart';
+
+// for passing args to the shell route
+import 'package:hobby_sphere/config/router.dart' show ShellRouteArgs;
 
 class SplashPage extends StatefulWidget {
-  const SplashPage({super.key}); // widget ctor
-
+  const SplashPage({super.key});
   @override
-  State<SplashPage> createState() => _SplashPageState(); // state
+  State<SplashPage> createState() => _SplashPageState();
 }
 
 class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
-  late final AnimationController _progressCtrl; // controls the bar
-  late final AnimationController _bgPulseCtrl; // controls the bg pulse
-  late final Animation<double> _progress; // curved progress value
-  double _pageOpacity = 1.0; // fade out before navigation
+  late final AnimationController _progressCtrl; // progress timer
+  late final AnimationController _bgPulseCtrl; // bg pulse
+  late final Animation<double> _progress; // eased progress
+  double _pageOpacity = 1.0; // fade out
+  bool _navigated = false; // ensure single navigation
 
   @override
   void initState() {
-    super.initState(); // call parent
+    super.initState();
 
+    // progress animation (cosmetic)
     _progressCtrl = AnimationController(
-      vsync: this, // ticker
-      duration: const Duration(seconds: 3), // total splash time
-    )..forward(); // start animation
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..forward();
+    _progress = CurvedAnimation(parent: _progressCtrl, curve: Curves.easeInOut);
 
-    _progress = CurvedAnimation(
-      parent: _progressCtrl, // base controller
-      curve: Curves.easeInOut, // smooth
-    );
-
+    // bg pulse animation (cosmetic)
     _bgPulseCtrl = AnimationController(
-      vsync: this, // ticker
-      duration: const Duration(milliseconds: 1800), // pulse period
-    )..repeat(reverse: true); // loop back & forth
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
 
+    // 1) fire logic right after first frame (doesn't wait the 3s)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _decideAndNavigate(); // start deciding
+    });
+
+    // 2) also keep your old fade when progress completes (just in case)
     _progressCtrl.addStatusListener((status) async {
-      // listen when done
-      if (status == AnimationStatus.completed && mounted) {
-        setState(() => _pageOpacity = 0.0); // fade out the page
-        await Future.delayed(const Duration(milliseconds: 240)); // tiny wait
-        if (!mounted) return; // safety
-
-        // === Decide where to go next ===
-        final nextRoute = await _computeNextRoute(); // pick route
-        if (!mounted) return; // safety again
-
-        // use removeUntil to clear stack (no back to splash/onboarding)
-        Navigator.of(context).pushNamedAndRemoveUntil(nextRoute, (r) => false);
+      if (status == AnimationStatus.completed) {
+        if (!mounted || _navigated) return;
+        setState(() => _pageOpacity = 0.0);
       }
     });
   }
 
-  // Decide the next route based on token + role or onboarding status.
-  Future<String> _computeNextRoute() async {
-    // ✅ Prefer TokenStore (same as login) so both read/write are identical
-    final saved = await TokenStore.read(); // (token, role)
-    final token = saved.token; // read token
-    // normalize role: lowercase + trim (handles "Business", " BUSINESS "…)
-    final role = (saved.role ?? 'user').trim().toLowerCase();
+  Future<void> _decideAndNavigate() async {
+    // small artificial splash delay so UI shows (adjust if you want)
+    final splashDelay = Future<void>.delayed(const Duration(milliseconds: 900));
 
-    // If we have a token → set bearer + skip onboarding → go to home by role
-    if (token != null && token.trim().isNotEmpty) {
-      ApiClient().setToken(token); // ✅ set bearer for first API calls
-      return (role == 'business') ? '/business/home' : '/user/home';
+    // compute next route in parallel
+    final next = _computeNext(); // Future<_RouteTarget>
+
+    // wait for both to finish (min splash time + decision)
+    final target = await Future.wait([
+      splashDelay,
+      next,
+    ]).then((list) => list[1] as _RouteTarget);
+
+    if (!mounted || _navigated) return;
+    _navigated = true; // block further calls
+
+    try {
+      // fade quickly
+      setState(() => _pageOpacity = 0.0);
+      await Future.delayed(const Duration(milliseconds: 180));
+      if (!mounted) return;
+
+      // go!
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        target.name, // '/shell' or onboarding routes
+        (r) => false,
+        arguments: target.args, // null for onboarding
+      );
+    } catch (e) {
+      // if navigation fails (route missing), show a simple fallback
+      debugPrint('Splash navigation error: $e');
+      if (!mounted) return;
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil('/onboarding', (r) => false);
     }
+  }
 
-    // No token → follow onboarding choice (read once here)
-    final sp = await SharedPreferences.getInstance();
-    final seen = sp.getBool('seen_onboarding') ?? false; // did user see it?
-    // Keep your mapping
-    return seen ? '/onboardingScreen' : '/onboarding';
+  // Decide where to go and which arguments to pass
+  Future<_RouteTarget> _computeNext() async {
+    try {
+      final saved = await TokenStore.read(); // (token, role, maybe extras)
+      final token = saved.token?.trim();
+      final roleStr = (saved.role ?? 'user').trim().toLowerCase();
+
+      if (token != null && token.isNotEmpty) {
+        ApiClient().setToken(token); // set bearer
+
+        // If you don’t store businessId yet → keep 0 (safe)
+        final int businessId = 0;
+
+        final appRole = roleStr == 'business' ? AppRole.business : AppRole.user;
+
+        return _RouteTarget(
+          name: '/shell', // must exist in AppRouter
+          args: ShellRouteArgs(
+            role: appRole,
+            token: token,
+            businessId: businessId,
+          ),
+        );
+      }
+
+      // no token → check onboarding flag
+      final sp = await SharedPreferences.getInstance();
+      final seen = sp.getBool('seen_onboarding') ?? false;
+      return _RouteTarget(name: seen ? '/onboardingScreen' : '/onboarding');
+    } catch (e) {
+      debugPrint('Splash decision error: $e');
+      return _RouteTarget(name: '/onboarding'); // safe fallback
+    }
   }
 
   @override
   void dispose() {
-    _progressCtrl.dispose(); // free progress controller
-    _bgPulseCtrl.dispose(); // free bg controller
-    super.dispose(); // parent
+    _progressCtrl.dispose();
+    _bgPulseCtrl.dispose();
+    super.dispose();
   }
 
-  // Small helper to lighten/darken a color (for the gradient).
   Color _adjustLightness(Color c, double delta) {
-    final hsl = HSLColor.fromColor(c); // convert to HSL
-    return hsl
-        .withLightness((hsl.lightness + delta).clamp(0.0, 1.0)) // clamp range
-        .toColor(); // back to Color
+    final hsl = HSLColor.fromColor(c);
+    return hsl.withLightness((hsl.lightness + delta).clamp(0.0, 1.0)).toColor();
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!; // strings
-    final primary = AppColors.primary; // brand color
-    final lighter = _adjustLightness(primary, 0.14); // lighter tone
-    final darker = _adjustLightness(primary, -0.14); // darker tone
+    final l10n = AppLocalizations.of(context)!;
+    final primary = AppColors.primary;
+    final lighter = _adjustLightness(primary, 0.14);
+    final darker = _adjustLightness(primary, -0.14);
 
     return Scaffold(
-      backgroundColor: AppColors.background, // theme background
+      backgroundColor: AppColors.background,
       body: AnimatedOpacity(
-        opacity: _pageOpacity, // fade out before navigation
-        duration: const Duration(milliseconds: 240), // fade speed
+        opacity: _pageOpacity,
+        duration: const Duration(milliseconds: 240),
         child: Stack(
-          fit: StackFit.expand, // fill screen
+          fit: StackFit.expand,
           children: [
-            // ===== Animated Gradient Background =====
             AnimatedBuilder(
-              animation: _bgPulseCtrl, // listen to pulse
+              animation: _bgPulseCtrl,
               builder: (context, _) {
-                final t = _bgPulseCtrl.value; // 0..1
-                final c1 = Color.lerp(primary, lighter, t)!; // color A
-                final c2 = Color.lerp(primary, darker, 1 - t)!; // color B
-                final begin = Alignment(-0.8 + t * 0.6, -0.9); // start align
-                final end = Alignment(0.8 - t * 0.6, 0.9); // end align
+                final t = _bgPulseCtrl.value;
+                final c1 = Color.lerp(primary, lighter, t)!;
+                final c2 = Color.lerp(primary, darker, 1 - t)!;
+                final begin = Alignment(-0.8 + t * 0.6, -0.9);
+                final end = Alignment(0.8 - t * 0.6, 0.9);
                 return Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      begin: begin, // gradient start
-                      end: end, // gradient end
-                      colors: [c1, c2], // two tones
+                      begin: begin,
+                      end: end,
+                      colors: [c1, c2],
                     ),
                   ),
                 );
               },
             ),
-
-            // ===== Center Logo + Title =====
             Center(
               child: Column(
-                mainAxisSize: MainAxisSize.min, // compact
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 112, // circle size
-                    height: 112, // circle size
+                    width: 112,
+                    height: 112,
                     decoration: BoxDecoration(
-                      color: AppColors.onPrimary.withOpacity(0.12), // soft bg
-                      shape: BoxShape.circle, // round
+                      color: AppColors.onPrimary.withOpacity(0.12),
+                      shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppColors.onPrimary.withOpacity(0.28), // ring
-                        width: 1.4, // ring width
+                        color: AppColors.onPrimary.withOpacity(0.28),
+                        width: 1.4,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.text.withOpacity(0.16), // shadow
-                          blurRadius: 18, // blur
-                          spreadRadius: 2, // spread
-                          offset: const Offset(0, 6), // drop
-                        ),
-                      ],
                     ),
                     child: Icon(
-                      Icons.sports_soccer, // placeholder icon
-                      size: 56, // icon size
-                      color: AppColors.onPrimary, // contrast color
+                      Icons.sports_soccer,
+                      size: 56,
+                      color: AppColors.onPrimary,
                     ),
                   ),
-                  const SizedBox(height: 18), // space
+                  const SizedBox(height: 18),
                   Text(
-                    l10n.appTitle, // app title (localized)
-                    textAlign: TextAlign.center, // center text
+                    l10n.appTitle,
+                    textAlign: TextAlign.center,
                     style: AppTypography.textTheme.headlineSmall?.copyWith(
-                      color: AppColors.onPrimary, // contrast
-                      fontWeight: FontWeight.w700, // bold
-                      letterSpacing: 0.4, // tracking
+                      color: AppColors.onPrimary,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
                     ),
                   ),
                 ],
               ),
             ),
-
-            // ===== Bottom Progress Bar + Percentage =====
             Positioned(
-              left: 0, // stretch
-              right: 0, // stretch
-              bottom: 0, // stick to bottom
+              left: 0,
+              right: 0,
+              bottom: 0,
               child: AnimatedBuilder(
-                animation: _progress, // listen to progress
+                animation: _progress,
                 builder: (context, _) {
-                  final percent = (_progress.value * 100).toInt(); // 0..100
+                  final percent = (_progress.value * 100).toInt();
                   return Column(
-                    mainAxisSize: MainAxisSize.min, // compact
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        "$percent%", // show percentage
+                        "$percent%",
                         style: AppTypography.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.onPrimary, // contrast
-                          fontWeight: FontWeight.w600, // semi-bold
+                          color: AppColors.onPrimary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       LinearProgressIndicator(
-                        value: _progress.value, // bar value
-                        minHeight: 8, // bar height
-                        backgroundColor: AppColors.onPrimary.withOpacity(
-                          0.22,
-                        ), // track
+                        value: _progress.value,
+                        minHeight: 8,
+                        backgroundColor: AppColors.onPrimary.withOpacity(0.22),
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.onPrimary, // fill
+                          AppColors.onPrimary,
                         ),
                       ),
                     ],
@@ -212,4 +246,10 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       ),
     );
   }
+}
+
+class _RouteTarget {
+  final String name; // route name
+  final Object? args; // optional arguments
+  _RouteTarget({required this.name, this.args});
 }
