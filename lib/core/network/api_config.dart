@@ -8,7 +8,7 @@ class ApiConfig {
   static String? _baseUrl;
 
   /// Safe base URL getter (fallback is Android emulator localhost)
-  static String get baseUrl => _baseUrl ?? 'http://192.168.1.3:8080/api';
+  static String get baseUrl => _baseUrl ?? 'http://3.96.140.126:8080/api';
 
   /// Server root (without trailing /api) - helpful for media URLs
   static String get serverRoot => baseUrl.endsWith('/api')
@@ -25,7 +25,7 @@ class ApiConfig {
       _baseUrl = '$clean/api';
     } catch (_) {
       // If file missing/invalid, keep fallback so app never crashes
-      _baseUrl ??= 'http://192.168.1.3:8080/api';
+      _baseUrl ??= 'http://3.96.140.126:8080/api';
     }
   }
 }
