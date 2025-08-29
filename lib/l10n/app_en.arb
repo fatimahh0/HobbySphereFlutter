@@ -41,7 +41,18 @@
   "businessWelcomeSubtitle": "Manage your activities and engage with users easily.",
   "createNewActivity": "Create New Activity",
   "activitiesEmpty": "No activities yet",
+  
+  "profileLastUpdated": "Last updated",
+  "viewDetails": "View",
+  
+  "buttonWebsite": "Website",
+  "buttonCall": "Call",
+  "mapOpen": "Open in Maps",
+  "copy": "Copy",
+  "copied": "Copied!",
 
+  "badgeStripe": "Stripe",
+  "labelDuration": "Duration",
   "authNotLoggedInTitle": "Not Logged In",
    "appTitle": "Hobby Sphere",
   "@appTitle": { "description": "App title" },

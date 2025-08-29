@@ -1,14 +1,19 @@
 // ===== Flutter 3.35.x =====
-// lib/core/network/api_fetch.dart
 // Simple wrapper around Dio. Supports GET/POST/... and query building.
 
 import 'package:dio/dio.dart'; // dio types
-import 'package:hobby_sphere/core/network/api_client.dart'; // singleton client
 import 'package:hobby_sphere/core/network/api_methods.dart'; // method names
+import 'package:hobby_sphere/core/network/globals.dart'
+    as g; // <-- use shared dio
 
 class ApiFetch {
-  final Dio _dio = ApiClient().dio; // reuse single dio
+  // pick injected Dio if provided, else use app-wide g.appDio (set in main)
+  final Dio _dio; // reuse one dio
   CancelToken? _token; // for cancelable PATCH
+
+  // constructor: optional dio for tests/overrides; zero-arg keeps old usage
+  ApiFetch([Dio? dio])
+    : _dio = dio ?? g.appDio!; // use global; '!' because main sets it
 
   // cancel current PATCH (if any)
   void cancel() {

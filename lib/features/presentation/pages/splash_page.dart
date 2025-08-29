@@ -1,17 +1,22 @@
 // ===== Flutter 3.35.x =====
 // Robust Splash → decide next → navigate once.
 
-import 'package:flutter/material.dart';
-import 'package:hobby_sphere/core/auth/app_role.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
-import 'package:hobby_sphere/theme/app_theme.dart';
+import 'package:flutter/material.dart'; // UI core
+import 'package:shared_preferences/shared_preferences.dart'; // local store
+import 'package:intl/intl.dart'; // (optional)
+import 'package:hobby_sphere/core/auth/app_role.dart'; // enum
+import 'package:hobby_sphere/l10n/app_localizations.dart'
+    show AppLocalizations; // i18n
+import 'package:hobby_sphere/theme/app_theme.dart'; // theme
 
-import 'package:hobby_sphere/core/auth/token_store.dart';
-import 'package:hobby_sphere/core/network/api_client.dart';
+import 'package:hobby_sphere/core/auth/token_store.dart'; // saved token/role
+import 'package:hobby_sphere/core/network/globals.dart' as g; // shared Dio
+import 'package:hobby_sphere/core/network/api_fetch.dart'; // http wrapper
+import 'package:hobby_sphere/core/network/api_methods.dart'; // HttpMethod
+import 'package:hobby_sphere/core/business/business_context.dart'; // 👈 NEW: business id keeper
 
-// for passing args to the shell route
-import 'package:hobby_sphere/config/router.dart' show ShellRouteArgs;
+import 'package:hobby_sphere/config/router.dart'
+    show ShellRouteArgs; // route args
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -30,134 +35,162 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
-    // progress animation (cosmetic)
     _progressCtrl = AnimationController(
+      // create progress anim
       vsync: this,
       duration: const Duration(seconds: 3),
-    )..forward();
-    _progress = CurvedAnimation(parent: _progressCtrl, curve: Curves.easeInOut);
+    )..forward(); // start it now
+    _progress = CurvedAnimation(
+      // ease curve
+      parent: _progressCtrl,
+      curve: Curves.easeInOut,
+    );
 
-    // bg pulse animation (cosmetic)
     _bgPulseCtrl = AnimationController(
+      // create bg pulse
       vsync: this,
       duration: const Duration(milliseconds: 1800),
-    )..repeat(reverse: true);
+    )..repeat(reverse: true); // loop pulse
 
-    // 1) fire logic right after first frame (doesn't wait the 3s)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _decideAndNavigate(); // start deciding
+      // after 1st frame
+      _decideAndNavigate(); // run logic
     });
 
-    // 2) also keep your old fade when progress completes (just in case)
     _progressCtrl.addStatusListener((status) async {
+      // cosmetic fade
       if (status == AnimationStatus.completed) {
-        if (!mounted || _navigated) return;
-        setState(() => _pageOpacity = 0.0);
+        if (!mounted || _navigated) return; // guard
+        setState(() => _pageOpacity = 0.0); // fade out
       }
     });
   }
 
-  Future<void> _decideAndNavigate() async {
-    // small artificial splash delay so UI shows (adjust if you want)
-    final splashDelay = Future<void>.delayed(const Duration(milliseconds: 900));
-
-    // compute next route in parallel
-    final next = _computeNext(); // Future<_RouteTarget>
-
-    // wait for both to finish (min splash time + decision)
-    final target = await Future.wait([
-      splashDelay,
-      next,
-    ]).then((list) => list[1] as _RouteTarget);
-
-    if (!mounted || _navigated) return;
-    _navigated = true; // block further calls
-
-    try {
-      // fade quickly
-      setState(() => _pageOpacity = 0.0);
-      await Future.delayed(const Duration(milliseconds: 180));
-      if (!mounted) return;
-
-      // go!
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        target.name, // '/shell' or onboarding routes
-        (r) => false,
-        arguments: target.args, // null for onboarding
-      );
-    } catch (e) {
-      // if navigation fails (route missing), show a simple fallback
-      debugPrint('Splash navigation error: $e');
-      if (!mounted) return;
-      Navigator.of(
-        context,
-      ).pushNamedAndRemoveUntil('/onboarding', (r) => false);
-    }
+  void _attachTokenToGlobalDio(String token) {
+    if (g.appDio == null) return; // Dio not ready
+    g.appDio!.options.headers['Authorization'] = // set bearer
+        'Bearer $token';
   }
 
-  // Decide where to go and which arguments to pass
+  // Resolve businessId using the central context.
+  Future<int> _resolveBusinessId(String token) async {
+    _attachTokenToGlobalDio(token); // ensure bearer set
+    final id = await BusinessContext.ensureId(); // memory/prefs/server
+    return id; // may be 0 if unknown
+  }
+
   Future<_RouteTarget> _computeNext() async {
     try {
-      final saved = await TokenStore.read(); // (token, role, maybe extras)
-      final token = saved.token?.trim();
-      final roleStr = (saved.role ?? 'user').trim().toLowerCase();
+      final saved = await TokenStore.read(); // read saved auth
+      final token = saved.token?.trim(); // token string
+      final roleStr =
+          (saved.role ?? 'user') // role string
+              .trim()
+              .toLowerCase();
 
       if (token != null && token.isNotEmpty) {
-        ApiClient().setToken(token); // set bearer
+        // logged in?
+        _attachTokenToGlobalDio(token); // attach bearer
 
-        // If you don’t store businessId yet → keep 0 (safe)
-        final int businessId = 0;
+        final businessId = await _resolveBusinessId(
+          // get businessId
+          token,
+        ); // may be 0
 
-        final appRole = roleStr == 'business' ? AppRole.business : AppRole.user;
+        final appRole =
+            roleStr ==
+                'business' // map role
+            ? AppRole.business
+            : AppRole.user;
+
+        if (appRole == AppRole.business && businessId > 0) {
+          await BusinessContext.set(businessId); // 👈 keep ready
+        }
 
         return _RouteTarget(
-          name: '/shell', // must exist in AppRouter
+          // go to shell
+          name: '/shell',
           args: ShellRouteArgs(
             role: appRole,
             token: token,
-            businessId: businessId,
+            businessId: businessId, // pass id (0 ok)
           ),
         );
       }
 
-      // no token → check onboarding flag
-      final sp = await SharedPreferences.getInstance();
-      final seen = sp.getBool('seen_onboarding') ?? false;
+      // not logged in → onboarding / first-run
+      final sp = await SharedPreferences.getInstance(); // prefs
+      final seen = sp.getBool('seen_onboarding') ?? false; // flag
       return _RouteTarget(name: seen ? '/onboardingScreen' : '/onboarding');
     } catch (e) {
-      debugPrint('Splash decision error: $e');
-      return _RouteTarget(name: '/onboarding'); // safe fallback
+      debugPrint('Splash decision error: $e'); // log
+      return _RouteTarget(name: '/onboarding'); // safe default
+    }
+  }
+
+  Future<void> _decideAndNavigate() async {
+    final splashDelay = Future<void>.delayed(
+      const Duration(milliseconds: 900),
+    ); // small wait
+    final next = _computeNext(); // compute
+
+    final target =
+        await Future.wait([splashDelay, next]) // wait both
+            .then((list) => list[1] as _RouteTarget); // take route
+
+    if (!mounted || _navigated) return; // guard
+    _navigated = true; // lock
+
+    try {
+      setState(() => _pageOpacity = 0.0); // fade
+      await Future.delayed(const Duration(milliseconds: 180)); // tiny wait
+      if (!mounted) return; // guard
+
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        // navigate
+        target.name,
+        (r) => false,
+        arguments: target.args,
+      );
+    } catch (e) {
+      debugPrint('Splash navigation error: $e'); // log
+      if (!mounted) return; // guard
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil('/onboarding', (r) => false); // fallback
     }
   }
 
   @override
   void dispose() {
-    _progressCtrl.dispose();
-    _bgPulseCtrl.dispose();
+    _progressCtrl.dispose(); // cleanup
+    _bgPulseCtrl.dispose(); // cleanup
     super.dispose();
   }
 
-  Color _adjustLightness(Color c, double delta) {
+  Color _adjustLightness(Color c, double d) {
+    // color util
     final hsl = HSLColor.fromColor(c);
-    return hsl.withLightness((hsl.lightness + delta).clamp(0.0, 1.0)).toColor();
+    return hsl.withLightness((hsl.lightness + d).clamp(0.0, 1.0)).toColor();
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final primary = AppColors.primary;
-    final lighter = _adjustLightness(primary, 0.14);
-    final darker = _adjustLightness(primary, -0.14);
+    final l10n = AppLocalizations.of(context)!; // strings
+    final primary = AppColors.primary; // base color
+    final lighter = _adjustLightness(primary, 0.14); // lighter
+    final darker = _adjustLightness(primary, -0.14); // darker
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.background, // bg
       body: AnimatedOpacity(
-        opacity: _pageOpacity,
-        duration: const Duration(milliseconds: 240),
+        opacity: _pageOpacity, // fade val
+        duration: const Duration(milliseconds: 240), // fade ms
         child: Stack(
           fit: StackFit.expand,
           children: [
             AnimatedBuilder(
+              // bg grad
               animation: _bgPulseCtrl,
               builder: (context, _) {
                 final t = _bgPulseCtrl.value;
@@ -177,6 +210,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               },
             ),
             Center(
+              // logo/title
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -211,6 +245,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               ),
             ),
             Positioned(
+              // bottom bar
               left: 0,
               right: 0,
               bottom: 0,
@@ -250,6 +285,6 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
 class _RouteTarget {
   final String name; // route name
-  final Object? args; // optional arguments
+  final Object? args; // optional args
   _RouteTarget({required this.name, this.args});
 }

@@ -1,166 +1,209 @@
-// Flutter 3.35.x
-import 'package:flutter/material.dart'; // UI widgets
+// ===== Flutter 3.35.x =====
+// Business Home — Welcome, header, masonry grid of CardActivityBusiness.
+import 'package:flutter/material.dart';
+import 'package:hobby_sphere/core/network/globals.dart' as g;
+import 'package:hobby_sphere/core/services/business_activity_service.dart';
+
+// widgets (keep your current paths for these three)
 import 'package:hobby_sphere/features/presentation/pages/Business/BusinessHomeScreen/widgets/header.dart';
 import 'package:hobby_sphere/features/presentation/pages/Business/BusinessHomeScreen/widgets/upcoming_activities_grid.dart';
-import 'package:hobby_sphere/l10n/app_localizations.dart'
-    show AppLocalizations; // i18n
-import 'package:hobby_sphere/core/services/business_activity_service.dart'; // API service
+import 'package:hobby_sphere/features/presentation/pages/Business/BusinessHomeScreen/widgets/welcome_section.dart';
 
-import 'package:hobby_sphere/ui/widgets/card_activity_business.dart'; // activity card
+import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
 
-typedef Json = Map<String, dynamic>; // simple JSON alias
+// ✅ NEW: use the split card barrel export
+import 'package:hobby_sphere/ui/widgets/cards/card_activity_business/index.dart';
+
+typedef Json = Map<String, dynamic>;
 
 class BusinessHomeScreen extends StatefulWidget {
-  final String token; // JWT token to call backend
-  final int businessId; // current business id
-  final VoidCallback onCreate; // navigate to create activity
-  final Widget? bottomBar; // your existing bottom nav (optional)
+  final String token;
+  final int businessId;
+  final VoidCallback onCreate;
+  final Widget? bottomBar;
 
   const BusinessHomeScreen({
-    super.key, // widget key
-    required this.token, // required token
-    required this.businessId, // required business id
-    required this.onCreate, // required create handler
-    this.bottomBar, // optional bottom bar
+    super.key,
+    required this.token,
+    required this.businessId,
+    required this.onCreate,
+    this.bottomBar,
   });
 
   @override
-  State<BusinessHomeScreen> createState() => _BusinessHomeScreenState(); // state builder
+  State<BusinessHomeScreen> createState() => _BusinessHomeScreenState();
 }
 
 class _BusinessHomeScreenState extends State<BusinessHomeScreen> {
-  final _service = BusinessActivityService(); // api client instance
-  List<Json> _items = []; // activities list
-  bool _loading = true; // first-load spinner flag
-  bool _refreshing = false; // pull-to-refresh flag
+  final _service = BusinessActivityService();
+  List<Json> _items = [];
+  bool _loading = true;
+  bool _refreshing = false; // optional spinner flag
+  String _currency = 'CAD';
 
   @override
   void initState() {
-    super.initState(); // base init
-    _load(); // fetch data once
+    super.initState();
+    _load();
   }
 
   Future<void> _load() async {
     try {
       final list = await _service.getActivitiesByBusiness(
-        businessId: widget.businessId, // pass id
-        token: widget.token, // pass auth
-      ); // GET /items/business/{id}
+        businessId: widget.businessId,
+        token: widget.token,
+      );
       setState(() {
-        _items = list
-            .map<Json>((e) => Map<String, dynamic>.from(e))
-            .toList(); // normalize
-        _loading = false; // stop first spinner
-      }); // update UI
+        _items = list.map<Json>((e) => Map<String, dynamic>.from(e)).toList();
+        _loading = false;
+      });
     } catch (e) {
-      setState(() => _loading = false); // stop spinner on error
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Load error: $e')), // quick feedback
-        ); // snack
-      }
+      setState(() => _loading = false);
+      if (!mounted) return;
+      _toast('Load error: $e');
     }
   }
 
   Future<void> _onRefresh() async {
-    setState(() => _refreshing = true); // show pull-to-refresh
-    await _load(); // re-fetch
-    setState(() => _refreshing = false); // hide pull-to-refresh
+    setState(() => _refreshing = true);
+    await _load();
+    if (mounted) setState(() => _refreshing = false);
   }
 
-  Widget _buildWelcomeHeader() {
-    final t = AppLocalizations.of(context)!; // strings
-    final scheme = Theme.of(context).colorScheme; // colors
-    final text = Theme.of(context).textTheme; // fonts
+  DateTime? _parseDate(dynamic v) {
+    if (v == null) return null;
+    if (v is String) return DateTime.tryParse(v);
+    if (v is num) return DateTime.fromMillisecondsSinceEpoch(v.toInt());
+    return null;
+  }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start, // left alignment
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), // outer spacing
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, // left alignment
-            children: [
-              Text(
-                t.businessWelcomeTitle, // "Welcome to your dashboard!"
-                style: text.headlineSmall?.copyWith(
-                  color: scheme.primary, // brand color
-                  fontWeight: FontWeight.w700, // bold
-                ), // style
-              ), // title
-              const SizedBox(height: 6), // small gap
-              Text(
-                t.businessWelcomeSubtitle, // "Manage your activities..."
-                style: text.bodyMedium?.copyWith(
-                  color: scheme.onSurface.withOpacity(0.75), // muted
-                ), // style
-              ), // subtitle
-              const SizedBox(height: 12), // gap
-              SizedBox(
-                width: double.infinity, // full width
-                child: ElevatedButton.icon(
-                  onPressed: widget.onCreate, // go to create screen
-                  icon: const Icon(Icons.add_circle_outline), // plus icon
-                  label: Text(t.createNewActivity), // i18n button text
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: scheme.primary, // bg color
-                    foregroundColor: scheme.onPrimary, // text/icon color
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 14,
-                      horizontal: 16,
-                    ), // padding
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24), // pill
-                    ), // shape
-                    textStyle: text.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600, // semi-bold
-                    ), // text style
-                  ), // style
-                ), // button
-              ), // sized
-            ],
-          ), // column
-        ), // padding
+  String _serverRoot() {
+    final base = (g.appServerRoot ?? '');
+    return base.replaceFirst(RegExp(r'/api/?$'), '');
+  }
 
-        const HeaderWithBadge(), // "Your Activities" row you gave
-      ],
-    ); // column
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> _openDetails(int id) async {
+    try {
+      await _service.getBusinessActivityById(widget.token, id);
+      _toast('Open details #$id'); // TODO: Navigator.pushNamed(...)
+    } catch (e) {
+      _toast('Details error: $e');
+    }
+  }
+
+  Future<void> _openEdit(int id) async {
+    try {
+      await _service.getBusinessActivityById(widget.token, id);
+      _toast('Open edit #$id'); // TODO: Navigator.pushNamed(...)
+    } catch (e) {
+      _toast('Edit error: $e');
+    }
+  }
+
+  Future<void> _confirmDelete(int id) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete?'),
+        content: const Text('Are you sure you want to delete this activity?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _service.deleteBusinessActivity(widget.token, id);
+      _toast('Deleted');
+      _load();
+    } catch (e) {
+      _toast('Delete error: $e');
+    }
+  }
+
+  Future<void> _reopen(int id) async {
+    try {
+      await _service.getBusinessActivityById(widget.token, id);
+      _toast('Reopen flow for #$id'); // TODO: Navigator to reopen flow
+      await _load();
+    } catch (e) {
+      _toast('Reopen error: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!; // i18n
+    final t = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+
+    final header = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        WelcomeSection(
+          token: widget.token,
+          onOpenNotifications: () {
+            // Navigator.pushNamed(context, '/business/notifications');
+          },
+          onOpenCreateActivity: widget.onCreate,
+        ),
+        const HeaderWithBadge(),
+      ],
+    );
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background, // bg color
+      backgroundColor: cs.background,
       body: UpcomingActivitiesGrid(
-        data: _items, // list to show
-        loading: _loading, // first load flag
-        refreshing: _refreshing, // pull flag
-        onRefresh: _onRefresh, // handler
-        header: _buildWelcomeHeader(), // welcome + header
-        emptyText: t.activitiesEmpty, // "No activities yet" (from ARB)
+        data: _items,
+        loading: _loading,
+        refreshing: _refreshing,
+        onRefresh: _onRefresh,
+        header: header,
+        emptyText: t.activitiesEmpty,
+        masonry: true, // ✅ auto-height grid
         itemBuilder: (ctx, item) {
-          return CardActivityBusiness(
-            item: item, // current activity json
-            token: widget.token, // auth token
-            onOpenDetails: (fresh) {
-              // TODO: navigate to details page with `fresh`
-              // Navigator.pushNamed(context, '/business/activity/details', arguments: fresh);
-            }, // details callback
-            onOpenEdit: (fresh) {
-              // TODO: navigate to edit page with `fresh`
-              // Navigator.pushNamed(context, '/business/activity/edit', arguments: fresh);
-            }, // edit callback
-            onOpenReopen: (fresh) {
-              // TODO: navigate to reopen flow with `fresh`
-              // Navigator.pushNamed(context, '/business/activity/reopen', arguments: fresh);
-            }, // reopen callback
-            onDeleted: _load, // after delete -> refresh list
-          ); // card
-        }, // builder
-      ), // grid wrapper
-      bottomNavigationBar: widget.bottomBar, // your bottom bar (don’t forget)
-    ); // scaffold
+          // Optional: clamp extreme accessibility font sizes per card
+          final mq = MediaQuery.of(ctx);
+          final clamped = mq.textScaleFactor.clamp(1.0, 1.35);
+
+          return MediaQuery(
+            data: mq.copyWith(textScaleFactor: clamped),
+            child: CardActivityBusiness(
+              id: '${item['id']}',
+              title: (item['itemName'] ?? 'Unnamed').toString(),
+              subtitle: item['itemType']?['activity_type']?.toString(),
+              startDate: _parseDate(item['startDatetime']),
+              participants: (item['maxParticipants'] ?? 0) as int,
+              price: (item['price'] as num?)?.toDouble() ?? 0.0,
+              currency: _currency,
+              status: (item['status'] ?? '').toString(),
+              imageUrl: item['imageUrl']?.toString(),
+              serverRoot: _serverRoot(),
+              onView: () => _openDetails(item['id'] as int),
+              onEdit: () => _openEdit(item['id'] as int),
+              onDelete: () => _confirmDelete(item['id'] as int),
+              onReopen:
+                  (item['status']?.toString().toLowerCase() == 'terminated')
+                  ? () => _reopen(item['id'] as int)
+                  : null,
+              // If you added an i18n key:
+              // participantsLabel: t.participantsLabel,
+            ),
+          );
+        },
+      ),
+      bottomNavigationBar: widget.bottomBar,
+    );
   }
 }

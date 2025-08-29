@@ -343,6 +343,60 @@ abstract class AppLocalizations {
   /// **'No activities yet'**
   String get activitiesEmpty;
 
+  /// No description provided for @profileLastUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Last updated'**
+  String get profileLastUpdated;
+
+  /// No description provided for @viewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get viewDetails;
+
+  /// No description provided for @buttonWebsite.
+  ///
+  /// In en, this message translates to:
+  /// **'Website'**
+  String get buttonWebsite;
+
+  /// No description provided for @buttonCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get buttonCall;
+
+  /// No description provided for @mapOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Maps'**
+  String get mapOpen;
+
+  /// No description provided for @copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get copy;
+
+  /// No description provided for @copied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied!'**
+  String get copied;
+
+  /// No description provided for @badgeStripe.
+  ///
+  /// In en, this message translates to:
+  /// **'Stripe'**
+  String get badgeStripe;
+
+  /// No description provided for @labelDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get labelDuration;
+
   /// No description provided for @authNotLoggedInTitle.
   ///
   /// In en, this message translates to:

@@ -132,6 +132,33 @@ class AppLocalizationsAr extends AppLocalizations {
   String get activitiesEmpty => 'No activities yet';
 
   @override
+  String get profileLastUpdated => 'Last updated';
+
+  @override
+  String get viewDetails => 'View';
+
+  @override
+  String get buttonWebsite => 'Website';
+
+  @override
+  String get buttonCall => 'Call';
+
+  @override
+  String get mapOpen => 'Open in Maps';
+
+  @override
+  String get copy => 'Copy';
+
+  @override
+  String get copied => 'Copied!';
+
+  @override
+  String get badgeStripe => 'Stripe';
+
+  @override
+  String get labelDuration => 'Duration';
+
+  @override
   String get authNotLoggedInTitle => 'Not Logged In';
 
   @override

@@ -1,31 +1,58 @@
-// Safe API config loader with fallback (no `late` crashes).
+// ===== Flutter 3.35.x =====
+// lib/core/network/api_config.dart
+// Non-static config loader. Creates an instance you inject.
 
 import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart'; // kIsWeb
+import 'package:flutter/services.dart'; // rootBundle
+import 'dart:io' show Platform;
 
 class ApiConfig {
-  // Nullable; we expose a safe getter with fallback instead of `late`
-  static String? _baseUrl;
+  final String baseUrl; // ex: http://192.168.1.5:8080/api
+  final String serverRoot;
 
-  /// Safe base URL getter (fallback is Android emulator localhost)
-  static String get baseUrl => _baseUrl ?? 'http://3.96.140.126:8080/api';
+  ApiConfig._(this.baseUrl, this.serverRoot);
 
-  /// Server root (without trailing /api) - helpful for media URLs
-  static String get serverRoot => baseUrl.endsWith('/api')
-      ? baseUrl.substring(0, baseUrl.length - 4)
-      : baseUrl;
-
-  /// Loads assets/hostIp.json and sets _baseUrl = "<serverURI>/api"
-  static Future<void> load() async {
+  // factory method: load from assets (hostIp.json)
+  static Future<ApiConfig> load() async {
     try {
-      final raw = await rootBundle.loadString('assets/hostIp.json');
+      final raw = await rootBundle.loadString('lib/config/hostIp.json');
       final map = jsonDecode(raw) as Map<String, dynamic>;
-      final host = (map['serverURI'] as String).trim();
-      final clean = host.replaceAll(RegExp(r'/$'), ''); // strip trailing slash
-      _baseUrl = '$clean/api';
-    } catch (_) {
-      // If file missing/invalid, keep fallback so app never crashes
-      _baseUrl ??= 'http://3.96.140.126:8080/api';
+      final rawHost = (map['serverURI'] ?? map['serverUrl'] ?? '')
+          .toString()
+          .trim();
+
+      if (rawHost.isEmpty) {
+        throw Exception("serverURI missing in hostIp.json");
+      }
+
+      final root = _normalizeServerRoot(rawHost);
+      final base = '$root/api';
+      return ApiConfig._(base, root);
+    } catch (e) {
+      throw Exception('Failed to load ApiConfig: $e');
     }
+  }
+
+  // normalize helpers
+  static String _normalizeServerRoot(String input) {
+    var s = input.trim();
+
+    if (s.endsWith('/api')) s = s.substring(0, s.length - 4);
+    s = s.replaceAll(RegExp(r'/+$'), '');
+    if (!s.startsWith('http://') && !s.startsWith('https://')) {
+      s = 'http://$s';
+    }
+
+    if (!kIsWeb) {
+      try {
+        if (Platform.isAndroid) {
+          s = s
+              .replaceFirst('http://localhost', 'http://10.0.2.2')
+              .replaceFirst('https://localhost', 'http://10.0.2.2');
+        }
+      } catch (_) {}
+    }
+    return s;
   }
 }

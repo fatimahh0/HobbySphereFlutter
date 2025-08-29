@@ -1,65 +1,60 @@
-// Flutter 3.35.x
-import 'package:flutter/material.dart'; // UI
-import 'package:hobby_sphere/l10n/app_localizations.dart'
-    show AppLocalizations; // L10n
+// ===== Flutter 3.35.x =====
+// Sliver grid wrapper that can do Masonry (auto-height) or fixed-ratio grid.
+import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
 
-// keep JSON flexible like RN
-typedef Json = Map<String, dynamic>; // alias
+typedef Json = Map<String, dynamic>;
 
 class UpcomingActivitiesGrid extends StatelessWidget {
-  // list of items to show
-  final List<Json> data; // activities
-  // show spinner during first load
-  final bool loading; // first load flag
-  // show spinner during pull-to-refresh
-  final bool refreshing; // refresh flag
-  // refresh callback
-  final Future<void> Function() onRefresh; // refresh
-  // header widget (Welcome + title row)
-  final Widget header; // header UI
-  // item builder to render each card (gives context + item)
-  final Widget Function(BuildContext, Json) itemBuilder; // card builder
-  // text when list empty
-  final String emptyText; // empty label
+  final List<Json> data;
+  final bool loading;
+  final bool refreshing; // (reserved for top refresh indicator if you want)
+  final Future<void> Function() onRefresh;
+  final Widget header;
+  final Widget Function(BuildContext, Json) itemBuilder;
+  final String emptyText;
+
+  final bool masonry; // true => SliverMasonryGrid
+  final double? childAspectRatio; // used when masonry=false
 
   const UpcomingActivitiesGrid({
-    super.key, // key
-    required this.data, // list
-    required this.loading, // flag
-    required this.refreshing, // flag
-    required this.onRefresh, // handler
-    required this.header, // header
-    required this.itemBuilder, // builder
-    required this.emptyText, // empty
+    super.key,
+    required this.data,
+    required this.loading,
+    required this.refreshing,
+    required this.onRefresh,
+    required this.header,
+    required this.itemBuilder,
+    required this.emptyText,
+    this.masonry = true,
+    this.childAspectRatio,
   });
 
   @override
   Widget build(BuildContext context) {
-    // theme
-    final scheme = Theme.of(context).colorScheme; // colors
+    final scheme = Theme.of(context).colorScheme;
 
-    // show big center spinner when first loading and list is empty
-    if (loading && (data.isEmpty)) {
-      return const Center(
-        child: CircularProgressIndicator(), // spinner
-      );
+    // First-load spinner
+    if (loading && data.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
     }
 
-    // when empty (not loading) show header + empty text
+    // Empty (but not loading)
     if (!loading && data.isEmpty) {
       return RefreshIndicator(
-        onRefresh: onRefresh, // allow pull-down even when empty
+        onRefresh: onRefresh,
         child: ListView(
-          padding: EdgeInsets.zero, // flush
+          padding: EdgeInsets.zero,
           children: [
-            header, // show header block
+            header,
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24), // spacing
+              padding: const EdgeInsets.symmetric(vertical: 24),
               child: Center(
                 child: Text(
-                  emptyText, // "No activities found..."
+                  emptyText,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: scheme.onSurface.withOpacity(0.6), // muted
+                    color: scheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ),
@@ -69,44 +64,37 @@ class UpcomingActivitiesGrid extends StatelessWidget {
       );
     }
 
-    // normal case: header + 2-column grid with pull-to-refresh
+    // Normal: header + grid
     return RefreshIndicator(
-      onRefresh: onRefresh, // pull-to-refresh
+      onRefresh: onRefresh,
       child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          // header on top (Welcome + "Your Activities")
-          SliverToBoxAdapter(child: header), // header
-          // padding around grid
-          const SliverPadding(
-            padding: EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ), // spacing
-            sliver: SliverToBoxAdapter(
-              child: SizedBox.shrink(),
-            ), // no-op (keeps structure clean)
-          ),
-          // actual grid (2 columns)
+          SliverToBoxAdapter(child: header),
           SliverPadding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ), // spacing
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, // 2 columns
-                mainAxisSpacing: 12, // vertical gap
-                crossAxisSpacing: 12, // horizontal gap
-                childAspectRatio: 1.1, // card aspect
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (ctx, i) => itemBuilder(ctx, data[i]), // build each card
-                childCount: data.length, // number of items
-              ),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            sliver: masonry
+                ? SliverMasonryGrid.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    itemBuilder: (ctx, i) => itemBuilder(ctx, data[i]),
+                    childCount: data.length,
+                  )
+                : SliverGrid(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: childAspectRatio ?? 1.1,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (ctx, i) => itemBuilder(ctx, data[i]),
+                      childCount: data.length,
+                    ),
+                  ),
           ),
-          // bottom extra space
-          const SliverToBoxAdapter(child: SizedBox(height: 24)), // footer space
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),
     );

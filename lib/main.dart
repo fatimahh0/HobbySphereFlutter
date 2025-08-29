@@ -1,33 +1,36 @@
 // ===== Flutter 3.35.x =====
-// App entry: load ApiConfig -> set Dio baseUrl -> restore token -> run app.
+// main.dart — load config → build ApiClient(cfg) → restore token → expose globals → run app.
 
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // token storage (simple)
-import 'package:hobby_sphere/core/network/api_config.dart'; // loads hostIp.json
-import 'package:hobby_sphere/core/network/api_client.dart'; // global Dio client
+import 'package:flutter/material.dart'; // UI base
+import 'package:shared_preferences/shared_preferences.dart'; // simple key/value
 
-import 'app.dart'; // your root App widget
+import 'package:hobby_sphere/core/network/api_config.dart'; // NON-static loader (returns ApiConfig)
+import 'package:hobby_sphere/core/network/api_client.dart'; // ApiClient(ApiConfig cfg)
+import 'package:hobby_sphere/core/network/globals.dart'
+    as g; // appDio + appServerRoot
+import 'app.dart'; // your root widget
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // allow async before runApp
 
-  try {
-    // 1) Load assets/hostIp.json (safe fallback inside)
-    await ApiConfig.load();
+  // 1) Load server settings from assets/hostIp.json (returns an ApiConfig instance)
+  final cfg = await ApiConfig.load(); // ex: baseUrl=http://192.168.1.5:8080/api
 
-    // 2) Apply the baseUrl to Dio AFTER load()
-    ApiClient().refreshBaseUrl();
-  } catch (e) {
-    // If config fails, ApiConfig has a fallback; we just log here
-    debugPrint('ApiConfig load error: $e');
-  }
+  // 2) Build ONE ApiClient using that config (constructor NEEDS cfg)
+  final apiClient = ApiClient(cfg); // ✅ FIX: pass cfg (no empty constructor)
 
-  // 3) Restore saved JWT and set Authorization header if present
-  final prefs = await SharedPreferences.getInstance();
-  final savedToken = prefs.getString('token');
+  // 3) Restore JWT if saved, then attach Authorization header
+  final sp = await SharedPreferences.getInstance(); // open local storage
+  final savedToken = sp.getString('token'); // read token (if any)
   if (savedToken != null && savedToken.isNotEmpty) {
-    ApiClient().setToken(savedToken);
+    // token exists?
+    apiClient.setToken(savedToken); // add "Bearer <token>" to all requests
   }
 
-  runApp(const App());
+  // 4) Share the configured Dio + serverRoot globally (so old code like ApiFetch() works zero-arg)
+  g.appDio = apiClient.dio; // now ApiFetch() can use g.appDio
+  g.appServerRoot = cfg.serverRoot; // your _fullUrl(...) can prefix images
+
+  // 5) Start the app (you can keep App() with no parameters)
+  runApp(const App()); // no change needed to app.dart
 }
