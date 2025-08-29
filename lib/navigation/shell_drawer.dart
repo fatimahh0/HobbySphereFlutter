@@ -6,20 +6,20 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:hobby_sphere/features/activities/presentation/Business/BusinessHomeScreen/business_home_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/Business/business_booking_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/Business/business_analytics_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/Business/business_activities_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/Business/business_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/presentation/BusinessHomeScreen/screen/business_home_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/presentation/business_booking_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/presentation/business_analytics_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/presentation/business_activities_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/presentation/business_profile_screen.dart';
 
-import 'package:hobby_sphere/features/activities/presentation/User/user_home_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/User/user_explore_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/User/user_community_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/User/user_tickets_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/User/user_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_explore_screen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_community_screen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_tickets_screen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_profile_screen.dart';
 
 import 'package:hobby_sphere/l10n/app_localizations.dart';
-import '../../../../core/constants/app_role.dart';
+import '../core/constants/app_role.dart';
 
 class ShellDrawer extends StatefulWidget {
   final AppRole role;
@@ -141,89 +141,65 @@ class _ShellDrawerState extends State<ShellDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    // Make Android's system nav bar solid to match the drawer
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        systemNavigationBarColor: Colors.transparent,
+      SystemUiOverlayStyle(
+        systemNavigationBarColor: Theme.of(context).colorScheme.surface,
         systemNavigationBarDividerColor: Colors.transparent,
         systemNavigationBarContrastEnforced: false,
       ),
     );
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final scheme = Theme.of(context).colorScheme;
     final menu = _menu(context);
     if (_index >= menu.length) _index = menu.length - 1;
 
-    final glassBorder = isDark
-        ? Colors.white.withOpacity(0.18)
-        : Colors.white.withOpacity(0.25);
-    final iconBase = isDark
-        ? Colors.white.withOpacity(0.88)
-        : Colors.black.withOpacity(0.72);
-
     return Scaffold(
-      extendBody: true,
+      extendBody: false,
+      // scrim can stay semi-transparent; it dims page behind the drawer, not the drawer itself
       drawerScrimColor: Colors.black.withOpacity(0.35),
+
       appBar: AppBar(
         title: Text(menu[_index].title),
         centerTitle: true,
-        surfaceTintColor: scheme.surfaceTint,
+        // solid app bar — no accidental glass tints
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
 
-      // keep state
+      // keep page states
       body: IndexedStack(
         index: _index,
         children: menu.map((m) => m.page).toList(),
       ),
 
-      // GLASS DRAWER
-      drawer: SafeArea(
-        child: Align(
-          alignment: Alignment.topLeft,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topRight: Radius.circular(24),
-              bottomRight: Radius.circular(24),
-            ),
-            child: SizedBox(
-              width: 304,
-              child: Stack(
-                children: [
-                  BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                    child: const SizedBox.expand(),
-                  ),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(isDark ? 0.06 : 0.10),
-                      border: Border.all(color: glassBorder, width: 1),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(isDark ? 0.30 : 0.14),
-                          blurRadius: 28,
-                          offset: const Offset(0, 14),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: _DrawerContent(
-                        items: menu,
-                        index: _index,
-                        onTap: (i) {
-                          Navigator.pop(context);
-                          if (i == _index) return;
-                          HapticFeedback.selectionClick();
-                          setState(() => _index = i);
-                        },
-                        iconBaseColor: iconBase,
-                        activeColor: scheme.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      // >>> SOLID DRAWER (no transparency, no blur) <<<
+      drawer: Drawer(
+        width: 304,
+        backgroundColor: scheme.surface, // ✅ solid background
+        shape: const RoundedRectangleBorder(
+          // nice rounded right edge
+          borderRadius: BorderRadius.only(
+            topRight: Radius.circular(24),
+            bottomRight: Radius.circular(24),
+          ),
+        ),
+        child: SafeArea(
+          child: _DrawerContent(
+            items: menu,
+            index: _index,
+            onTap: (i) {
+              Navigator.pop(context);
+              if (i == _index) return;
+              HapticFeedback.selectionClick();
+              setState(() => _index = i);
+            },
+            iconBaseColor: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.88)
+                : Colors.black.withOpacity(0.72),
+            activeColor: scheme.primary,
           ),
         ),
       ),

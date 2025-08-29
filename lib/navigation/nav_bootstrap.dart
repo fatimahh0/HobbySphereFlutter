@@ -3,11 +3,11 @@
 // → build the matching shell and PASS role + token + businessId.
 
 import 'package:flutter/material.dart'; // core UI widgets
-import 'package:hobby_sphere/features/activities/data/services/common/theme_service.dart'; // get active theme json
+import 'package:hobby_sphere/features/activities/common/data/services/theme_service.dart'; // get active theme json
 
-import '../../../../app/router/nav_type.dart'; // enum: bottom / top / drawer
-import '../../../../app/router/nav_from_theme.dart'; // parser: json → AppNavType
-import '../../../../core/constants/app_role.dart'; // enum: user / business / guest
+import '../app/router/nav_type.dart'; // enum: bottom / top / drawer
+import '../app/router/nav_from_theme.dart'; // parser: json → AppNavType
+import '../core/constants/app_role.dart'; // enum: user / business / guest
 
 import 'shell_bottom.dart'; // bottom tabs shell (needs role, token, businessId)
 import 'shell_top.dart'; // top tabs shell (needs role, token, businessId)
@@ -87,7 +87,7 @@ class _NavBootstrapState extends State<NavBootstrap> {
           case AppNavType.bottom:
           default:
             // bottom tabs shell
-            return ShellBottom(
+            return ShellDrawer(
               role: widget.role, // role down
               token: widget.token, // token down
               businessId: widget.businessId, // id down

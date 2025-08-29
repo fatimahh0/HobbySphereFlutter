@@ -8,13 +8,14 @@ import 'package:flutter/material.dart'; // core UI
 import 'package:hobby_sphere/core/constants/app_role.dart';
 
 // ===== existing pages =====
-import 'package:hobby_sphere/features/authentication/presentation/login_page.dart'; // login
-import 'package:hobby_sphere/features/activities/presentation/Business/BusinessHomeScreen/business_home_screen.dart'; // business home (needs params)
-import 'package:hobby_sphere/features/activities/presentation/OnboardingScreen.dart'; // animated onboarding
-import 'package:hobby_sphere/features/activities/presentation/User/user_home_screen.dart'; // user home
-import 'package:hobby_sphere/features/activities/presentation/onboarding_page.dart'; // static onboarding
-import 'package:hobby_sphere/features/activities/presentation/splash_page.dart';
-import 'package:hobby_sphere/features/activities/presentation/navigation/nav_bootstrap.dart'; // splash
+
+import 'package:hobby_sphere/features/activities/Business/presentation/BusinessHomeScreen/screen/business_home_screen.dart'; // business home (needs params)
+import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart'; // animated onboarding
+import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart'; // user home
+import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart'; // static onboarding
+import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
+import 'package:hobby_sphere/navigation/nav_bootstrap.dart';
+import 'package:hobby_sphere/features/authentication/presentation/login/screen/login_page.dart'; // splash
 
 // ===== small args holders (type-safe route arguments) =====
 

@@ -9,18 +9,18 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:hobby_sphere/features/activities/presentation/Business/business_activities_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/Business/business_analytics_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/Business/business_booking_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/Business/BusinessHomeScreen/business_home_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/Business/business_profile_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/User/user_community_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/User/user_explore_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/User/user_home_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/User/user_profile_screen.dart';
-import 'package:hobby_sphere/features/activities/presentation/User/user_tickets_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/presentation/business_activities_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/presentation/business_analytics_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/presentation/business_booking_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/presentation/BusinessHomeScreen/screen/business_home_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/presentation/business_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_community_screen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_explore_screen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_tickets_screen.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
-import '../../../../core/constants/app_role.dart';
+import '../core/constants/app_role.dart';
 
 class ShellBottom extends StatefulWidget {
   final AppRole role;
@@ -139,7 +139,7 @@ class _ShellBottomState extends State<ShellBottom> {
 
     return Scaffold(
       // KEY: body extends behind bottom bar -> no white background slab
-      extendBody: true,
+      extendBody: false,
 
       appBar: AppBar(
         title: Text(labels[_index]),
