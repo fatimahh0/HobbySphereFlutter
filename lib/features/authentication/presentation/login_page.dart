@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart'; // UI
 import 'package:hobby_sphere/core/constants/app_role.dart'; // enum
 import 'package:hobby_sphere/core/network/globals.dart' as g; // Dio
-import 'package:hobby_sphere/features/activities/data/services/auth_service.dart'; // auth API
+import 'package:hobby_sphere/features/activities/data/services/common/auth_service.dart'; // auth API
 import 'package:intl_phone_field/intl_phone_field.dart'; // phone
 import 'package:intl_phone_field/country_picker_dialog.dart'; // picker
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
