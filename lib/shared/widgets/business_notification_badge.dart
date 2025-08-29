@@ -1,7 +1,7 @@
 // Flutter 3.35.x
 import 'dart:async'; // for Timer and Stream
 import 'package:flutter/material.dart'; // UI widgets
-import 'package:hobby_sphere/services/business_notification_service.dart';
+import 'package:hobby_sphere/features/activities/data/services/business_notification_service.dart';
 import 'package:hobby_sphere/shared/utils/notification_bus.dart';
 
 class BusinessNotificationBadge extends StatefulWidget {

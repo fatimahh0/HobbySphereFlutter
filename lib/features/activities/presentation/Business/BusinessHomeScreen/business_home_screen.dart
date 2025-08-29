@@ -2,7 +2,7 @@
 // Business Home — Welcome, header, masonry grid of CardActivityBusiness.
 import 'package:flutter/material.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
-import 'package:hobby_sphere/services/business_activity_service.dart';
+import 'package:hobby_sphere/features/activities/data/services/business_activity_service.dart';
 
 // widgets (keep your current paths for these three)
 import 'package:hobby_sphere/features/activities/presentation/Business/BusinessHomeScreen/widgets/header.dart';

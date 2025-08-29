@@ -9,7 +9,7 @@ import 'package:hobby_sphere/l10n/app_localizations.dart'
     show AppLocalizations; // i18n
 import 'package:hobby_sphere/shared/theme/app_theme.dart'; // theme
 
-import 'package:hobby_sphere/core/services/token_store.dart'; // saved token/role
+import 'package:hobby_sphere/services/token_store.dart'; // saved token/role
 import 'package:hobby_sphere/core/network/globals.dart' as g; // shared Dio
 import 'package:hobby_sphere/core/network/api_fetch.dart'; // http wrapper
 import 'package:hobby_sphere/core/network/api_methods.dart'; // HttpMethod

@@ -3,7 +3,7 @@
 // → build the matching shell and PASS role + token + businessId.
 
 import 'package:flutter/material.dart'; // core UI widgets
-import 'package:hobby_sphere/services/theme_service.dart'; // get active theme json
+import 'package:hobby_sphere/features/activities/data/services/theme_service.dart'; // get active theme json
 
 import '../../../../app/router/nav_type.dart'; // enum: bottom / top / drawer
 import '../../../../app/router/nav_from_theme.dart'; // parser: json → AppNavType
