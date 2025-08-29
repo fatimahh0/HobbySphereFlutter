@@ -8,7 +8,7 @@ import 'package:hobby_sphere/core/network/api_config.dart'; // NON-static loader
 import 'package:hobby_sphere/core/network/api_client.dart'; // ApiClient(ApiConfig cfg)
 import 'package:hobby_sphere/core/network/globals.dart'
     as g; // appDio + appServerRoot
-import 'app.dart'; // your root widget
+import 'app/app.dart'; // your root widget
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // allow async before runApp

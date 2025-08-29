@@ -4,18 +4,18 @@
 import 'package:flutter/material.dart'; // UI core
 import 'package:shared_preferences/shared_preferences.dart'; // local store
 import 'package:intl/intl.dart'; // (optional)
-import 'package:hobby_sphere/core/auth/app_role.dart'; // enum
+import 'package:hobby_sphere/core/constants/app_role.dart'; // enum
 import 'package:hobby_sphere/l10n/app_localizations.dart'
     show AppLocalizations; // i18n
-import 'package:hobby_sphere/theme/app_theme.dart'; // theme
+import 'package:hobby_sphere/shared/theme/app_theme.dart'; // theme
 
-import 'package:hobby_sphere/core/auth/token_store.dart'; // saved token/role
+import 'package:hobby_sphere/core/services/token_store.dart'; // saved token/role
 import 'package:hobby_sphere/core/network/globals.dart' as g; // shared Dio
 import 'package:hobby_sphere/core/network/api_fetch.dart'; // http wrapper
 import 'package:hobby_sphere/core/network/api_methods.dart'; // HttpMethod
 import 'package:hobby_sphere/core/business/business_context.dart'; // 👈 NEW: business id keeper
 
-import 'package:hobby_sphere/config/router.dart'
+import 'package:hobby_sphere/app/router/router.dart'
     show ShellRouteArgs; // route args
 
 class SplashPage extends StatefulWidget {

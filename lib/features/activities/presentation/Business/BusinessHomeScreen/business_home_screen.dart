@@ -2,17 +2,17 @@
 // Business Home — Welcome, header, masonry grid of CardActivityBusiness.
 import 'package:flutter/material.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
-import 'package:hobby_sphere/core/services/business_activity_service.dart';
+import 'package:hobby_sphere/services/business_activity_service.dart';
 
 // widgets (keep your current paths for these three)
-import 'package:hobby_sphere/features/presentation/pages/Business/BusinessHomeScreen/widgets/header.dart';
-import 'package:hobby_sphere/features/presentation/pages/Business/BusinessHomeScreen/widgets/upcoming_activities_grid.dart';
-import 'package:hobby_sphere/features/presentation/pages/Business/BusinessHomeScreen/widgets/welcome_section.dart';
+import 'package:hobby_sphere/features/activities/presentation/Business/BusinessHomeScreen/widgets/header.dart';
+import 'package:hobby_sphere/features/activities/presentation/Business/BusinessHomeScreen/widgets/upcoming_activities_grid.dart';
+import 'package:hobby_sphere/features/activities/presentation/Business/BusinessHomeScreen/widgets/welcome_section.dart';
 
 import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
 
 // ✅ NEW: use the split card barrel export
-import 'package:hobby_sphere/ui/widgets/cards/card_activity_business/index.dart';
+import 'package:hobby_sphere/shared/widgets/cards/card_activity_business/index.dart';
 
 typedef Json = Map<String, dynamic>;
 

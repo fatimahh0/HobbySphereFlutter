@@ -6,20 +6,20 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:hobby_sphere/features/presentation/pages/Business/BusinessHomeScreen/business_home_screen.dart';
-import 'package:hobby_sphere/features/presentation/pages/Business/business_booking_screen.dart';
-import 'package:hobby_sphere/features/presentation/pages/Business/business_analytics_screen.dart';
-import 'package:hobby_sphere/features/presentation/pages/Business/business_activities_screen.dart';
-import 'package:hobby_sphere/features/presentation/pages/Business/business_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/presentation/Business/BusinessHomeScreen/business_home_screen.dart';
+import 'package:hobby_sphere/features/activities/presentation/Business/business_booking_screen.dart';
+import 'package:hobby_sphere/features/activities/presentation/Business/business_analytics_screen.dart';
+import 'package:hobby_sphere/features/activities/presentation/Business/business_activities_screen.dart';
+import 'package:hobby_sphere/features/activities/presentation/Business/business_profile_screen.dart';
 
-import 'package:hobby_sphere/features/presentation/pages/User/user_home_screen.dart';
-import 'package:hobby_sphere/features/presentation/pages/User/user_explore_screen.dart';
-import 'package:hobby_sphere/features/presentation/pages/User/user_community_screen.dart';
-import 'package:hobby_sphere/features/presentation/pages/User/user_tickets_screen.dart';
-import 'package:hobby_sphere/features/presentation/pages/User/user_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/presentation/User/user_home_screen.dart';
+import 'package:hobby_sphere/features/activities/presentation/User/user_explore_screen.dart';
+import 'package:hobby_sphere/features/activities/presentation/User/user_community_screen.dart';
+import 'package:hobby_sphere/features/activities/presentation/User/user_tickets_screen.dart';
+import 'package:hobby_sphere/features/activities/presentation/User/user_profile_screen.dart';
 
 import 'package:hobby_sphere/l10n/app_localizations.dart';
-import '../core/auth/app_role.dart';
+import '../../../../core/constants/app_role.dart';
 
 class ShellDrawer extends StatefulWidget {
   final AppRole role;

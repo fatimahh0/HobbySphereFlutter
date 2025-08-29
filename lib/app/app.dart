@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
-import 'package:hobby_sphere/theme/app_theme.dart' show AppTheme;
-import 'config/router.dart'; // we'll pass callbacks to it
+import 'package:hobby_sphere/shared/theme/app_theme.dart' show AppTheme;
+import 'router/router.dart'; // we'll pass callbacks to it
 
 class App extends StatefulWidget {
   const App({super.key});

@@ -1,8 +1,8 @@
 // ===== Flutter 3.35.x =====
 import 'package:flutter/material.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
-import 'package:hobby_sphere/core/auth/token_store.dart'; // ✅ token storage
-import 'package:hobby_sphere/config/router.dart'; // for navigation (Login route)
+import 'package:hobby_sphere/core/services/token_store.dart'; // ✅ token storage
+import 'package:hobby_sphere/app/router/router.dart'; // for navigation (Login route)
 
 class BusinessProfileScreen extends StatelessWidget {
   const BusinessProfileScreen({super.key});

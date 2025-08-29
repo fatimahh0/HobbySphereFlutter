@@ -14,7 +14,7 @@ class AppButton extends StatelessWidget {
   // tap callback (null means disabled)
   final VoidCallback? onPressed; // action
   // visual style
-  final AppButtonType type; // variant
+  final AppButtonType type; // variant+
   // semantic size
   final AppButtonSize size; // size
   // full-width if true

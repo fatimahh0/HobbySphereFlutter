@@ -3,7 +3,7 @@ import 'package:flutter/material.dart'; // core
 import 'package:shared_preferences/shared_preferences.dart'; // remember seen onboarding
 import 'package:hobby_sphere/l10n/app_localizations.dart'
     show AppLocalizations; // i18n
-import 'package:hobby_sphere/ui/widgets/app_button.dart'; // reusable AppButton
+import 'package:hobby_sphere/shared/widgets/app_button.dart'; // reusable AppButton
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key}); // constructor

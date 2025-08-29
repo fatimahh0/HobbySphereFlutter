@@ -1,9 +1,9 @@
 // ===== Flutter 3.35.x =====
 import 'package:flutter/material.dart'; // Flutter core UI
-import 'package:hobby_sphere/theme/app_theme.dart'; // your app theme (colors/typography)
+import 'package:hobby_sphere/shared/theme/app_theme.dart'; // your app theme (colors/typography)
 import 'package:hobby_sphere/l10n/app_localizations.dart'
     show AppLocalizations; // i18n
-import 'package:hobby_sphere/ui/widgets/app_button.dart'; // reusable AppButton
+import 'package:hobby_sphere/shared/widgets/app_button.dart'; // reusable AppButton
 
 // Onboarding screen with responsive layout and animated image
 class OnboardingScreen extends StatefulWidget {

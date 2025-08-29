@@ -5,16 +5,16 @@
 // Provide a shell route (NavBootstrap) that picks bottom/top/drawer from theme.
 
 import 'package:flutter/material.dart'; // core UI
-import 'package:hobby_sphere/core/auth/app_role.dart';
+import 'package:hobby_sphere/core/constants/app_role.dart';
 
 // ===== existing pages =====
-import 'package:hobby_sphere/features/auth/presentation/pages/login_page.dart'; // login
-import 'package:hobby_sphere/features/presentation/pages/Business/BusinessHomeScreen/business_home_screen.dart'; // business home (needs params)
-import 'package:hobby_sphere/features/presentation/pages/OnboardingScreen.dart'; // animated onboarding
-import 'package:hobby_sphere/features/presentation/pages/User/user_home_screen.dart'; // user home
-import 'package:hobby_sphere/features/presentation/pages/onboarding_page.dart'; // static onboarding
-import 'package:hobby_sphere/features/presentation/pages/splash_page.dart';
-import 'package:hobby_sphere/navigation/nav_bootstrap.dart'; // splash
+import 'package:hobby_sphere/features/authentication/presentation/login_page.dart'; // login
+import 'package:hobby_sphere/features/activities/presentation/Business/BusinessHomeScreen/business_home_screen.dart'; // business home (needs params)
+import 'package:hobby_sphere/features/activities/presentation/OnboardingScreen.dart'; // animated onboarding
+import 'package:hobby_sphere/features/activities/presentation/User/user_home_screen.dart'; // user home
+import 'package:hobby_sphere/features/activities/presentation/onboarding_page.dart'; // static onboarding
+import 'package:hobby_sphere/features/activities/presentation/splash_page.dart';
+import 'package:hobby_sphere/features/activities/presentation/navigation/nav_bootstrap.dart'; // splash
 
 // ===== small args holders (type-safe route arguments) =====
 

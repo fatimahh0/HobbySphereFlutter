@@ -2,20 +2,20 @@
 // login_page.dart — Full login with backend + Google Sign-In.
 
 import 'package:flutter/material.dart'; // UI
-import 'package:hobby_sphere/core/auth/app_role.dart'; // enum
+import 'package:hobby_sphere/core/constants/app_role.dart'; // enum
 import 'package:hobby_sphere/core/network/globals.dart' as g; // Dio
-import 'package:hobby_sphere/core/services/auth_service.dart'; // auth API
+import 'package:hobby_sphere/services/auth_service.dart'; // auth API
 import 'package:intl_phone_field/intl_phone_field.dart'; // phone
 import 'package:intl_phone_field/country_picker_dialog.dart'; // picker
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
-import 'package:hobby_sphere/ui/widgets/app_button.dart'; // btn
-import 'package:hobby_sphere/ui/widgets/app_text_field.dart'; // input
+import 'package:hobby_sphere/shared/widgets/app_button.dart'; // btn
+import 'package:hobby_sphere/shared/widgets/app_text_field.dart'; // input
 import 'package:hobby_sphere/shared/utils/validators_auto.dart'; // email val
 
 import 'package:google_sign_in/google_sign_in.dart'; // GSI
-import 'package:hobby_sphere/core/auth/token_store.dart'; // save token
+import 'package:hobby_sphere/core/services/token_store.dart'; // save token
 import 'package:hobby_sphere/core/network/api_client.dart'; // bearer
-import 'package:hobby_sphere/config/router.dart' show ShellRouteArgs; // args
+import 'package:hobby_sphere/app/router/router.dart' show ShellRouteArgs; // args
 import 'package:shared_preferences/shared_preferences.dart'; // prefs
 import 'package:hobby_sphere/core/business/business_context.dart'; // 👈 NEW
 
