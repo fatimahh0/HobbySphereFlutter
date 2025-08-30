@@ -9,7 +9,7 @@ import 'package:hobby_sphere/core/constants/app_role.dart';
 
 // ===== existing pages =====
 
-import 'package:hobby_sphere/features/activities/Business/presentation/BusinessHomeScreen/screen/business_home_screen.dart'; // business home (needs params)
+import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart'; // business home (needs params)
 import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart'; // animated onboarding
 import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart'; // user home
 import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart'; // static onboarding

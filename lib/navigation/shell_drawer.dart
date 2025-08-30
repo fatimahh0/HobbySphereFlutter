@@ -6,11 +6,11 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:hobby_sphere/features/activities/Business/presentation/BusinessHomeScreen/screen/business_home_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/presentation/business_booking_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/presentation/business_analytics_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/presentation/business_activities_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/presentation/business_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
 
 import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_explore_screen.dart';

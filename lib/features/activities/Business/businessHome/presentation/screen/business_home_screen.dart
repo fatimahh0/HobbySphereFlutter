@@ -1,18 +1,19 @@
 import "package:flutter/material.dart";
 import "package:hobby_sphere/core/network/globals.dart" as g;
 
-// Domain & data wiring (you already own these)
-import "package:hobby_sphere/features/activities/Business/domain/entities/business_activity.dart";
-import "package:hobby_sphere/features/activities/Business/domain/usecases/get_business_activities.dart";
-import "package:hobby_sphere/features/activities/Business/domain/usecases/get_business_activity_by_id.dart";
-import "package:hobby_sphere/features/activities/Business/domain/usecases/delete_business_activity.dart";
-import "package:hobby_sphere/features/activities/Business/data/repositories/business_activity_repository_impl.dart";
-import "package:hobby_sphere/features/activities/Business/data/services/business_activity_service.dart";
+// Domain & data wiring
+import "package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart";
+import "package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart";
+import "package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart";
+import "package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart";
+import "package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart";
+import "package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart";
 
 // Presentation widgets
-import "package:hobby_sphere/features/activities/Business/presentation/BusinessHomeScreen/widgets/header.dart";
-import "package:hobby_sphere/features/activities/Business/presentation/BusinessHomeScreen/widgets/upcoming_activities_grid.dart";
-import "package:hobby_sphere/features/activities/Business/presentation/BusinessHomeScreen/widgets/welcome_section.dart";
+import "package:hobby_sphere/features/activities/Business/businessHome/presentation/widgets/header.dart";
+import "package:hobby_sphere/features/activities/Business/businessHome/presentation/widgets/upcoming_activities_grid.dart";
+import "package:hobby_sphere/features/activities/Business/businessHome/presentation/widgets/welcome_section.dart";
+import "package:hobby_sphere/shared/widgets/top_toast.dart";
 
 // Local state controller
 import "../state/business_home_controller.dart";
@@ -21,9 +22,6 @@ import "../state/business_home_controller.dart";
 import "package:hobby_sphere/l10n/app_localizations.dart" show AppLocalizations;
 import "package:hobby_sphere/shared/widgets/cards/card_activity_business/index.dart";
 
-/// ===== Flutter 3.35.x =====
-/// Business Home � UI layer only; logic lives in BusinessHomeController.
-/// Pattern: Feature-Oriented + Layers (screen/widgets/state)
 class BusinessHomeScreen extends StatefulWidget {
   final String token;
   final int businessId;
@@ -45,15 +43,20 @@ class BusinessHomeScreen extends StatefulWidget {
 class _BusinessHomeScreenState extends State<BusinessHomeScreen> {
   late final BusinessHomeController _ctrl;
 
-  // Keep this helper in UI (for images that need absolute host)
   String _serverRoot() {
     final base = (g.appServerRoot ?? "");
     return base.replaceFirst(RegExp(r"/api/?$"), "");
   }
 
-  void _toast(String msg) {
+  void _toast(String msg, {bool error = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    final rootCtx = Navigator.of(context, rootNavigator: true).context;
+    showTopToast(
+      rootCtx,
+      msg,
+      type: error ? ToastType.error : ToastType.success,
+      haptics: true,
+    );
   }
 
   @override
@@ -68,18 +71,17 @@ class _BusinessHomeScreenState extends State<BusinessHomeScreen> {
     final deleteOne = DeleteBusinessActivity(repo);
 
     // Create controller with session context
-    _ctrl =
-        BusinessHomeController(
-            getList: getList,
-            getOne: getOne,
-            deleteOne: deleteOne,
-            token: widget.token,
-            businessId: widget.businessId,
-          )
-          ..onInfo = _toast
-          ..onError = _toast;
+    _ctrl = BusinessHomeController(
+      getList: getList,
+      getOne: getOne,
+      deleteOne: deleteOne,
+      token: widget.token,
+      businessId: widget.businessId,
+    );
 
-    // First load
+    _ctrl.onInfo = (m) => _toast(m);
+    _ctrl.onError = (m) => _toast(m, error: true);
+
     _ctrl.load();
   }
 
@@ -94,22 +96,18 @@ class _BusinessHomeScreenState extends State<BusinessHomeScreen> {
     final t = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
 
-    // Header block: welcome + badge row
     final header = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         WelcomeSection(
           token: widget.token,
-          onOpenNotifications: () {
-            // TODO: Navigator.pushNamed(context, "/business/notifications");
-          },
+          onOpenNotifications: () {},
           onOpenCreateActivity: widget.onCreate,
         ),
         const HeaderWithBadge(),
       ],
     );
 
-    // AnimatedBuilder listens to controller changes and rebuilds the body
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (context, _) {
@@ -118,7 +116,6 @@ class _BusinessHomeScreenState extends State<BusinessHomeScreen> {
         return Scaffold(
           backgroundColor: cs.background,
           body: UpcomingActivitiesGrid(
-            // Current grid API expects List<Map>, so adapt entities here.
             data: state.items
                 .map(
                   (a) => {
@@ -140,7 +137,6 @@ class _BusinessHomeScreenState extends State<BusinessHomeScreen> {
             emptyText: t.activitiesEmpty,
             masonry: true,
             itemBuilder: (ctx, item) {
-              // Optional: clamp accessibility font size per card
               final mq = MediaQuery.of(ctx);
               final clamped = mq.textScaleFactor.clamp(1.0, 1.35);
 

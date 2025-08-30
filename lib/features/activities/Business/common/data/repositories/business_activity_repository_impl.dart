@@ -1,5 +1,5 @@
-import 'package:hobby_sphere/features/activities/Business/domain/entities/business_activity.dart';
-import 'package:hobby_sphere/features/activities/Business/domain/repositories/business_activity_repository.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/repositories/business_activity_repository.dart';
 import '../services/business_activity_service.dart';
 
 class BusinessActivityRepositoryImpl implements BusinessActivityRepository {

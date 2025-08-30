@@ -21,7 +21,7 @@ class PasswordInput extends StatelessWidget {
     return AppTextField(
       controller: controller,
       label: t.loginPassword,
-      hint: '.........',
+      hint: '${t.loginPassword}',
       prefix: const Icon(Icons.lock_outline),
       suffix: IconButton(
         icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),

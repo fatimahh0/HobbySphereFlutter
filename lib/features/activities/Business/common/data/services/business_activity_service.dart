@@ -249,24 +249,27 @@ class BusinessActivityService {
   }
 
   // DELETE /api/items/{id}
-  Future<Map<String, dynamic>> deleteActivity({
-    required int id, // item id
-    required String token, // bearer token
-  }) async {
-    // Send DELETE
+Future<void> deleteActivity({required int id, required String token}) async {
     final res = await _fetch.fetch(
-      HttpMethod.delete, // method
-      '$_itemsBase/$id', // path
-      headers: {'Authorization': 'Bearer $token'}, // auth
+      HttpMethod.delete,
+      '$_itemsBase/$id',
+      headers: {'Authorization': 'Bearer $token'},
+
+      // If your ApiFetch passes options through to Dio, add:
+      // responseType: ResponseType.plain,
+      // validateStatus: (s) => s != null && s < 500,
     );
-    // Validate map payload
-    final data = res.data; // json
-    if (data is! Map) throw Exception('Invalid delete response'); // guard
-    return Map<String, dynamic>.from(data); // payload (e.g. {success:true})
+
+    final code = res.statusCode ?? 0;
+    if (code == 200 || code == 202 || code == 204) {
+      return; // success; ignore body
+    }
+    // If backend returns 4xx with text body, bubble it up
+    throw Exception('Delete failed ($code): ${res.data}');
   }
 
   // ALIAS: keep UI compatibility (if your UI calls deleteBusinessActivity)
-  Future<Map<String, dynamic>> deleteBusinessActivity(String token, int id) =>
+  Future<void> deleteBusinessActivity(String token, int id) =>
       deleteActivity(id: id, token: token); // forward
 
   // GET /api/item-types

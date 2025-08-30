@@ -23,6 +23,7 @@ class HeaderWithBadge extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: scheme.onSurface,
             ),
+            
           ),
           const SizedBox.shrink(),
         ],

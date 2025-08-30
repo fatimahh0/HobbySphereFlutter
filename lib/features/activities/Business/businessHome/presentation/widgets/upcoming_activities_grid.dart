@@ -92,11 +92,16 @@ class UpcomingActivitiesGrid extends StatelessWidget {
                       (ctx, i) => itemBuilder(ctx, data[i]),
                       childCount: data.length,
                     ),
+                    
                   ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
+        
       ),
+
+
+
     );
   }
 }
