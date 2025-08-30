@@ -61,6 +61,7 @@ class WelcomeSection extends StatelessWidget {
             width: 220,
             child: ElevatedButton.icon(
               onPressed: onOpenCreateActivity,
+              
               icon: const Icon(Icons.add_circle_outline),
               label: Text(t.businessCreateActivity),
               style: ElevatedButton.styleFrom(
@@ -73,6 +74,7 @@ class WelcomeSection extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                
               ),
             ),
           ),

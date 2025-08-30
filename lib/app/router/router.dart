@@ -1,200 +1,225 @@
 // ===== Flutter 3.35.x =====
 // config/router.dart
-// Build all app routes in one place.
-// Pass token + businessId to BusinessHomeScreen.
-// Provide a shell route (NavBootstrap) that picks bottom/top/drawer from theme.
+// Central place for all routes.
+// Adds: /business/activity/create (with full DI wiring).
 
-import 'package:flutter/material.dart'; // core UI
-import 'package:hobby_sphere/core/constants/app_role.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'package:hobby_sphere/core/constants/app_role.dart'; // role enum
 
 // ===== existing pages =====
-
-import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart'; // business home (needs params)
-import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart'; // animated onboarding
-import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart'; // user home
-import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart'; // static onboarding
+import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
+import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
+import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
 import 'package:hobby_sphere/navigation/nav_bootstrap.dart';
-import 'package:hobby_sphere/features/authentication/presentation/login/screen/login_page.dart'; // splash
+import 'package:hobby_sphere/features/authentication/presentation/login/screen/login_page.dart';
 
-// ===== small args holders (type-safe route arguments) =====
+// ===== Create Activity feature (paths per your structure) =====
+import 'package:hobby_sphere/features/activities/Business/createActivity/data/services/business_create_activity_service.dart';
+import 'package:hobby_sphere/features/activities/Business/createActivity/data/repositories/create_activity_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/createActivity/domain/usecases/create_business_activity.dart';
+import 'package:hobby_sphere/features/activities/Business/createActivity/domain/usecases/get_activity_types.dart';
+import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/state/create_business_activity_controller.dart';
+import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/screen/create_business_activity_screen.dart';
 
-// Arguments for BusinessHomeScreen
+// ===== small args holders =====
 class BusinessHomeRouteArgs {
-  final String token; // JWT token from login
-  final int businessId; // business id from login / profile
-  final VoidCallback? onCreateOverride; // optional custom create action
+  final String token;
+  final int businessId;
+  final VoidCallback? onCreateOverride;
 
   const BusinessHomeRouteArgs({
-    required this.token, // required token
-    required this.businessId, // required id
-    this.onCreateOverride, // optional (defaults to route push)
+    required this.token,
+    required this.businessId,
+    this.onCreateOverride,
   });
 }
 
-// Arguments for NavBootstrap (shell that picks bottom/top/drawer)
 class ShellRouteArgs {
-  final AppRole role; // user or business
-  final String token; // for business home usage
-  final int businessId; // for business home usage
+  final AppRole role;
+  final String token;
+  final int businessId;
 
   const ShellRouteArgs({
-    required this.role, // role to build correct pages
-    required this.token, // JWT for API
-    required this.businessId, // current business id
+    required this.role,
+    required this.token,
+    required this.businessId,
+  });
+}
+
+class CreateActivityRouteArgs {
+  final String token;
+  final int businessId;
+
+  const CreateActivityRouteArgs({
+    required this.token,
+    required this.businessId,
   });
 }
 
 class AppRouter {
-  // callbacks you already use in onboarding screen
-  final VoidCallback onToggleTheme; // switch theme (light/dark)
-  final void Function(Locale) onChangeLocale; // change language
-  final Locale Function() getCurrentLocale; // read current locale
+  final VoidCallback onToggleTheme;
+  final void Function(Locale) onChangeLocale;
+  final Locale Function() getCurrentLocale;
 
   AppRouter({
-    required this.onToggleTheme, // save theme callback
-    required this.onChangeLocale, // save language callback
-    required this.getCurrentLocale, // save getter
+    required this.onToggleTheme,
+    required this.onChangeLocale,
+    required this.getCurrentLocale,
   });
 
   Route<dynamic> onGenerateRoute(RouteSettings settings) {
-    // name of the incoming route
-    final name = settings.name; // e.g., '/login'
-    // dynamic args payload (we cast safely per case)
-    final args = settings.arguments; // may be null
+    final name = settings.name;
+    final args = settings.arguments;
 
     switch (name) {
-      // ===== splash as start =====
+      // ===== splash =====
       case '/':
-        // show splash first
         return MaterialPageRoute(builder: (_) => const SplashPage());
 
       // ===== onboarding (static) =====
       case '/onboarding':
-        // simple onboarding page
         return MaterialPageRoute(builder: (_) => const OnboardingPage());
 
-      // ===== onboarding (animated, needs callbacks) =====
+      // ===== onboarding (animated) =====
       case '/onboardingScreen':
-        // pass theme + language callbacks
         return MaterialPageRoute(
           builder: (_) => OnboardingScreen(
-            onToggleTheme: onToggleTheme, // toggle theme
-            onChangeLocale: onChangeLocale, // change language
-            currentLocale: getCurrentLocale(), // show current locale
+            onToggleTheme: onToggleTheme,
+            onChangeLocale: onChangeLocale,
+            currentLocale: getCurrentLocale(),
           ),
         );
 
       // ===== login =====
       case '/login':
-        // login page (no args)
         return MaterialPageRoute(builder: (_) => const LoginPage());
 
-      // ===== user home (simple) =====
+      // ===== user home =====
       case '/user/home':
-        // direct user home screen
         return MaterialPageRoute(builder: (_) => const UserHomeScreen());
 
-      // ===== business home (DIRECT screen) =====
-      // Use this if you only want the BusinessHomeScreen without shells.
+      // ===== business home =====
       case '/business/home':
         {
-          // cast args to our type-safe holder
-          final data = args is BusinessHomeRouteArgs ? args : null; // safe cast
+          final data = args is BusinessHomeRouteArgs ? args : null;
           if (data == null) {
-            // if missing args, show a friendly error page
-            return MaterialPageRoute(
-              builder: (_) => _RouteErrorPage(
-                message:
-                    'Missing BusinessHomeRouteArgs (token + businessId required).',
-              ),
+            return _error(
+              'Missing BusinessHomeRouteArgs (token + businessId).',
             );
           }
-
-          // build the business home and pass parameters
           return MaterialPageRoute(
             builder: (ctx) => BusinessHomeScreen(
-              token: data.token, // pass JWT
-              businessId: data.businessId, // pass id
+              token: data.token,
+              businessId: data.businessId,
               onCreate:
                   data.onCreateOverride ??
                   () {
-                    // default: go to create activity route
                     Navigator.pushNamed(
                       ctx,
-                      '/business/activity/create', // define this route in your app
+                      '/business/activity/create',
+                      arguments: CreateActivityRouteArgs(
+                        token: data.token,
+                        businessId: data.businessId,
+                      ),
                     );
                   },
-              // bottomBar is NOT passed here to avoid duplicate bars
             ),
           );
         }
 
-      // ===== universal shell route (RECOMMENDED) =====
-      // This builds the role-aware shell (bottom/top/drawer) from theme.
-      case '/shell':
+      // ===== create activity =====
+      case '/business/activity/create':
         {
-          // cast args to ShellRouteArgs
-          final data = args is ShellRouteArgs ? args : null; // safe cast
+          final data = args is CreateActivityRouteArgs ? args : null;
           if (data == null) {
-            // if missing, show friendly error
-            return MaterialPageRoute(
-              builder: (_) => _RouteErrorPage(
-                message:
-                    'Missing ShellRouteArgs (role + token + businessId required).',
-              ),
+            return _error(
+              'Missing CreateActivityRouteArgs (token + businessId).',
             );
           }
 
-          // Build NavBootstrap that forwards role + token + businessId
+          // DI wiring
+          final service = BusinessCreateActivityService();
+          final repo = CreateActivityRepositoryImpl(service);
+          final createUsecase = CreateBusinessActivity(repo);
+          final getTypesUsecase = GetActivityTypes(repo);
+
           return MaterialPageRoute(
-            builder: (_) => NavBootstrap(
-              role: data.role, // user/business
-              token: data.token, // JWT (used by business home)
-              businessId: data.businessId, // business id
+            builder: (_) => ChangeNotifierProvider(
+              create: (_) => CreateBusinessActivityController(
+                createUsecase: createUsecase,
+                getTypesUsecase: getTypesUsecase,
+              ),
+              child: CreateBusinessActivityScreen(
+                businessId: data.businessId,
+                token: data.token,
+              ),
+            ),
+            settings: RouteSettings(
+              name: '/business/activity/create',
+              arguments: data,
             ),
           );
         }
 
-      // ===== default fallback =====
+      // ===== role-aware shell =====
+      case '/shell':
+        {
+          final data = args is ShellRouteArgs ? args : null;
+          if (data == null) {
+            return _error(
+              'Missing ShellRouteArgs (role + token + businessId).',
+            );
+          }
+          return MaterialPageRoute(
+            builder: (_) => NavBootstrap(
+              role: data.role,
+              token: data.token,
+              businessId: data.businessId,
+            ),
+          );
+        }
+
+      // ===== default =====
       default:
-        // unknown route → back to splash
         return MaterialPageRoute(builder: (_) => const SplashPage());
     }
   }
+
+  // tiny helper
+  MaterialPageRoute _error(String message) {
+    return MaterialPageRoute(builder: (_) => _RouteErrorPage(message: message));
+  }
 }
 
-// ===== tiny error page (clean message when args are missing) =====
 class _RouteErrorPage extends StatelessWidget {
-  final String message; // what went wrong
-  const _RouteErrorPage({required this.message}); // ctor
+  final String message;
+  const _RouteErrorPage({required this.message});
 
   @override
   Widget build(BuildContext context) {
-    // use theme colors for a clean look
-    final scheme = Theme.of(context).colorScheme; // colors
-    final text = Theme.of(context).textTheme; // fonts
-
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Routing Error'), // title
-        centerTitle: true, // center
-      ),
+      appBar: AppBar(title: const Text('Routing Error'), centerTitle: true),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24), // spacing
+          padding: const EdgeInsets.all(24),
           child: Container(
-            padding: const EdgeInsets.all(16), // inner padding
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: scheme.errorContainer, // soft error bg
-              borderRadius: BorderRadius.circular(12), // rounded
+              color: scheme.errorContainer,
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              message, // the error text
-              textAlign: TextAlign.center, // center text
+              message,
+              textAlign: TextAlign.center,
               style: text.bodyMedium?.copyWith(
-                color: scheme.onErrorContainer, // readable color
-                fontWeight: FontWeight.w600, // semi-bold
+                color: scheme.onErrorContainer,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

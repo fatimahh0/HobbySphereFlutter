@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:hobby_sphere/app/router/router.dart";
 import "package:hobby_sphere/core/network/globals.dart" as g;
 
 // Domain & data wiring
@@ -97,14 +98,26 @@ class _BusinessHomeScreenState extends State<BusinessHomeScreen> {
     final cs = Theme.of(context).colorScheme;
 
     final header = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start, // align left
       children: [
         WelcomeSection(
-          token: widget.token,
-          onOpenNotifications: () {},
-          onOpenCreateActivity: widget.onCreate,
+          token: widget.token, // pass token to header if needed
+          onOpenNotifications: () {}, // keep your notifications action
+          onOpenCreateActivity: () {
+            // when button is pressed
+            Navigator.pushNamed(
+              // push a named route
+              context, // current context
+              '/business/activity/create', // route name for create screen
+              arguments: CreateActivityRouteArgs(
+                // pass typed arguments
+                token: widget.token, // pass the current token
+                businessId: widget.businessId, // pass the current business id
+              ),
+            );
+          },
         ),
-        const HeaderWithBadge(),
+        const HeaderWithBadge(), // keep your header badge
       ],
     );
 
