@@ -4242,6 +4242,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yes'**
   String get yes;
+
+  /// No description provided for @fieldTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get fieldTitle;
+
+  /// No description provided for @hintTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity title'**
+  String get hintTitle;
+
+  /// No description provided for @selectActivityType.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Activity Type'**
+  String get selectActivityType;
+
+  /// No description provided for @fieldDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get fieldDescription;
+
+  /// No description provided for @hintDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe your activity'**
+  String get hintDescription;
+
+  /// No description provided for @searchLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Search address'**
+  String get searchLocation;
+
+  /// No description provided for @getMyLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Get My Location'**
+  String get getMyLocation;
+
+  /// No description provided for @fieldMaxParticipants.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Participants'**
+  String get fieldMaxParticipants;
+
+  /// No description provided for @hintMaxParticipants.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number'**
+  String get hintMaxParticipants;
+
+  /// No description provided for @fieldPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get fieldPrice;
+
+  /// No description provided for @fieldStartDateTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Date & Time'**
+  String get fieldStartDateTime;
+
+  /// No description provided for @fieldEndDateTime.
+  ///
+  /// In en, this message translates to:
+  /// **'End Date & Time'**
+  String get fieldEndDateTime;
+
+  /// No description provided for @pickImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick an Image'**
+  String get pickImage;
+
+  /// No description provided for @submit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get submit;
+
+  /// No description provided for @errorAuthRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be logged in.'**
+  String get errorAuthRequired;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

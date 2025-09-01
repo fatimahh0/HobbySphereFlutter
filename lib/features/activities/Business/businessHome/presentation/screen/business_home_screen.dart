@@ -111,7 +111,6 @@ class _BusinessHomeScreenState extends State<BusinessHomeScreen> {
               '/business/activity/create', // route name for create screen
               arguments: CreateActivityRouteArgs(
                 // pass typed arguments
-                token: widget.token, // pass the current token
                 businessId: widget.businessId, // pass the current business id
               ),
             );

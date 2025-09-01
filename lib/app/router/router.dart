@@ -1,36 +1,51 @@
 // ===== Flutter 3.35.x =====
-// config/router.dart
-// Central place for all routes.
-// Adds: /business/activity/create (with full DI wiring).
+// router.dart — central app router (Navigator 1.0, onGenerateRoute)
+// This version HARD-WIRES the repos for the Create Item route
+// so you DON'T need Provider for ItemTypeRepository / CurrencyRepository.
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart';
 
-import 'package:hobby_sphere/core/constants/app_role.dart'; // role enum
-
-// ===== existing pages =====
-import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
-import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
-import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
+// ---------- screens you already have ----------
 import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
-import 'package:hobby_sphere/navigation/nav_bootstrap.dart';
+import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
+import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart';
 import 'package:hobby_sphere/features/authentication/presentation/login/screen/login_page.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
+import 'package:hobby_sphere/navigation/nav_bootstrap.dart';
+import 'package:hobby_sphere/core/constants/app_role.dart';
 
-// ===== Create Activity feature (paths per your structure) =====
-import 'package:hobby_sphere/features/activities/Business/createActivity/data/services/business_create_activity_service.dart';
-import 'package:hobby_sphere/features/activities/Business/createActivity/data/repositories/create_activity_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/Business/createActivity/domain/usecases/create_business_activity.dart';
-import 'package:hobby_sphere/features/activities/Business/createActivity/domain/usecases/get_activity_types.dart';
-import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/state/create_business_activity_controller.dart';
-import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/screen/create_business_activity_screen.dart';
+// ---------- new Create Item (BLoC) page ----------
+import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/screen/create_item_page.dart';
 
-// ===== small args holders =====
+// ---------- domain usecases ----------
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
+
+// ---------- data layer: services + repositories impl (ADJUST PATHS if needed) ----------
+
+import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
+
+/// Named routes
+abstract class Routes {
+  static const splash = '/';
+  static const onboarding = '/onboarding';
+  static const onboardingScreen = '/onboardingScreen';
+  static const login = '/login';
+  static const userHome = '/user/home';
+  static const businessHome = '/business/home';
+  static const createBusinessActivity = '/business/activity/create';
+  static const shell = '/shell';
+}
+
+/// Business Home args
 class BusinessHomeRouteArgs {
   final String token;
   final int businessId;
   final VoidCallback? onCreateOverride;
-
   const BusinessHomeRouteArgs({
     required this.token,
     required this.businessId,
@@ -38,11 +53,11 @@ class BusinessHomeRouteArgs {
   });
 }
 
+/// Shell args
 class ShellRouteArgs {
   final AppRole role;
   final String token;
   final int businessId;
-
   const ShellRouteArgs({
     required this.role,
     required this.token,
@@ -50,15 +65,14 @@ class ShellRouteArgs {
   });
 }
 
+/// Create Item args — we only pass businessId (token is read by BLoC via TokenStore)
 class CreateActivityRouteArgs {
-  final String token;
   final int businessId;
-
-  const CreateActivityRouteArgs({
-    required this.token,
-    required this.businessId,
-  });
+  const CreateActivityRouteArgs({required this.businessId});
 }
+
+/// Optional navigator key (useful for programmatic navigation)
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class AppRouter {
   final VoidCallback onToggleTheme;
@@ -76,123 +90,122 @@ class AppRouter {
     final args = settings.arguments;
 
     switch (name) {
-      // ===== splash =====
-      case '/':
-        return MaterialPageRoute(builder: (_) => const SplashPage());
+      // Splash
+      case Routes.splash:
+        return _page(const SplashPage(), settings);
 
-      // ===== onboarding (static) =====
-      case '/onboarding':
-        return MaterialPageRoute(builder: (_) => const OnboardingPage());
+      // Static onboarding
+      case Routes.onboarding:
+        return _page(const OnboardingPage(), settings);
 
-      // ===== onboarding (animated) =====
-      case '/onboardingScreen':
-        return MaterialPageRoute(
-          builder: (_) => OnboardingScreen(
+      // Animated onboarding
+      case Routes.onboardingScreen:
+        return _page(
+          OnboardingScreen(
             onToggleTheme: onToggleTheme,
             onChangeLocale: onChangeLocale,
             currentLocale: getCurrentLocale(),
           ),
+          settings,
         );
 
-      // ===== login =====
-      case '/login':
-        return MaterialPageRoute(builder: (_) => const LoginPage());
+      // Login
+      case Routes.login:
+        return _page(const LoginPage(), settings);
 
-      // ===== user home =====
-      case '/user/home':
-        return MaterialPageRoute(builder: (_) => const UserHomeScreen());
+      // User home
+      case Routes.userHome:
+        return _page(const UserHomeScreen(), settings);
 
-      // ===== business home =====
-      case '/business/home':
+      // Business home
+      case Routes.businessHome:
         {
           final data = args is BusinessHomeRouteArgs ? args : null;
-          if (data == null) {
+          if (data == null)
             return _error(
               'Missing BusinessHomeRouteArgs (token + businessId).',
             );
-          }
-          return MaterialPageRoute(
-            builder: (ctx) => BusinessHomeScreen(
+
+          return _page(
+            BusinessHomeScreen(
               token: data.token,
               businessId: data.businessId,
               onCreate:
                   data.onCreateOverride ??
                   () {
+                    final ctx = navigatorKey.currentContext!;
                     Navigator.pushNamed(
                       ctx,
-                      '/business/activity/create',
+                      Routes.createBusinessActivity,
                       arguments: CreateActivityRouteArgs(
-                        token: data.token,
                         businessId: data.businessId,
                       ),
                     );
                   },
             ),
+            settings,
           );
         }
 
-      // ===== create activity =====
-      case '/business/activity/create':
+      // Create Item (BLoC) — HARD-WIRED repos (no Provider required)
+      case Routes.createBusinessActivity:
         {
           final data = args is CreateActivityRouteArgs ? args : null;
-          if (data == null) {
-            return _error(
-              'Missing CreateActivityRouteArgs (token + businessId).',
-            );
-          }
-
-          // DI wiring
-          final service = BusinessCreateActivityService();
-          final repo = CreateActivityRepositoryImpl(service);
-          final createUsecase = CreateBusinessActivity(repo);
-          final getTypesUsecase = GetActivityTypes(repo);
+          if (data == null)
+            return _error('Missing CreateActivityRouteArgs (businessId).');
 
           return MaterialPageRoute(
-            builder: (_) => ChangeNotifierProvider(
-              create: (_) => CreateBusinessActivityController(
-                createUsecase: createUsecase,
-                getTypesUsecase: getTypesUsecase,
-              ),
-              child: CreateBusinessActivityScreen(
+            settings: settings,
+            builder: (_) {
+              // Build services/repositories locally to avoid Provider
+              final itemTypeSvc = ItemTypesService();
+              final currencySvc = CurrencyService();
+              final itemTypeRepo = ItemTypeRepositoryImpl(itemTypeSvc);
+              final currencyRepo = CurrencyRepositoryImpl(currencySvc);
+
+              // Usecases
+              final getItemTypes = GetItemTypes(itemTypeRepo);
+              final getCurrency = GetCurrentCurrency(currencyRepo);
+
+              return CreateItemPage(
                 businessId: data.businessId,
-                token: data.token,
-              ),
-            ),
-            settings: RouteSettings(
-              name: '/business/activity/create',
-              arguments: data,
-            ),
+                getItemTypes: getItemTypes,
+                getCurrentCurrency: getCurrency,
+              );
+            },
           );
         }
 
-      // ===== role-aware shell =====
-      case '/shell':
+      // Role-aware shell
+      case Routes.shell:
         {
           final data = args is ShellRouteArgs ? args : null;
-          if (data == null) {
+          if (data == null)
             return _error(
               'Missing ShellRouteArgs (role + token + businessId).',
             );
-          }
-          return MaterialPageRoute(
-            builder: (_) => NavBootstrap(
+
+          return _page(
+            NavBootstrap(
               role: data.role,
               token: data.token,
               businessId: data.businessId,
             ),
+            settings,
           );
         }
 
-      // ===== default =====
+      // Fallback → splash
       default:
-        return MaterialPageRoute(builder: (_) => const SplashPage());
+        return _page(const SplashPage(), settings);
     }
   }
 
-  // tiny helper
-  MaterialPageRoute _error(String message) {
-    return MaterialPageRoute(builder: (_) => _RouteErrorPage(message: message));
-  }
+  MaterialPageRoute _page(Widget child, RouteSettings settings) =>
+      MaterialPageRoute(builder: (_) => child, settings: settings);
+
+  MaterialPageRoute _error(String message) =>
+      MaterialPageRoute(builder: (_) => _RouteErrorPage(message: message));
 }
 
 class _RouteErrorPage extends StatelessWidget {
@@ -201,26 +214,24 @@ class _RouteErrorPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Routing Error'), centerTitle: true),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: scheme.errorContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              message,
-              textAlign: TextAlign.center,
-              style: text.bodyMedium?.copyWith(
-                color: scheme.onErrorContainer,
-                fontWeight: FontWeight.w600,
-              ),
+        child: Container(
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cs.errorContainer,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: tt.bodyMedium?.copyWith(
+              color: cs.onErrorContainer,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),

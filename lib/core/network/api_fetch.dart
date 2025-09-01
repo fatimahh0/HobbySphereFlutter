@@ -1,75 +1,61 @@
+// lib/core/network/api_fetch.dart
 // ===== Flutter 3.35.x =====
-// Simple wrapper around Dio. Supports GET/POST/... and query building.
+// Simple wrapper around Dio. Adds optional `responseType`.
 
-import 'package:dio/dio.dart'; // dio types
-import 'package:hobby_sphere/core/network/api_methods.dart'; // method names
-import 'package:hobby_sphere/core/network/globals.dart'
-    as g; // <-- use shared dio
+import 'package:dio/dio.dart';
+import 'package:hobby_sphere/core/network/api_methods.dart';
+import 'package:hobby_sphere/core/network/globals.dart' as g;
 
 class ApiFetch {
-  // pick injected Dio if provided, else use app-wide g.appDio (set in main)
-  final Dio _dio; // reuse one dio
-  CancelToken? _token; // for cancelable PATCH
+  final Dio _dio;
+  CancelToken? _token;
 
-  // constructor: optional dio for tests/overrides; zero-arg keeps old usage
-  ApiFetch([Dio? dio])
-    : _dio = dio ?? g.appDio!; // use global; '!' because main sets it
+  ApiFetch([Dio? dio]) : _dio = dio ?? g.appDio!;
 
-  // cancel current PATCH (if any)
   void cancel() {
-    _token?.cancel('Cancelled'); // cancel reason
-    _token = null; // clear
+    _token?.cancel('Cancelled');
+    _token = null;
   }
 
-  // build a query string from a map (for GET)
   String _query(Map<String, dynamic>? p) {
-    if (p == null || p.isEmpty) return ''; // nothing → empty
+    if (p == null || p.isEmpty) return '';
     final q = p.entries
         .map(
           (e) =>
               '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent('${e.value}')}',
-        ) // key=value
-        .join('&'); // join with &
-    return '?$q'; // start with ?
+        )
+        .join('&');
+    return '?$q';
   }
 
-  // main fetch method
   Future<Response> fetch(
-    String method, // method string (from api_methods.dart)
-    String url, { // endpoint path (ex: /auth/user/login)
-    dynamic data, // body or query map
-    Map<String, String>? headers, // extra headers
-    Duration? receiveTimeoutOverride, // optional per-call timeout
+    String method,
+    String url, {
+    dynamic data,
+    Map<String, String>? headers,
+    Duration? receiveTimeoutOverride,
+    ResponseType? responseType, // ⬅ NEW
   }) async {
-    // base options for this call
     final opts = Options(
-      headers: headers, // merge headers if provided
-      receiveTimeout:
-          receiveTimeoutOverride, // per-call receive timeout (optional)
+      headers: headers,
+      receiveTimeout: receiveTimeoutOverride,
+      responseType: responseType, // ⬅ NEW
     );
 
-    // route by method
     switch (method) {
       case HttpMethod.get:
-        // GET → put query in URL
         return _dio.get('$url${_query(data)}', options: opts);
-
       case HttpMethod.post:
-        // POST → send body as-is (Map or FormData)
         return _dio.post(url, data: data, options: opts);
-
       case HttpMethod.put:
         return _dio.put(url, data: data, options: opts);
-
       case HttpMethod.delete:
         return _dio.delete(url, data: data, options: opts);
-
       case HttpMethod.patch:
-        _token = CancelToken(); // create cancel token
+        _token = CancelToken();
         return _dio.patch(url, data: data, options: opts, cancelToken: _token);
-
       default:
-        throw ArgumentError('Invalid method'); // guard
+        throw ArgumentError('Invalid method');
     }
   }
 }

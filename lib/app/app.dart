@@ -1,9 +1,11 @@
-// app.dart
+// app.dart — theme/locale prefs + classic Navigator 1.0 (onGenerateRoute)
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
 import 'package:hobby_sphere/shared/theme/app_theme.dart' show AppTheme;
-import 'router/router.dart'; // we'll pass callbacks to it
+import 'router/router.dart'; // AppRouter + Routes + navigatorKey
 
 class App extends StatefulWidget {
   const App({super.key});
@@ -12,14 +14,13 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
-  static const _kThemeKey =
-      'themeMode'; // light|dark|system (we’ll use light/dark)
-  static const _kLocaleKey = 'locale'; // en|ar|fr
+  static const _kThemeKey = 'themeMode'; // 'light' | 'dark'
+  static const _kLocaleKey = 'locale'; // 'en' | 'ar' | ...
 
   ThemeMode _themeMode = ThemeMode.light;
   Locale _locale = const Locale('en');
 
-  late AppRouter _router; // needs callbacks from here
+  late final AppRouter _router;
 
   @override
   void initState() {
@@ -56,7 +57,6 @@ class _AppState extends State<App> {
     await sp.setString(_kLocaleKey, locale.languageCode);
   }
 
-  // ===== callbacks given to OnboardingScreen via router =====
   void _toggleTheme() {
     setState(() {
       _themeMode = _themeMode == ThemeMode.light
@@ -76,17 +76,15 @@ class _AppState extends State<App> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Hobby Sphere',
-      // IMPORTANT: use the stateful values (not ThemeMode.system)
+      navigatorKey: navigatorKey, // optional global key
+      initialRoute: Routes.splash, // '/'
+      onGenerateRoute: _router.onGenerateRoute, // Navigator 1.0
       themeMode: _themeMode,
-      theme: AppTheme.light, // your light theme
-      darkTheme: AppTheme.dark, // your dark theme
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
       locale: _locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-
-      // Use router that can inject the callbacks into screens
-      onGenerateRoute: _router.onGenerateRoute,
-      initialRoute: '/', // Splash or whatever you use
     );
   }
 }

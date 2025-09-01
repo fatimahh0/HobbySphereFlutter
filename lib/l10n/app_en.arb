@@ -696,6 +696,22 @@
   "verifySuccessUser": "Account verified successfully!",
   "verifyVerifyBtn": "Verify",
   "yes": "Yes",
+    "createActivityTitle": "Create Activity",
+  "fieldTitle": "Title",
+  "hintTitle": "Activity title",
+  "selectActivityType": "Select Activity Type",
+  "fieldDescription": "Description",
+  "hintDescription": "Describe your activity",
+  "searchLocation": "Search address",
+  "getMyLocation": "Get My Location",
+  "fieldMaxParticipants": "Max Participants",
+  "hintMaxParticipants": "Enter a number",
+  "fieldPrice": "Price",
+  "fieldStartDateTime": "Start Date & Time",
+  "fieldEndDateTime": "End Date & Time",
+  "pickImage": "Pick an Image",
+  "submit": "Submit",
+  "errorAuthRequired": "You must be logged in.",
   "@bookingMaxParticipants": {
     "placeholders": {
       "count": {

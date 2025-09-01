@@ -2094,4 +2094,49 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get yes => 'Yes';
+
+  @override
+  String get fieldTitle => 'Title';
+
+  @override
+  String get hintTitle => 'Activity title';
+
+  @override
+  String get selectActivityType => 'Select Activity Type';
+
+  @override
+  String get fieldDescription => 'Description';
+
+  @override
+  String get hintDescription => 'Describe your activity';
+
+  @override
+  String get searchLocation => 'Search address';
+
+  @override
+  String get getMyLocation => 'Get My Location';
+
+  @override
+  String get fieldMaxParticipants => 'Max Participants';
+
+  @override
+  String get hintMaxParticipants => 'Enter a number';
+
+  @override
+  String get fieldPrice => 'Price';
+
+  @override
+  String get fieldStartDateTime => 'Start Date & Time';
+
+  @override
+  String get fieldEndDateTime => 'End Date & Time';
+
+  @override
+  String get pickImage => 'Pick an Image';
+
+  @override
+  String get submit => 'Submit';
+
+  @override
+  String get errorAuthRequired => 'You must be logged in.';
 }
