@@ -9,6 +9,7 @@ import '../../domain/entities/create_item_request.dart';
 import 'create_item_event.dart';
 import 'create_item_state.dart';
 
+
 class CreateItemBloc extends Bloc<CreateItemEvent, CreateItemState> {
   final CreateItem createItem;
   final GetItemTypes getItemTypes;

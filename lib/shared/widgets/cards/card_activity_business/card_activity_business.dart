@@ -74,8 +74,10 @@ class CardActivityBusiness extends StatelessWidget {
                   chipColor: chipColor,
                   price: '$sym ${fmtPrice(price)}',
                   priceTextStyle: tt.titleMedium?.copyWith(
-                    color: Colors.green,
-                    fontWeight: FontWeight.w900,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary, // themed color
+                    fontWeight: FontWeight.w900, // bold
                   ),
                 ),
                 const SizedBox(height: 8),

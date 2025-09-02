@@ -7,12 +7,14 @@ import 'package:geocoding/geocoding.dart' as geo;
 class MapLocationPicker extends StatefulWidget {
   final String hintText;
   final String? initialAddress;
+  final LatLng? initialLatLng; // 👈 NEW
   final void Function(String address, double lat, double lng) onPicked;
 
   const MapLocationPicker({
     super.key,
     required this.hintText,
     this.initialAddress,
+    this.initialLatLng, // 👈 NEW
     required this.onPicked,
   });
 
@@ -64,22 +66,56 @@ class MapLocationPicker extends StatefulWidget {
   State<MapLocationPicker> createState() => _MapLocationPickerState();
 }
 
+
+
 class _MapLocationPickerState extends State<MapLocationPicker> {
   final _searchCtrl = TextEditingController();
   GoogleMapController? _map;
 
-  // keep track of the camera target as user pans/zooms
   LatLng _cameraTarget = const LatLng(45.5019, -73.5674); // default center
   Marker? _marker;
   String _address = '';
   bool _busy = false;
+  bool _suppressFirstIdle =
+      true; // 👈 prevent first onCameraIdle from firing onPicked
+
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialAddress != null) {
+
+    if (widget.initialAddress != null && widget.initialAddress!.isNotEmpty) {
       _searchCtrl.text = widget.initialAddress!;
       _address = widget.initialAddress!;
+    }
+
+    if (widget.initialLatLng != null) {
+      // Pre-place the marker & camera on the provided position
+      _cameraTarget = widget.initialLatLng!;
+      _marker = Marker(
+        markerId: const MarkerId('picked'),
+        position: _cameraTarget,
+        infoWindow: InfoWindow(
+          title: _address.isNotEmpty ? _address : 'Picked location',
+        ),
+      );
+
+      // Fire onPicked once after first frame so parent state is aligned
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final addr = _address.isNotEmpty
+            ? _address
+            : await MapLocationPicker._reverse(
+                _cameraTarget.latitude,
+                _cameraTarget.longitude,
+              );
+        widget.onPicked(addr, _cameraTarget.latitude, _cameraTarget.longitude);
+        if (mounted && _address.isEmpty) {
+          setState(() {
+            _address = addr;
+            _searchCtrl.text = addr;
+          });
+        }
+      });
     }
   }
 
@@ -138,6 +174,9 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    print(
+      "DEBUG Map init => initialLatLng=${widget.initialLatLng}, initialAddress=${widget.initialAddress}",
+    );
 
     return Container(
       height: 260,
@@ -152,19 +191,25 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: _cameraTarget,
-              zoom: 12,
+              zoom: widget.initialLatLng != null ? 15 : 12,
             ),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
-            onMapCreated: (c) => _map = c,
+            onMapCreated: (c) {
+              _map = c;
+              // After map is created, we let onCameraIdle work as usual
+              // but skip the very first idle that happens immediately.
+              Future.delayed(const Duration(milliseconds: 300), () {
+                _suppressFirstIdle = false;
+              });
+            },
             markers: {if (_marker != null) _marker!},
-            // ✅ track camera position while moving
             onCameraMove: (CameraPosition pos) {
               _cameraTarget = pos.target;
             },
-            // ✅ when the move stops, reverse geocode the last target
             onCameraIdle: () async {
+              if (_suppressFirstIdle) return; // 👈 skip first idle
               setState(() => _busy = true);
               final addr = await MapLocationPicker._reverse(
                 _cameraTarget.latitude,
@@ -265,4 +310,15 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
       ),
     );
   }
+
+  @override
+  void didUpdateWidget(covariant MapLocationPicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.initialLatLng != null &&
+        widget.initialLatLng != oldWidget.initialLatLng) {
+      _moveCamera(widget.initialLatLng!, address: widget.initialAddress);
+    }
+  }
+  
 }

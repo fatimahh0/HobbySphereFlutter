@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/repositories/business_activity_repository.dart';
 import '../services/business_activity_service.dart';
@@ -8,31 +9,51 @@ class BusinessActivityRepositoryImpl implements BusinessActivityRepository {
 
   BusinessActivity _map(Map<String, dynamic> e) {
     final id = (e['id'] as num?)?.toInt() ?? 0;
+
     final name = (e['itemName'] ?? 'Unnamed').toString();
-    final type = (e['itemType']?['activity_type'] ?? '').toString();
     final status = (e['status'] ?? '').toString();
     final imageUrl = e['imageUrl']?.toString();
 
-    DateTime? startDate;
-    final sd = e['startDatetime'];
-    if (sd is String) {
-      startDate = DateTime.tryParse(sd);
-    } else if (sd is num) {
-      startDate = DateTime.fromMillisecondsSinceEpoch(sd.toInt());
-    }
+    // item type id (used in dropdown preselection)
+    final itemTypeId =
+        (e['itemType']?['id'] as num?)?.toInt() ?? // nested
+        (e['itemTypeId'] as num?)?.toInt();
 
+    // flat FK
+
+    final description = (e['description'] ?? '').toString();
     final maxParticipants = (e['maxParticipants'] as num?)?.toInt() ?? 0;
     final price = (e['price'] as num?)?.toDouble() ?? 0.0;
+
+    //  Dates
+    DateTime? startDate;
+    final sd = e['startDatetime'];
+    if (sd is String) startDate = DateTime.tryParse(sd);
+
+    DateTime? endDate;
+    final ed = e['endDatetime'];
+    if (ed is String) endDate = DateTime.tryParse(ed);
+
+    //  Lat / Lng
+    final lat = (e['latitude'] as num?)?.toDouble() ?? 0.0;
+    final lng = (e['longitude'] as num?)?.toDouble() ?? 0.0;
+    final address = (e['location'] ?? '').toString();
+
 
     return BusinessActivity(
       id: id,
       name: name,
-      type: type,
-      startDate: startDate,
-      maxParticipants: maxParticipants,
-      price: price,
+      description: description,
+      itemTypeId: itemTypeId, // 👈 use the extracted var
       status: status,
       imageUrl: imageUrl,
+      location: (e['location'] ?? '').toString(),
+      latitude: lat,
+      longitude: lng,
+      startDate: startDate,
+      endDate: endDate,
+      maxParticipants: maxParticipants,
+      price: price,
     );
   }
 
@@ -61,10 +82,7 @@ class BusinessActivityRepositoryImpl implements BusinessActivityRepository {
   }
 
   @override
-  Future<void> delete({
-    required String token,
-    required int id,
-  }) {
+  Future<void> delete({required String token, required int id}) {
     return service.deleteBusinessActivity(token, id);
   }
 }

@@ -1,12 +1,11 @@
 // ===== Flutter 3.35.x =====
 // router.dart — central app router (Navigator 1.0, onGenerateRoute)
-// This version HARD-WIRES the repos for the Create Item route
-// so you DON'T need Provider for ItemTypeRepository / CurrencyRepository.
 
 import 'package:flutter/material.dart';
+import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/edit_item_page.dart';
 import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart';
 
-// ---------- screens you already have ----------
+// ---------- screens ----------
 import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart';
@@ -16,18 +15,22 @@ import 'package:hobby_sphere/features/activities/Business/businessHome/presentat
 import 'package:hobby_sphere/navigation/nav_bootstrap.dart';
 import 'package:hobby_sphere/core/constants/app_role.dart';
 
-// ---------- new Create Item (BLoC) page ----------
+// ---------- Create screen ----------
 import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/screen/create_item_page.dart';
 
 // ---------- domain usecases ----------
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
 
-// ---------- data layer: services + repositories impl (ADJUST PATHS if needed) ----------
-
+// ---------- data layer ----------
 import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
 import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
+
+// ---------- Edit screen + business activity read ----------
+import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
+import 'package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
 
 /// Named routes
 abstract class Routes {
@@ -39,9 +42,16 @@ abstract class Routes {
   static const businessHome = '/business/home';
   static const createBusinessActivity = '/business/activity/create';
   static const shell = '/shell';
+  static const editBusinessActivity = '/business/activity/edit';
 }
 
-/// Business Home args
+// ===== Route Args =====
+class EditActivityRouteArgs {
+  final int itemId;
+  final int businessId;
+  const EditActivityRouteArgs({required this.itemId, required this.businessId});
+}
+
 class BusinessHomeRouteArgs {
   final String token;
   final int businessId;
@@ -53,7 +63,6 @@ class BusinessHomeRouteArgs {
   });
 }
 
-/// Shell args
 class ShellRouteArgs {
   final AppRole role;
   final String token;
@@ -65,7 +74,6 @@ class ShellRouteArgs {
   });
 }
 
-/// Create Item args — we only pass businessId (token is read by BLoC via TokenStore)
 class CreateActivityRouteArgs {
   final int businessId;
   const CreateActivityRouteArgs({required this.businessId});
@@ -121,10 +129,11 @@ class AppRouter {
       case Routes.businessHome:
         {
           final data = args is BusinessHomeRouteArgs ? args : null;
-          if (data == null)
+          if (data == null) {
             return _error(
               'Missing BusinessHomeRouteArgs (token + businessId).',
             );
+          }
 
           return _page(
             BusinessHomeScreen(
@@ -147,7 +156,7 @@ class AppRouter {
           );
         }
 
-      // Create Item (BLoC) — HARD-WIRED repos (no Provider required)
+      // Create Item
       case Routes.createBusinessActivity:
         {
           final data = args is CreateActivityRouteArgs ? args : null;
@@ -157,13 +166,10 @@ class AppRouter {
           return MaterialPageRoute(
             settings: settings,
             builder: (_) {
-              // Build services/repositories locally to avoid Provider
               final itemTypeSvc = ItemTypesService();
               final currencySvc = CurrencyService();
               final itemTypeRepo = ItemTypeRepositoryImpl(itemTypeSvc);
               final currencyRepo = CurrencyRepositoryImpl(currencySvc);
-
-              // Usecases
               final getItemTypes = GetItemTypes(itemTypeRepo);
               final getCurrency = GetCurrentCurrency(currencyRepo);
 
@@ -171,6 +177,44 @@ class AppRouter {
                 businessId: data.businessId,
                 getItemTypes: getItemTypes,
                 getCurrentCurrency: getCurrency,
+              );
+            },
+          );
+        }
+
+      // Edit Item (NEW)
+      case Routes.editBusinessActivity:
+        {
+          final data = args is EditActivityRouteArgs ? args : null;
+          if (data == null)
+            return _error(
+              'Missing EditActivityRouteArgs (itemId + businessId).',
+            );
+
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) {
+              // shared services for dropdown & currency
+              final itemTypeSvc = ItemTypesService();
+              final currencySvc = CurrencyService();
+              final itemTypeRepo = ItemTypeRepositoryImpl(itemTypeSvc);
+              final currencyRepo = CurrencyRepositoryImpl(currencySvc);
+              final getItemTypes = GetItemTypes(itemTypeRepo);
+              final getCurrency = GetCurrentCurrency(currencyRepo);
+              
+
+              // business activity reader to prefill
+              final activitySvc = BusinessActivityService();
+              final activityRepo = BusinessActivityRepositoryImpl(activitySvc);
+              final getOne = GetBusinessActivityById(activityRepo);
+
+              return EditItemPage(
+                itemId: data.itemId,
+                businessId: data.businessId,
+                getItemTypes: getItemTypes,
+                getCurrentCurrency: getCurrency,
+                getItemById: getOne,
+
               );
             },
           );

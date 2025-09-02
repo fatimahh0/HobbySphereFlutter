@@ -22,6 +22,7 @@ Future<void> main() async {
   final savedToken = sp.getString('token');
   if (savedToken != null && savedToken.isNotEmpty) {
     apiClient.setToken(savedToken);
+    g.Token = savedToken; // expose globally
   }
 
   // 4) Expose globals so ApiFetch() can reuse the configured Dio

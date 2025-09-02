@@ -53,6 +53,8 @@ class CreateItemService {
       );
     }
 
+
+
     return _fetch.fetch(
       HttpMethod.post,
       '$_base/create', // -> /api/items/create
@@ -62,6 +64,48 @@ class CreateItemService {
         // Don't set Content-Type manually; Dio sets multipart boundary.
       },
     );
+  }
+
+Future<Response> updateMultipart(String token, int id, Map<String, dynamic> body) async {
+    final form = await _toForm(body);
+    return _fetch.fetch(
+      HttpMethod.put,
+      '$_base/$id/update-with-image',
+      data: form,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'multipart/form-data',
+      },
+    );
+  }
+
+  Future<FormData> _toForm(Map<String, dynamic> body) async {
+    final form = FormData();
+    for (final e in body.entries) {
+      final k = e.key; final v = e.value;
+      if (v == null) continue;
+      if (k == 'imageRemoved') { // booleans must be strings for some servers
+        form.fields.add(MapEntry(k, (v == true) ? 'true' : 'false'));
+        continue;
+      }
+      if (v is File) continue; // handled below
+      form.fields.add(MapEntry(k, v.toString()));
+    }
+
+    if (body['image'] is File) {
+      final file = body['image'] as File;
+      form.files.add(
+        MapEntry(
+          'image',
+          await MultipartFile.fromFile(
+            file.path,
+            filename: p.basename(file.path),
+            contentType: MediaType('image', _guess(p.extension(file.path))),
+          ),
+        ),
+      );
+    }
+    return form;
   }
 
   String _guess(String ext) {
