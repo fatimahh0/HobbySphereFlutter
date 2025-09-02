@@ -127,119 +127,99 @@ class AppRouter {
 
       // Business home
       case Routes.businessHome:
-        {
-          final data = args is BusinessHomeRouteArgs ? args : null;
-          if (data == null) {
-            return _error(
-              'Missing BusinessHomeRouteArgs (token + businessId).',
-            );
-          }
+        final data = args is BusinessHomeRouteArgs ? args : null;
+        if (data == null) {
+          return _error('Missing BusinessHomeRouteArgs (token + businessId).');
+        }
 
-          return _page(
-            BusinessHomeScreen(
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (context) {
+            return BusinessHomeScreen(
               token: data.token,
               businessId: data.businessId,
-              onCreate:
-                  data.onCreateOverride ??
-                  () {
-                    final ctx = navigatorKey.currentContext!;
-                    Navigator.pushNamed(
-                      ctx,
-                      Routes.createBusinessActivity,
-                      arguments: CreateActivityRouteArgs(
-                        businessId: data.businessId,
-                      ),
-                    );
-                  },
-            ),
-            settings,
-          );
-        }
+              onCreate: (ctx, bid) {
+                navigatorKey.currentState?.pushNamed(
+                  Routes.createBusinessActivity,
+                  arguments: CreateActivityRouteArgs(businessId: bid),
+                );
+              },
+            );
+          },
+        );
 
       // Create Item
       case Routes.createBusinessActivity:
-        {
-          final data = args is CreateActivityRouteArgs ? args : null;
-          if (data == null)
-            return _error('Missing CreateActivityRouteArgs (businessId).');
+        print("🚀 [Router] createBusinessActivity route triggered");
+        final data = args is CreateActivityRouteArgs ? args : null;
+        if (data == null) return _error("Missing CreateActivityRouteArgs");
 
-          return MaterialPageRoute(
-            settings: settings,
-            builder: (_) {
-              final itemTypeSvc = ItemTypesService();
-              final currencySvc = CurrencyService();
-              final itemTypeRepo = ItemTypeRepositoryImpl(itemTypeSvc);
-              final currencyRepo = CurrencyRepositoryImpl(currencySvc);
-              final getItemTypes = GetItemTypes(itemTypeRepo);
-              final getCurrency = GetCurrentCurrency(currencyRepo);
-
-              return CreateItemPage(
-                businessId: data.businessId,
-                getItemTypes: getItemTypes,
-                getCurrentCurrency: getCurrency,
-              );
-            },
-          );
-        }
-
-      // Edit Item (NEW)
-      case Routes.editBusinessActivity:
-        {
-          final data = args is EditActivityRouteArgs ? args : null;
-          if (data == null)
-            return _error(
-              'Missing EditActivityRouteArgs (itemId + businessId).',
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) {
+            print(
+              "🟢 [Router] Building CreateItemPage for businessId=${data.businessId}",
             );
+            return CreateItemPage(
+              businessId: data.businessId,
+              getItemTypes: GetItemTypes(
+                ItemTypeRepositoryImpl(ItemTypesService()),
+              ),
+              getCurrentCurrency: GetCurrentCurrency(
+                CurrencyRepositoryImpl(CurrencyService()),
+              ),
+            );
+          },
+        );
 
-          return MaterialPageRoute(
-            settings: settings,
-            builder: (_) {
-              // shared services for dropdown & currency
-              final itemTypeSvc = ItemTypesService();
-              final currencySvc = CurrencyService();
-              final itemTypeRepo = ItemTypeRepositoryImpl(itemTypeSvc);
-              final currencyRepo = CurrencyRepositoryImpl(currencySvc);
-              final getItemTypes = GetItemTypes(itemTypeRepo);
-              final getCurrency = GetCurrentCurrency(currencyRepo);
-              
-
-              // business activity reader to prefill
-              final activitySvc = BusinessActivityService();
-              final activityRepo = BusinessActivityRepositoryImpl(activitySvc);
-              final getOne = GetBusinessActivityById(activityRepo);
-
-              return EditItemPage(
-                itemId: data.itemId,
-                businessId: data.businessId,
-                getItemTypes: getItemTypes,
-                getCurrentCurrency: getCurrency,
-                getItemById: getOne,
-
-              );
-            },
-          );
+      // Edit Item
+      case Routes.editBusinessActivity:
+        final data = args is EditActivityRouteArgs ? args : null;
+        if (data == null) {
+          return _error('Missing EditActivityRouteArgs (itemId + businessId).');
         }
+
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) {
+            final itemTypeSvc = ItemTypesService();
+            final currencySvc = CurrencyService();
+            final itemTypeRepo = ItemTypeRepositoryImpl(itemTypeSvc);
+            final currencyRepo = CurrencyRepositoryImpl(currencySvc);
+            final getItemTypes = GetItemTypes(itemTypeRepo);
+            final getCurrency = GetCurrentCurrency(currencyRepo);
+
+            final activitySvc = BusinessActivityService();
+            final activityRepo = BusinessActivityRepositoryImpl(activitySvc);
+            final getOne = GetBusinessActivityById(activityRepo);
+
+            return EditItemPage(
+              itemId: data.itemId,
+              businessId: data.businessId,
+              getItemTypes: getItemTypes,
+              getCurrentCurrency: getCurrency,
+              getItemById: getOne,
+            );
+          },
+        );
 
       // Role-aware shell
       case Routes.shell:
-        {
-          final data = args is ShellRouteArgs ? args : null;
-          if (data == null)
-            return _error(
-              'Missing ShellRouteArgs (role + token + businessId).',
-            );
-
-          return _page(
-            NavBootstrap(
-              role: data.role,
-              token: data.token,
-              businessId: data.businessId,
-            ),
-            settings,
-          );
+        final data = args is ShellRouteArgs ? args : null;
+        if (data == null) {
+          return _error('Missing ShellRouteArgs (role + token + businessId).');
         }
 
-      // Fallback → splash
+        return _page(
+          NavBootstrap(
+            role: data.role,
+            token: data.token,
+            businessId: data.businessId,
+          ),
+          settings,
+        );
+
+      // Fallback
       default:
         return _page(const SplashPage(), settings);
     }

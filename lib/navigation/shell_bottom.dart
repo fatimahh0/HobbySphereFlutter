@@ -8,6 +8,7 @@
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hobby_sphere/app/router/router.dart';
 
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
@@ -54,11 +55,17 @@ class _ShellBottomState extends State<ShellBottom> {
     UserProfileScreen(),
   ];
 
-  late final List<Widget> _businessPages = <Widget>[
+ late final List<Widget> _businessPages = <Widget>[
     BusinessHomeScreen(
       token: widget.token,
       businessId: widget.businessId,
-      onCreate: () => Navigator.pushNamed(context, '/business/activity/create'),
+      onCreate: (ctx, bid) {
+        Navigator.pushNamed(
+          ctx,
+          '/business/activity/create',
+          arguments: CreateActivityRouteArgs(businessId: bid),
+        );
+      },
     ),
     const BusinessBookingScreen(),
     const BusinessAnalyticsScreen(),

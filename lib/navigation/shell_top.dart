@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hobby_sphere/app/router/router.dart';
 
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
@@ -74,8 +75,13 @@ class ShellTop extends StatelessWidget {
         BusinessHomeScreen(
           token: token,
           businessId: businessId,
-          onCreate: () =>
-              Navigator.of(context).pushNamed('/business/activity/create'),
+          onCreate: (ctx, bid) {
+            Navigator.pushNamed(
+              ctx,
+              '/business/activity/create',
+              arguments: CreateActivityRouteArgs(businessId: bid),
+            );
+          },
         ),
         const BusinessBookingScreen(),
         const BusinessAnalyticsScreen(),
@@ -130,7 +136,6 @@ class ShellTop extends StatelessWidget {
     return DefaultTabController(
       length: labels.length,
       child: Scaffold(
-   
         extendBodyBehindAppBar: true,
 
         body: Padding(
@@ -151,9 +156,7 @@ class ShellTop extends StatelessWidget {
           title: const Text('Hobby Sphere'),
 
           flexibleSpace: Container(
-            margin: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top,
-            ), 
+            margin: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
             decoration: BoxDecoration(
               color: fill,
               border: Border(bottom: BorderSide(color: border, width: 0.8)),
@@ -177,7 +180,7 @@ class ShellTop extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: border, width: 1),
-                  color: fill, 
+                  color: fill,
                 ),
                 child: TabBar(
                   isScrollable: true,

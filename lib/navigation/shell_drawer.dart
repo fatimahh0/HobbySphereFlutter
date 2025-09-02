@@ -5,6 +5,7 @@
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hobby_sphere/app/router/router.dart';
 
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart';
@@ -59,13 +60,20 @@ class _ShellDrawerState extends State<ShellDrawer> {
     BusinessHomeScreen(
       token: widget.token,
       businessId: widget.businessId,
-      onCreate: () {}, // <-- no-op instead of null (fixes your error)
+      onCreate: (ctx, bid) {
+        Navigator.pushNamed(
+          ctx,
+          '/business/activity/create',
+          arguments: CreateActivityRouteArgs(businessId: bid),
+        );
+      },
     ),
     const BusinessBookingScreen(),
     const BusinessAnalyticsScreen(),
     const BusinessActivitiesScreen(),
     const BusinessProfileScreen(),
   ];
+
 
   List<({String title, IconData icon, Widget page, int? badge})> _menu(
     BuildContext context,
