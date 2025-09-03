@@ -28,4 +28,9 @@ class TokenStore {
     await sp.remove('token'); // remove token
     await sp.remove('role'); // remove role
   }
+
+  static Future<String?> readToken() async {
+    final sp = await SharedPreferences.getInstance();
+    return sp.getString('token');
+  }
 }

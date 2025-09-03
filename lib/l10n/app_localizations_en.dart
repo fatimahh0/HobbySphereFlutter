@@ -2139,4 +2139,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorAuthRequired => 'You must be logged in.';
+
+  @override
+  String get bookingsMyBookings => 'My Bookings';
+
+  @override
+  String get bookingsByUser => 'Booked by';
+
+  @override
+  String get bookingsStatus => 'Status';
+
+  @override
+  String get bookingsPaid => 'Paid';
+
+  @override
+  String get bookingsReject => 'Reject';
+
+  @override
+  String get bookingsUnreject => 'Unreject';
+
+  @override
+  String get bookingsMarkPaid => 'Mark as Paid';
+
+  @override
+  String get bookingsDetails => 'View Details';
+
+  @override
+  String get activitiesUnnamed => 'Unnamed Activity';
 }

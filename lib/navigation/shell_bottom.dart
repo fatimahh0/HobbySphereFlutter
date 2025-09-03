@@ -55,7 +55,7 @@ class _ShellBottomState extends State<ShellBottom> {
     UserProfileScreen(),
   ];
 
- late final List<Widget> _businessPages = <Widget>[
+  late final List<Widget> _businessPages = <Widget>[
     BusinessHomeScreen(
       token: widget.token,
       businessId: widget.businessId,

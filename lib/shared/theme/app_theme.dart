@@ -8,6 +8,13 @@ class AppColors {
   static const text = Color(0xFF0F172A); // main text color (dark)
   static const muted = Color(0xFF64748B); // secondary text (gray)
   static const error = Color(0xFFDC2626); // error red
+
+    // ==== New semantic colors ====
+  static const pending = Color(0xFFF59E0B); // amber/orange
+  static const completed = Color(0xFF16A34A); // green
+  static const rejected = Color(0xFFDC2626); // red
+  static const canceled = Color(0xFF6B7280); // gray
+  static const paid = Color(0xFF2563EB); // blue
 }
 
 // ========== TYPOGRAPHY ==========

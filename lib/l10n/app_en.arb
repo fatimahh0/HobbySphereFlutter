@@ -712,6 +712,17 @@
   "pickImage": "Pick an Image",
   "submit": "Submit",
   "errorAuthRequired": "You must be logged in.",
+  
+"bookingsMyBookings": "My Bookings",
+"bookingsByUser": "Booked by",
+"bookingsStatus": "Status",
+"bookingsPaid": "Paid",
+"bookingsReject": "Reject",
+"bookingsUnreject": "Unreject",
+"bookingsMarkPaid": "Mark as Paid",
+"bookingsDetails": "View Details",
+"activitiesUnnamed": "Unnamed Activity",
+
   "@bookingMaxParticipants": {
     "placeholders": {
       "count": {

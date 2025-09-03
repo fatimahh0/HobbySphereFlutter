@@ -2,35 +2,47 @@
 // router.dart — central app router (Navigator 1.0, onGenerateRoute)
 
 import 'package:flutter/material.dart';
-import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/edit_item_page.dart';
-import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-// ---------- screens ----------
+// ---------- Common screens ----------
 import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart';
 import 'package:hobby_sphere/features/authentication/presentation/login/screen/login_page.dart';
+
+// ---------- User ----------
 import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
+
+// ---------- Business ----------
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/edit_item_page.dart';
+import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/screen/create_item_page.dart';
+
+// ---------- Business Bookings ----------
+import '../../features/activities/Business/businessBooking/data/repositories/business_booking_repository_impl.dart';
+import '../../features/activities/Business/businessBooking/data/services/business_booking_service.dart';
+import '../../features/activities/Business/businessBooking/domain/usecases/get_business_bookings.dart';
+import '../../features/activities/Business/businessBooking/domain/usecases/update_booking_status.dart';
+import '../../features/activities/Business/businessBooking/presentation/bloc/business_booking_bloc.dart';
+import '../../features/activities/Business/businessBooking/presentation/bloc/business_booking_event.dart';
+import '../../features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart';
+
+// ---------- Core ----------
 import 'package:hobby_sphere/navigation/nav_bootstrap.dart';
 import 'package:hobby_sphere/core/constants/app_role.dart';
 
-// ---------- Create screen ----------
-import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/screen/create_item_page.dart';
-
-// ---------- domain usecases ----------
+// ---------- Domain usecases ----------
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
 
-// ---------- data layer ----------
+// ---------- Data layer ----------
+import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart';
 import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
 import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
-
-// ---------- Edit screen + business activity read ----------
 import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
 import 'package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
 
 /// Named routes
 abstract class Routes {
@@ -41,8 +53,9 @@ abstract class Routes {
   static const userHome = '/user/home';
   static const businessHome = '/business/home';
   static const createBusinessActivity = '/business/activity/create';
-  static const shell = '/shell';
   static const editBusinessActivity = '/business/activity/edit';
+  static const businessBookings = '/business/bookings';
+  static const shell = '/shell';
 }
 
 // ===== Route Args =====
@@ -79,7 +92,7 @@ class CreateActivityRouteArgs {
   const CreateActivityRouteArgs({required this.businessId});
 }
 
-/// Optional navigator key (useful for programmatic navigation)
+/// Global navigator key (for programmatic navigation)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class AppRouter {
@@ -98,15 +111,13 @@ class AppRouter {
     final args = settings.arguments;
 
     switch (name) {
-      // Splash
+      // ===== Common =====
       case Routes.splash:
         return _page(const SplashPage(), settings);
 
-      // Static onboarding
       case Routes.onboarding:
         return _page(const OnboardingPage(), settings);
 
-      // Animated onboarding
       case Routes.onboardingScreen:
         return _page(
           OnboardingScreen(
@@ -117,62 +128,70 @@ class AppRouter {
           settings,
         );
 
-      // Login
       case Routes.login:
         return _page(const LoginPage(), settings);
 
-      // User home
+      // ===== Business Bookings =====
+      case Routes.businessBookings:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) {
+            final repo = BusinessBookingRepositoryImpl(
+              BusinessBookingService(),
+            );
+            return BlocProvider(
+              create: (ctx) => BusinessBookingBloc(
+                getBookings: GetBusinessBookings(repo),
+                updateStatus: UpdateBookingStatus(repo),
+              )..add(BusinessBookingBootstrap()), // bootstrap fetch
+              child: const BusinessBookingScreen(),
+            );
+          },
+        );
+
+      // ===== User =====
       case Routes.userHome:
         return _page(const UserHomeScreen(), settings);
 
-      // Business home
+      // ===== Business Home =====
       case Routes.businessHome:
         final data = args is BusinessHomeRouteArgs ? args : null;
         if (data == null) {
           return _error('Missing BusinessHomeRouteArgs (token + businessId).');
         }
-
         return MaterialPageRoute(
           settings: settings,
-          builder: (context) {
-            return BusinessHomeScreen(
-              token: data.token,
-              businessId: data.businessId,
-              onCreate: (ctx, bid) {
-                navigatorKey.currentState?.pushNamed(
-                  Routes.createBusinessActivity,
-                  arguments: CreateActivityRouteArgs(businessId: bid),
-                );
-              },
-            );
-          },
+          builder: (context) => BusinessHomeScreen(
+            token: data.token,
+            businessId: data.businessId,
+            onCreate: (ctx, bid) {
+              navigatorKey.currentState?.pushNamed(
+                Routes.createBusinessActivity,
+                arguments: CreateActivityRouteArgs(businessId: bid),
+              );
+            },
+          ),
         );
 
-      // Create Item
+      // ===== Create Activity =====
       case Routes.createBusinessActivity:
-        print("🚀 [Router] createBusinessActivity route triggered");
         final data = args is CreateActivityRouteArgs ? args : null;
         if (data == null) return _error("Missing CreateActivityRouteArgs");
 
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) {
-            print(
-              "🟢 [Router] Building CreateItemPage for businessId=${data.businessId}",
-            );
-            return CreateItemPage(
-              businessId: data.businessId,
-              getItemTypes: GetItemTypes(
-                ItemTypeRepositoryImpl(ItemTypesService()),
-              ),
-              getCurrentCurrency: GetCurrentCurrency(
-                CurrencyRepositoryImpl(CurrencyService()),
-              ),
-            );
-          },
+          builder: (_) => CreateItemPage(
+            businessId: data.businessId,
+            getItemTypes: GetItemTypes(
+              ItemTypeRepositoryImpl(ItemTypesService()),
+            ),
+            getCurrentCurrency: GetCurrentCurrency(
+              CurrencyRepositoryImpl(CurrencyService()),
+            ),
+          ),
         );
 
-      // Edit Item
+      // ===== Edit Activity =====
       case Routes.editBusinessActivity:
         final data = args is EditActivityRouteArgs ? args : null;
         if (data == null) {
@@ -182,15 +201,14 @@ class AppRouter {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) {
-            final itemTypeSvc = ItemTypesService();
-            final currencySvc = CurrencyService();
-            final itemTypeRepo = ItemTypeRepositoryImpl(itemTypeSvc);
-            final currencyRepo = CurrencyRepositoryImpl(currencySvc);
+            final itemTypeRepo = ItemTypeRepositoryImpl(ItemTypesService());
+            final currencyRepo = CurrencyRepositoryImpl(CurrencyService());
             final getItemTypes = GetItemTypes(itemTypeRepo);
             final getCurrency = GetCurrentCurrency(currencyRepo);
 
-            final activitySvc = BusinessActivityService();
-            final activityRepo = BusinessActivityRepositoryImpl(activitySvc);
+            final activityRepo = BusinessActivityRepositoryImpl(
+              BusinessActivityService(),
+            );
             final getOne = GetBusinessActivityById(activityRepo);
 
             return EditItemPage(
@@ -203,13 +221,12 @@ class AppRouter {
           },
         );
 
-      // Role-aware shell
+      // ===== Role-aware shell =====
       case Routes.shell:
         final data = args is ShellRouteArgs ? args : null;
         if (data == null) {
           return _error('Missing ShellRouteArgs (role + token + businessId).');
         }
-
         return _page(
           NavBootstrap(
             role: data.role,
@@ -219,7 +236,7 @@ class AppRouter {
           settings,
         );
 
-      // Fallback
+      // ===== Fallback =====
       default:
         return _page(const SplashPage(), settings);
     }

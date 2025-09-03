@@ -1,35 +1,45 @@
 // ===== Flutter 3.35.x =====
-// ShellDrawer — glassmorphism + animated selection + badges.
-// Fixed: onCreate must be a non-null VoidCallback → using () {} (no-op).
+// ShellDrawer — drawer navigation for user & business roles.
+// Fixes: i18n for app title, consistent BlocProvider for BusinessBookingScreen,
+// refactored _menu for readability, all theme-aware.
 
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hobby_sphere/app/router/router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:hobby_sphere/app/router/router.dart';
+import 'package:hobby_sphere/core/constants/app_role.dart';
+import 'package:hobby_sphere/l10n/app_localizations.dart';
+
+// ===== Business screens =====
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/data/repositories/business_booking_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/data/services/business_booking_service.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/domain/usecases/get_business_bookings.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/domain/usecases/update_booking_status.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/bloc/business_booking_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
 
+// ===== User screens =====
 import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_explore_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_community_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_tickets_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_profile_screen.dart';
 
-import 'package:hobby_sphere/l10n/app_localizations.dart';
-import '../core/constants/app_role.dart';
+import '../features/activities/Business/businessBooking/presentation/bloc/business_booking_event.dart';
 
 class ShellDrawer extends StatefulWidget {
   final AppRole role;
   final String token;
   final int businessId;
 
-  /// Optional badges (match bottom bar).
-  final int bookingsBadge; // Business only
-  final int ticketsBadge; // User only
+  final int bookingsBadge; // business only
+  final int ticketsBadge; // user only
 
   const ShellDrawer({
     super.key,
@@ -47,6 +57,7 @@ class ShellDrawer extends StatefulWidget {
 class _ShellDrawerState extends State<ShellDrawer> {
   int _index = 0;
 
+  // ===== User pages =====
   late final List<Widget> _userPages = const [
     UserHomeScreen(),
     UserExploreScreen(),
@@ -55,7 +66,7 @@ class _ShellDrawerState extends State<ShellDrawer> {
     UserProfileScreen(),
   ];
 
-  // 🔧 FIX: pass a non-null VoidCallback (no-op) to onCreate
+  // ===== Business pages =====
   late final List<Widget> _businessPages = <Widget>[
     BusinessHomeScreen(
       token: widget.token,
@@ -63,56 +74,71 @@ class _ShellDrawerState extends State<ShellDrawer> {
       onCreate: (ctx, bid) {
         Navigator.pushNamed(
           ctx,
-          '/business/activity/create',
+          Routes.createBusinessActivity,
           arguments: CreateActivityRouteArgs(businessId: bid),
         );
       },
     ),
-    const BusinessBookingScreen(),
+    // ✅ wrap with BlocProvider so it always works
+    BlocProvider(
+      create: (ctx) => BusinessBookingBloc(
+        getBookings: GetBusinessBookings(
+          BusinessBookingRepositoryImpl(BusinessBookingService()),
+        ),
+        updateStatus: UpdateBookingStatus(
+          BusinessBookingRepositoryImpl(BusinessBookingService()),
+        ),
+      )..add(BusinessBookingBootstrap()),
+      child: const BusinessBookingScreen(),
+    ),
     const BusinessAnalyticsScreen(),
     const BusinessActivitiesScreen(),
     const BusinessProfileScreen(),
   ];
 
-
-  List<({String title, IconData icon, Widget page, int? badge})> _menu(
+  // ===== Menus =====
+  List<({String title, IconData icon, Widget page, int? badge})> _businessMenu(
     BuildContext context,
   ) {
     final t = AppLocalizations.of(context)!;
-    if (widget.role == AppRole.business) {
-      return [
-        (
-          title: t.tabHome,
-          icon: Icons.home_outlined,
-          page: _businessPages[0],
-          badge: null,
-        ),
-        (
-          title: t.tabBookings,
-          icon: Icons.event_available_outlined,
-          page: _businessPages[1],
-          badge: widget.bookingsBadge > 0 ? widget.bookingsBadge : null,
-        ),
-        (
-          title: t.tabAnalytics,
-          icon: Icons.insights_outlined,
-          page: _businessPages[2],
-          badge: null,
-        ),
-        (
-          title: t.tabActivities,
-          icon: Icons.local_activity_outlined,
-          page: _businessPages[3],
-          badge: null,
-        ),
-        (
-          title: t.tabProfile,
-          icon: Icons.person_outline,
-          page: _businessPages[4],
-          badge: null,
-        ),
-      ];
-    }
+    return [
+      (
+        title: t.tabHome,
+        icon: Icons.home_outlined,
+        page: _businessPages[0],
+        badge: null,
+      ),
+      (
+        title: t.tabBookings,
+        icon: Icons.event_available_outlined,
+        page: _businessPages[1],
+        badge: widget.bookingsBadge > 0 ? widget.bookingsBadge : null,
+      ),
+      (
+        title: t.tabAnalytics,
+        icon: Icons.insights_outlined,
+        page: _businessPages[2],
+        badge: null,
+      ),
+      (
+        title: t.tabActivities,
+        icon: Icons.local_activity_outlined,
+        page: _businessPages[3],
+        badge: null,
+      ),
+      (
+        title: t.tabProfile,
+        icon: Icons.person_outline,
+        page: _businessPages[4],
+        badge: null,
+      ),
+    ];
+  }
+
+  List<({String title, IconData icon, Widget page, int? badge})> _userMenu(
+    BuildContext context,
+  ) {
+    final t = AppLocalizations.of(context)!;
     return [
       (
         title: t.tabHome,
@@ -149,7 +175,7 @@ class _ShellDrawerState extends State<ShellDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    // Make Android's system nav bar solid to match the drawer
+    // Match system nav bar color
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
         systemNavigationBarColor: Theme.of(context).colorScheme.surface,
@@ -159,36 +185,29 @@ class _ShellDrawerState extends State<ShellDrawer> {
     );
 
     final scheme = Theme.of(context).colorScheme;
-    final menu = _menu(context);
-    if (_index >= menu.length) _index = menu.length - 1;
+    final menu = widget.role == AppRole.business
+        ? _businessMenu(context)
+        : _userMenu(context);
+    _index = _index.clamp(0, menu.length - 1);
 
     return Scaffold(
-      extendBody: false,
-      // scrim can stay semi-transparent; it dims page behind the drawer, not the drawer itself
       drawerScrimColor: Colors.black.withOpacity(0.35),
-
       appBar: AppBar(
         title: Text(menu[_index].title),
         centerTitle: true,
-        // solid app bar — no accidental glass tints
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
-
-      // keep page states
       body: IndexedStack(
         index: _index,
         children: menu.map((m) => m.page).toList(),
       ),
-
-      // >>> SOLID DRAWER (no transparency, no blur) <<<
       drawer: Drawer(
         width: 304,
-        backgroundColor: scheme.surface, // ✅ solid background
+        backgroundColor: scheme.surface,
         shape: const RoundedRectangleBorder(
-          // nice rounded right edge
           borderRadius: BorderRadius.only(
             topRight: Radius.circular(24),
             bottomRight: Radius.circular(24),
@@ -215,6 +234,7 @@ class _ShellDrawerState extends State<ShellDrawer> {
   }
 }
 
+// ===== Drawer Content =====
 class _DrawerContent extends StatelessWidget {
   final List<({String title, IconData icon, Widget page, int? badge})> items;
   final int index;
@@ -233,12 +253,11 @@ class _DrawerContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final name = 'Hobby Sphere';
 
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        // header
+        // Header
         Container(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
           child: Row(
@@ -257,7 +276,10 @@ class _DrawerContent extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name, style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      t.appTitle,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ), // ✅ i18n title
                     const SizedBox(height: 2),
                     Text(
                       t.tabProfile,
@@ -273,14 +295,13 @@ class _DrawerContent extends StatelessWidget {
         ),
         const Divider(height: 1),
 
-        // items
+        // Menu items
         ...List.generate(items.length, (i) {
           final it = items[i];
-          final selected = i == index;
           return _AnimatedDrawerTile(
             icon: it.icon,
             label: it.title,
-            selected: selected,
+            selected: i == index,
             onTap: () => onTap(i),
             iconBaseColor: iconBaseColor,
             activeColor: activeColor,
@@ -290,7 +311,7 @@ class _DrawerContent extends StatelessWidget {
 
         const Divider(height: 1),
 
-        // settings
+        // Settings
         _AnimatedDrawerTile(
           icon: Icons.settings_outlined,
           label: t.tabSettings,
@@ -309,6 +330,7 @@ class _DrawerContent extends StatelessWidget {
   }
 }
 
+// ===== Drawer Tile with animation =====
 class _AnimatedDrawerTile extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -366,20 +388,6 @@ class _AnimatedDrawerTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                if (t > 0)
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: activeColor.withOpacity(0.45 * t),
-                          blurRadius: 16 * t,
-                        ),
-                      ],
-                    ),
-                  ),
                 Icon(icon, color: ic),
                 const SizedBox(width: 12),
                 Expanded(

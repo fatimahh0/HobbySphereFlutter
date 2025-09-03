@@ -4332,6 +4332,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You must be logged in.'**
   String get errorAuthRequired;
+
+  /// No description provided for @bookingsMyBookings.
+  ///
+  /// In en, this message translates to:
+  /// **'My Bookings'**
+  String get bookingsMyBookings;
+
+  /// No description provided for @bookingsByUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Booked by'**
+  String get bookingsByUser;
+
+  /// No description provided for @bookingsStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get bookingsStatus;
+
+  /// No description provided for @bookingsPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get bookingsPaid;
+
+  /// No description provided for @bookingsReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get bookingsReject;
+
+  /// No description provided for @bookingsUnreject.
+  ///
+  /// In en, this message translates to:
+  /// **'Unreject'**
+  String get bookingsUnreject;
+
+  /// No description provided for @bookingsMarkPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as Paid'**
+  String get bookingsMarkPaid;
+
+  /// No description provided for @bookingsDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View Details'**
+  String get bookingsDetails;
+
+  /// No description provided for @activitiesUnnamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed Activity'**
+  String get activitiesUnnamed;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
