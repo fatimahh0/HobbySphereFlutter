@@ -4386,6 +4386,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unnamed Activity'**
   String get activitiesUnnamed;
+
+  /// No description provided for @upcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get upcoming;
+
+  /// No description provided for @terminated.
+  ///
+  /// In en, this message translates to:
+  /// **'Terminated'**
+  String get terminated;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

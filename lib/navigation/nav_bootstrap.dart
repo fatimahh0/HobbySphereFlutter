@@ -87,7 +87,7 @@ class _NavBootstrapState extends State<NavBootstrap> {
           case AppNavType.bottom:
           default:
             // bottom tabs shell
-            return ShellDrawer(
+            return ShellBottom(
               role: widget.role, // role down
               token: widget.token, // token down
               businessId: widget.businessId, // id down

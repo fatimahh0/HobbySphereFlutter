@@ -3,6 +3,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessReviews/presentation/screens/business_reviews_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
+import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
 
 // ---------- Common screens ----------
 import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
@@ -26,6 +33,14 @@ import '../../features/activities/Business/businessBooking/domain/usecases/updat
 import '../../features/activities/Business/businessBooking/presentation/bloc/business_booking_bloc.dart';
 import '../../features/activities/Business/businessBooking/presentation/bloc/business_booking_event.dart';
 import '../../features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart';
+
+// ---------- Business Analytics ----------
+import '../../features/activities/Business/BusinessAnalytics/data/repositories/business_analytics_repository_impl.dart';
+import '../../features/activities/Business/BusinessAnalytics/data/services/business_analytics_service.dart';
+import '../../features/activities/Business/BusinessAnalytics/domain/usecases/get_business_analytics.dart';
+import '../../features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_bloc.dart';
+import '../../features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
+import '../../features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
 
 // ---------- Core ----------
 import 'package:hobby_sphere/navigation/nav_bootstrap.dart';
@@ -55,7 +70,10 @@ abstract class Routes {
   static const createBusinessActivity = '/business/activity/create';
   static const editBusinessActivity = '/business/activity/edit';
   static const businessBookings = '/business/bookings';
+  static const businessAnalytics = '/business/analytics';
   static const shell = '/shell';
+  static const businessReviews = '/business/reviews';
+  static const businessActivities = '/business/activities';
 }
 
 // ===== Route Args =====
@@ -90,6 +108,25 @@ class ShellRouteArgs {
 class CreateActivityRouteArgs {
   final int businessId;
   const CreateActivityRouteArgs({required this.businessId});
+}
+
+class BusinessActivitiesRouteArgs {
+  final String token;
+  final int businessId;
+  const BusinessActivitiesRouteArgs({
+    required this.token,
+    required this.businessId,
+  });
+}
+
+class BusinessReviewsRouteArgs {
+  final int businessId;
+  final String token;
+
+  const BusinessReviewsRouteArgs({
+    required this.businessId,
+    required this.token,
+  });
 }
 
 /// Global navigator key (for programmatic navigation)
@@ -128,6 +165,21 @@ class AppRouter {
           settings,
         );
 
+      case Routes.businessReviews:
+        final data = args is BusinessReviewsRouteArgs ? args : null;
+        if (data == null) {
+          return _error(
+            "Missing BusinessReviewsRouteArgs (businessId + token).",
+          );
+        }
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => BusinessReviewsScreen(
+            businessId: data.businessId,
+            token: data.token,
+          ),
+        );
+
       case Routes.login:
         return _page(const LoginPage(), settings);
 
@@ -143,8 +195,71 @@ class AppRouter {
               create: (ctx) => BusinessBookingBloc(
                 getBookings: GetBusinessBookings(repo),
                 updateStatus: UpdateBookingStatus(repo),
-              )..add(BusinessBookingBootstrap()), // bootstrap fetch
+              )..add(BusinessBookingBootstrap()),
               child: const BusinessBookingScreen(),
+            );
+          },
+        );
+
+      // ===== Business Analytics =====
+      case Routes.businessAnalytics:
+        final data = args is BusinessHomeRouteArgs ? args : null;
+        if (data == null) {
+          return _error('Missing BusinessHomeRouteArgs (token + businessId).');
+        }
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) {
+            final repo = BusinessAnalyticsRepositoryImpl(
+              BusinessAnalyticsService(),
+            );
+            return BlocProvider(
+              create: (ctx) =>
+                  BusinessAnalyticsBloc(
+                    getBusinessAnalytics: GetBusinessAnalytics(repo),
+                  )..add(
+                    LoadBusinessAnalytics(
+                      token: data.token,
+                      businessId: data.businessId,
+                    ),
+                  ),
+              child: BusinessAnalyticsScreen(
+                token: data.token,
+                businessId: data.businessId,
+              ),
+            );
+          },
+        );
+
+      // ===== Business Activities =====
+      case Routes.businessActivities:
+        final data = args is BusinessActivitiesRouteArgs ? args : null;
+        if (data == null) {
+          return _error(
+            "Missing BusinessActivitiesRouteArgs (token + businessId).",
+          );
+        }
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) {
+            final repo = BusinessActivityRepositoryImpl(
+              BusinessActivityService(),
+            );
+            return BlocProvider(
+              create: (ctx) =>
+                  BusinessActivitiesBloc(
+                    getActivities: GetBusinessActivities(repo),
+                    deleteActivity: DeleteBusinessActivity(repo),
+                  )..add(
+                    LoadBusinessActivities(
+                      token: data.token,
+                      businessId: data.businessId,
+                    ),
+                  ),
+              child: BusinessActivitiesScreen(
+                token: data.token,
+                businessId: data.businessId,
+              ),
             );
           },
         );

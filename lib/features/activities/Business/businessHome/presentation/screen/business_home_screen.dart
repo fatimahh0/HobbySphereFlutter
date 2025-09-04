@@ -138,6 +138,8 @@ class _BusinessHomeView extends StatelessWidget {
           backgroundColor: cs.background,
           body: UpcomingActivitiesGrid(
             data: state.items
+                // ✅ Filter: show only upcoming (not terminated)
+                .where((a) => (a.status.toLowerCase() != 'terminated'))
                 .map(
                   (a) => {
                     'id': a.id,
@@ -199,15 +201,12 @@ class _BusinessHomeView extends StatelessWidget {
                     );
                   },
                   onDelete: () => _confirmDelete(ctx, item['id'] as int),
-                  onReopen:
-                      ((item['status'] ?? '').toString().toLowerCase() ==
-                          'terminated')
-                      ? () => _toast(ctx, 'Reopen flow for #${item["id"]}')
-                      : null,
+                  onReopen: null, // ❌ not in home, only in activities
                 ),
               );
             },
           ),
+
           bottomNavigationBar: bottomBar,
         );
       },

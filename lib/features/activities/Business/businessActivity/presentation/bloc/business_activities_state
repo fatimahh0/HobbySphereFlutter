@@ -1,0 +1,26 @@
+import 'package:equatable/equatable.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
+
+abstract class BusinessActivitiesState extends Equatable {
+  const BusinessActivitiesState();
+  @override
+  List<Object?> get props => [];
+}
+
+class BusinessActivitiesInitial extends BusinessActivitiesState {}
+
+class BusinessActivitiesLoading extends BusinessActivitiesState {}
+
+class BusinessActivitiesLoaded extends BusinessActivitiesState {
+  final List<BusinessActivity> activities;
+  const BusinessActivitiesLoaded(this.activities);
+  @override
+  List<Object?> get props => [activities];
+}
+
+class BusinessActivitiesError extends BusinessActivitiesState {
+  final String message;
+  const BusinessActivitiesError(this.message);
+  @override
+  List<Object?> get props => [message];
+}

@@ -1,5 +1,5 @@
 // ===== Flutter 3.35.x =====
-// BusinessBookingScreen — bookings with search + filter tabs
+// BusinessBookingScreen — bookings with search + filter tabs (scrollable)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -83,21 +83,23 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
 
           return Column(
             children: [
-              // ==== FILTER TABS ====
+              // ==== FILTER TABS (scrollable row of buttons) ====
               Container(
                 padding: const EdgeInsets.all(8),
-                child: Row(
-                  children:
-                      [
-                        'all',
-                        'pending',
-                        'completed',
-                        'rejected',
-                        'canceled',
-                      ].map((f) {
-                        final active = state.filter == f;
-                        return Expanded(
-                          child: Padding(
+                width: double.infinity,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children:
+                        [
+                          'all',
+                          'pending',
+                          'completed',
+                          'rejected',
+                          'canceled',
+                        ].map((f) {
+                          final active = state.filter == f;
+                          return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             child: AppButton(
                               label: _labelForFilter(l10n, f),
@@ -111,9 +113,9 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                                   : AppButtonType.outline,
                               size: AppButtonSize.sm,
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                  ),
                 ),
               ),
 

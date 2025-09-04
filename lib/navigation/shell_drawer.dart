@@ -1,7 +1,6 @@
 // ===== Flutter 3.35.x =====
 // ShellDrawer — drawer navigation for user & business roles.
-// Fixes: i18n for app title, consistent BlocProvider for BusinessBookingScreen,
-// refactored _menu for readability, all theme-aware.
+// Fixed: BusinessActivitiesScreen now receives token + businessId.
 
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
@@ -19,8 +18,16 @@ import 'package:hobby_sphere/features/activities/Business/businessBooking/data/s
 import 'package:hobby_sphere/features/activities/Business/businessBooking/domain/usecases/get_business_bookings.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/domain/usecases/update_booking_status.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/bloc/business_booking_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/bloc/business_booking_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart';
+
+import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/data/repositories/business_analytics_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/data/services/business_analytics_service.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/domain/usecases/get_business_analytics.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
+
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
 
@@ -30,8 +37,6 @@ import 'package:hobby_sphere/features/activities/user/presentation/user_explore_
 import 'package:hobby_sphere/features/activities/user/presentation/user_community_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_tickets_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_profile_screen.dart';
-
-import '../features/activities/Business/businessBooking/presentation/bloc/business_booking_event.dart';
 
 class ShellDrawer extends StatefulWidget {
   final AppRole role;
@@ -79,7 +84,6 @@ class _ShellDrawerState extends State<ShellDrawer> {
         );
       },
     ),
-    // ✅ wrap with BlocProvider so it always works
     BlocProvider(
       create: (ctx) => BusinessBookingBloc(
         getBookings: GetBusinessBookings(
@@ -91,12 +95,33 @@ class _ShellDrawerState extends State<ShellDrawer> {
       )..add(BusinessBookingBootstrap()),
       child: const BusinessBookingScreen(),
     ),
-    const BusinessAnalyticsScreen(),
-    const BusinessActivitiesScreen(),
+    BlocProvider(
+      create: (ctx) =>
+          BusinessAnalyticsBloc(
+            getBusinessAnalytics: GetBusinessAnalytics(
+              BusinessAnalyticsRepositoryImpl(BusinessAnalyticsService()),
+            ),
+          )..add(
+            LoadBusinessAnalytics(
+              token: widget.token,
+              businessId: widget.businessId,
+            ),
+          ),
+      child: BusinessAnalyticsScreen(
+        token: widget.token,
+        businessId: widget.businessId,
+      ),
+    ),
+
+    // ✅ FIXED: Pass token + businessId to activities screen
+    BusinessActivitiesScreen(
+      token: widget.token,
+      businessId: widget.businessId,
+    ),
+
     const BusinessProfileScreen(),
   ];
 
-  // ===== Menus =====
   List<({String title, IconData icon, Widget page, int? badge})> _businessMenu(
     BuildContext context,
   ) {
@@ -175,7 +200,6 @@ class _ShellDrawerState extends State<ShellDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    // Match system nav bar color
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
         systemNavigationBarColor: Theme.of(context).colorScheme.surface,
@@ -234,7 +258,6 @@ class _ShellDrawerState extends State<ShellDrawer> {
   }
 }
 
-// ===== Drawer Content =====
 class _DrawerContent extends StatelessWidget {
   final List<({String title, IconData icon, Widget page, int? badge})> items;
   final int index;
@@ -257,7 +280,6 @@ class _DrawerContent extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        // Header
         Container(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
           child: Row(
@@ -279,7 +301,7 @@ class _DrawerContent extends StatelessWidget {
                     Text(
                       t.appTitle,
                       style: Theme.of(context).textTheme.titleLarge,
-                    ), // ✅ i18n title
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       t.tabProfile,
@@ -294,8 +316,6 @@ class _DrawerContent extends StatelessWidget {
           ),
         ),
         const Divider(height: 1),
-
-        // Menu items
         ...List.generate(items.length, (i) {
           final it = items[i];
           return _AnimatedDrawerTile(
@@ -308,10 +328,7 @@ class _DrawerContent extends StatelessWidget {
             badge: it.badge,
           );
         }),
-
         const Divider(height: 1),
-
-        // Settings
         _AnimatedDrawerTile(
           icon: Icons.settings_outlined,
           label: t.tabSettings,
@@ -330,7 +347,6 @@ class _DrawerContent extends StatelessWidget {
   }
 }
 
-// ===== Drawer Tile with animation =====
 class _AnimatedDrawerTile extends StatelessWidget {
   final IconData icon;
   final String label;

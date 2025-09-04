@@ -2166,4 +2166,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get activitiesUnnamed => 'Unnamed Activity';
+
+  @override
+  String get upcoming => 'Upcoming';
+
+  @override
+  String get terminated => 'Terminated';
 }

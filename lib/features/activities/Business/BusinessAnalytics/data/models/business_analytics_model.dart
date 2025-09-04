@@ -2,26 +2,31 @@ import '../../domain/entities/business_analytics.dart';
 
 class BusinessAnalyticsModel extends BusinessAnalytics {
   const BusinessAnalyticsModel({
-    required int totalBookings,
     required double totalRevenue,
-    required int activeItems,
-    required int completedBookings,
-    required int canceledBookings,
+    required String topActivity,
+    required double bookingGrowth,
+    required String peakHours,
+    required double customerRetention,
+    required String analyticsDate,
   }) : super(
-         totalBookings: totalBookings,
          totalRevenue: totalRevenue,
-         activeItems: activeItems,
-         completedBookings: completedBookings,
-         canceledBookings: canceledBookings,
+         topActivity: topActivity,
+         bookingGrowth: bookingGrowth,
+         peakHours: peakHours,
+         customerRetention: customerRetention,
+         analyticsDate: analyticsDate,
        );
 
   factory BusinessAnalyticsModel.fromJson(Map<String, dynamic> json) {
+    print("🔍 Backend Analytics JSON: $json"); // 👈 Debug log
+
     return BusinessAnalyticsModel(
-      totalBookings: (json['totalBookings'] ?? 0) as int,
       totalRevenue: (json['totalRevenue'] ?? 0).toDouble(),
-      activeItems: (json['activeItems'] ?? 0) as int,
-      completedBookings: (json['completedBookings'] ?? 0) as int,
-      canceledBookings: (json['canceledBookings'] ?? 0) as int,
+      topActivity: (json['topActivity'] ?? 'N/A').toString(),
+      bookingGrowth: (json['bookingGrowth'] ?? 0).toDouble(),
+      peakHours: (json['peakHours'] ?? 'N/A').toString(),
+      customerRetention: (json['customerRetention'] ?? 0).toDouble(),
+      analyticsDate: (json['analyticsDate'] ?? '').toString(),
     );
   }
 }

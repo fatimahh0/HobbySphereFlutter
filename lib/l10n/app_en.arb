@@ -722,6 +722,8 @@
 "bookingsMarkPaid": "Mark as Paid",
 "bookingsDetails": "View Details",
 "activitiesUnnamed": "Unnamed Activity",
+"upcoming": "Upcoming",
+"terminated": "Terminated",
 
   "@bookingMaxParticipants": {
     "placeholders": {

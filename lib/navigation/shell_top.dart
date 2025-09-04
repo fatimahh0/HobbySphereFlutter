@@ -1,31 +1,47 @@
 // ===== Flutter 3.35.x =====
-// ShellTop — fixed top bar (no content transparency) + smooth Tab animation
+// ShellTop — fixed top bar (no transparency) + smooth Tab animation.
+// FIXED: Passes token + businessId everywhere. Injects BlocProviders for Bookings + Analytics.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:hobby_sphere/app/router/router.dart';
+import 'package:hobby_sphere/core/constants/app_role.dart';
+import 'package:hobby_sphere/l10n/app_localizations.dart';
+
+// ===== Business =====
+import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/data/repositories/business_booking_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/data/services/business_booking_service.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/domain/usecases/get_business_bookings.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/domain/usecases/update_booking_status.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/bloc/business_booking_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/bloc/business_booking_event.dart';
+import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart';
+
+import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/data/repositories/business_analytics_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/data/services/business_analytics_service.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/domain/usecases/get_business_analytics.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
 
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
 
-import 'package:hobby_sphere/features/activities/user/presentation/user_community_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_explore_screen.dart';
+// ===== User =====
 import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_explore_screen.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_community_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_tickets_screen.dart';
-
-import 'package:hobby_sphere/l10n/app_localizations.dart';
-import '../core/constants/app_role.dart';
+import 'package:hobby_sphere/features/activities/user/presentation/user_profile_screen.dart';
 
 class ShellTop extends StatelessWidget {
   final AppRole role;
   final String token;
   final int businessId;
 
-  // optional badges (biz: bookings, user: tickets)
   final int bookingsBadge;
   final int ticketsBadge;
 
@@ -78,15 +94,32 @@ class ShellTop extends StatelessWidget {
           onCreate: (ctx, bid) {
             Navigator.pushNamed(
               ctx,
-              '/business/activity/create',
+              Routes.createBusinessActivity,
               arguments: CreateActivityRouteArgs(businessId: bid),
             );
           },
         ),
-        const BusinessBookingScreen(),
-        const BusinessAnalyticsScreen(),
-        const BusinessActivitiesScreen(),
-        const BusinessProfileScreen(),
+        BlocProvider(
+          create: (ctx) => BusinessBookingBloc(
+            getBookings: GetBusinessBookings(
+              BusinessBookingRepositoryImpl(BusinessBookingService()),
+            ),
+            updateStatus: UpdateBookingStatus(
+              BusinessBookingRepositoryImpl(BusinessBookingService()),
+            ),
+          )..add(BusinessBookingBootstrap()),
+          child: BusinessBookingScreen(),
+        ),
+        BlocProvider(
+          create: (ctx) => BusinessAnalyticsBloc(
+            getBusinessAnalytics: GetBusinessAnalytics(
+              BusinessAnalyticsRepositoryImpl(BusinessAnalyticsService()),
+            ),
+          )..add(LoadBusinessAnalytics(token: token, businessId: businessId)),
+          child: BusinessAnalyticsScreen(token: token, businessId: businessId),
+        ),
+        BusinessActivitiesScreen(token: token, businessId: businessId),
+        BusinessProfileScreen(),
       ];
     }
     return const [
@@ -124,7 +157,6 @@ class ShellTop extends StatelessWidget {
     const toolbarH = 44.0;
     const tabsH = 44.0;
 
-    // opaque glass (no BackdropFilter }
     final border = isDark
         ? Colors.white.withOpacity(0.16)
         : Colors.white.withOpacity(0.20);
@@ -137,14 +169,12 @@ class ShellTop extends StatelessWidget {
       length: labels.length,
       child: Scaffold(
         extendBodyBehindAppBar: true,
-
         body: Padding(
           padding: EdgeInsets.only(
             top: MediaQuery.of(context).padding.top + toolbarH + tabsH,
           ),
           child: TabBarView(children: pages),
         ),
-
         appBar: AppBar(
           elevation: 0,
           scrolledUnderElevation: 0,
@@ -154,7 +184,6 @@ class ShellTop extends StatelessWidget {
           centerTitle: true,
           toolbarHeight: toolbarH,
           title: const Text('Hobby Sphere'),
-
           flexibleSpace: Container(
             margin: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
             decoration: BoxDecoration(
@@ -169,7 +198,6 @@ class ShellTop extends StatelessWidget {
               ],
             ),
           ),
-
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(tabsH),
             child: Padding(
@@ -209,7 +237,6 @@ class ShellTop extends StatelessWidget {
                           : Colors.black.withOpacity(0.72),
                       active: scheme.primary,
                     );
-
                     if (i == badgeIndex && badgeCount > 0) {
                       return Tab(
                         child: Badge(
@@ -236,7 +263,6 @@ class ShellTop extends StatelessWidget {
   }
 }
 
-/// Smooth tab chip animation (scale + color) based on controller progress.
 class _AnimatedTabChip extends StatelessWidget {
   final int index;
   final String label;
@@ -257,15 +283,13 @@ class _AnimatedTabChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ctrl = DefaultTabController.maybeOf(context);
-    if (ctrl?.animation == null) {
-      return _chip(0.0);
-    }
+    if (ctrl?.animation == null) return _chip(0.0);
     return AnimatedBuilder(
       animation: ctrl!.animation!,
       builder: (context, _) {
-        final pos = ctrl.animation!.value; // ex: 0.0, 0.3, 1.0 ...
-        final dist = (pos - index).abs(); // distance from this tab
-        final t = (1.0 - dist).clamp(0.0, 1.0); // 0..1 selectedness
+        final pos = ctrl.animation!.value;
+        final dist = (pos - index).abs();
+        final t = (1.0 - dist).clamp(0.0, 1.0);
         return _chip(t);
       },
     );
