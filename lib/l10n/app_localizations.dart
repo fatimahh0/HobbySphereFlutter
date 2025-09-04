@@ -4398,6 +4398,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Terminated'**
   String get terminated;
+
+  /// No description provided for @editBusinessInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Business Info'**
+  String get editBusinessInfo;
+
+  /// No description provided for @myActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'My Activities'**
+  String get myActivities;
+
+  /// No description provided for @analytics.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics'**
+  String get analytics;
+
+  /// No description provided for @notifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
+
+  /// No description provided for @inviteManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite Manager'**
+  String get inviteManager;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get privacyPolicy;
+
+  /// No description provided for @language.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get language;
+
+  /// No description provided for @logout.
+  ///
+  /// In en, this message translates to:
+  /// **'Logout'**
+  String get logout;
+
+  /// No description provided for @manageAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Account'**
+  String get manageAccount;
+
+  /// No description provided for @toggleVisibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle Visibility'**
+  String get toggleVisibility;
+
+  /// No description provided for @setInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Account Inactive'**
+  String get setInactive;
+
+  /// No description provided for @setActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Reactivate Account'**
+  String get setActive;
+
+  /// No description provided for @deleteBusiness.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Business'**
+  String get deleteBusiness;
+
+  /// No description provided for @confirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Password'**
+  String get confirmPassword;
+
+  /// No description provided for @enterPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your password'**
+  String get enterPassword;
+
+  /// No description provided for @statusUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Status updated successfully'**
+  String get statusUpdated;
+
+  /// No description provided for @visibilityUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Visibility updated successfully'**
+  String get visibilityUpdated;
+
+  /// No description provided for @businessDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Business deleted successfully'**
+  String get businessDeleted;
+
+  /// No description provided for @errorOccurred.
+  ///
+  /// In en, this message translates to:
+  /// **'An error occurred. Please try again.'**
+  String get errorOccurred;
+
+  /// No description provided for @publicProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Public Profile'**
+  String get publicProfile;
+
+  /// No description provided for @privateProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Private Profile'**
+  String get privateProfile;
+
+  /// No description provided for @businessGrowMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s grow your business with HobbySphere..'**
+  String get businessGrowMessage;
+
+  /// No description provided for @stripeAccountConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Stripe account connected'**
+  String get stripeAccountConnected;
+
+  /// No description provided for @deleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get deleteAccount;
+
+  /// No description provided for @stripeAccountNotConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'stripe Account not connected'**
+  String get stripeAccountNotConnected;
+
+  /// No description provided for @registerOnStripe.
+  ///
+  /// In en, this message translates to:
+  /// **' register on stripe account'**
+  String get registerOnStripe;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -8,6 +8,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/constants/app_role.dart';
+import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/delete_business.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/get_business_by_id.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_visibility.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_event.dart';
+import 'package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 
 // ===== Business =====
@@ -118,8 +133,34 @@ class ShellTop extends StatelessWidget {
           )..add(LoadBusinessAnalytics(token: token, businessId: businessId)),
           child: BusinessAnalyticsScreen(token: token, businessId: businessId),
         ),
-        BusinessActivitiesScreen(token: token, businessId: businessId),
-        BusinessProfileScreen(),
+        BlocProvider(
+          create: (ctx) {
+            final repo = BusinessActivityRepositoryImpl(
+              BusinessActivityService(),
+            );
+            return BusinessActivitiesBloc(
+              getActivities: GetBusinessActivities(repo),
+              deleteActivity: DeleteBusinessActivity(repo),
+            )..add(
+              LoadBusinessActivities(token: token, businessId: businessId),
+            );
+          },
+          child: BusinessActivitiesScreen(token: token, businessId: businessId),
+        ),
+
+        BlocProvider(
+          create: (ctx) {
+            final businessRepo = BusinessRepositoryImpl(BusinessService());
+            return BusinessProfileBloc(
+              getBusinessById: GetBusinessById(businessRepo),
+              updateBusinessVisibility: UpdateBusinessVisibility(businessRepo),
+              updateBusinessStatus: UpdateBusinessStatus(businessRepo),
+              deleteBusiness: DeleteBusiness(businessRepo),
+              checkStripeStatus: CheckStripeStatus(businessRepo),
+            )..add(LoadBusinessProfile(token, businessId));
+          },
+          child: BusinessProfileScreen(token: token, businessId: businessId),
+        ),
       ];
     }
     return const [

@@ -1,6 +1,6 @@
 // ===== Flutter 3.35.x =====
 // ShellBottom — glassy transparent bottom bar + fixed animation.
-// FIXED: inject BlocProviders for Bookings, Analytics, and Activities.
+// Mirrors ShellDrawer: passes token + businessId, injects Blocs for Bookings + Analytics.
 
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
@@ -9,6 +9,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/constants/app_role.dart';
+import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/delete_business.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/get_business_by_id.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_visibility.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_event.dart';
+import 'package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 
 // ===== Business screens =====
@@ -28,14 +43,7 @@ import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/pres
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
 
-import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
-
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
 
 // ===== User screens =====
@@ -78,7 +86,7 @@ class _ShellBottomState extends State<ShellBottom> {
     UserProfileScreen(),
   ];
 
-  // ===== Business pages (with providers) =====
+  // ===== Business pages =====
   late final List<Widget> _businessPages = <Widget>[
     BusinessHomeScreen(
       token: widget.token,
@@ -100,7 +108,7 @@ class _ShellBottomState extends State<ShellBottom> {
           BusinessBookingRepositoryImpl(BusinessBookingService()),
         ),
       )..add(BusinessBookingBootstrap()),
-      child: const BusinessBookingScreen(),
+      child: BusinessBookingScreen(),
     ),
     BlocProvider(
       create: (ctx) =>
@@ -120,26 +128,41 @@ class _ShellBottomState extends State<ShellBottom> {
       ),
     ),
     BlocProvider(
-      create: (ctx) =>
-          BusinessActivitiesBloc(
-            getActivities: GetBusinessActivities(
-              BusinessActivityRepositoryImpl(BusinessActivityService()),
-            ),
-            deleteActivity: DeleteBusinessActivity(
-              BusinessActivityRepositoryImpl(BusinessActivityService()),
-            ),
-          )..add(
-            LoadBusinessActivities(
-              token: widget.token,
-              businessId: widget.businessId,
-            ),
+      create: (ctx) {
+        final repo = BusinessActivityRepositoryImpl(BusinessActivityService());
+        return BusinessActivitiesBloc(
+          getActivities: GetBusinessActivities(repo),
+          deleteActivity: DeleteBusinessActivity(repo),
+        )..add(
+          LoadBusinessActivities(
+            token: widget.token,
+            businessId: widget.businessId,
           ),
+        );
+      },
       child: BusinessActivitiesScreen(
         token: widget.token,
         businessId: widget.businessId,
       ),
     ),
-    const BusinessProfileScreen(),
+
+    // ShellBottom business pages
+    BlocProvider(
+      create: (ctx) {
+        final businessRepo = BusinessRepositoryImpl(BusinessService());
+        return BusinessProfileBloc(
+          getBusinessById: GetBusinessById(businessRepo),
+          updateBusinessVisibility: UpdateBusinessVisibility(businessRepo),
+          updateBusinessStatus: UpdateBusinessStatus(businessRepo),
+          deleteBusiness: DeleteBusiness(businessRepo),
+          checkStripeStatus: CheckStripeStatus(businessRepo),
+        )..add(LoadBusinessProfile(widget.token, widget.businessId));
+      },
+      child: BusinessProfileScreen(
+        token: widget.token,
+        businessId: widget.businessId,
+      ),
+    ),
   ];
 
   // ===== Helpers =====

@@ -2172,4 +2172,82 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get terminated => 'Terminated';
+
+  @override
+  String get editBusinessInfo => 'Edit Business Info';
+
+  @override
+  String get myActivities => 'My Activities';
+
+  @override
+  String get analytics => 'Analytics';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get inviteManager => 'Invite Manager';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get logout => 'Logout';
+
+  @override
+  String get manageAccount => 'Manage Account';
+
+  @override
+  String get toggleVisibility => 'Toggle Visibility';
+
+  @override
+  String get setInactive => 'Set Account Inactive';
+
+  @override
+  String get setActive => 'Reactivate Account';
+
+  @override
+  String get deleteBusiness => 'Delete Business';
+
+  @override
+  String get confirmPassword => 'Confirm Password';
+
+  @override
+  String get enterPassword => 'Please enter your password';
+
+  @override
+  String get statusUpdated => 'Status updated successfully';
+
+  @override
+  String get visibilityUpdated => 'Visibility updated successfully';
+
+  @override
+  String get businessDeleted => 'Business deleted successfully';
+
+  @override
+  String get errorOccurred => 'An error occurred. Please try again.';
+
+  @override
+  String get publicProfile => 'Public Profile';
+
+  @override
+  String get privateProfile => 'Private Profile';
+
+  @override
+  String get businessGrowMessage => 'Let\'s grow your business with HobbySphere..';
+
+  @override
+  String get stripeAccountConnected => 'Stripe account connected';
+
+  @override
+  String get deleteAccount => 'Delete Account';
+
+  @override
+  String get stripeAccountNotConnected => 'stripe Account not connected';
+
+  @override
+  String get registerOnStripe => ' register on stripe account';
 }
