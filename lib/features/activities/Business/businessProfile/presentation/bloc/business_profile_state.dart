@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/entities/business.dart';
 
-
 abstract class BusinessProfileState extends Equatable {
   @override
   List<Object?> get props => [];
@@ -13,12 +12,12 @@ class BusinessProfileLoading extends BusinessProfileState {}
 
 class BusinessProfileLoaded extends BusinessProfileState {
   final Business business;
-  final bool? stripeConnected; 
+  final bool? stripeConnected;
 
   BusinessProfileLoaded(this.business, {this.stripeConnected});
 
   @override
-  List<Object?> get props => [business, stripeConnected];
+  List<Object?> get props => [business, stripeConnected ?? ''];
 }
 
 class BusinessProfileError extends BusinessProfileState {

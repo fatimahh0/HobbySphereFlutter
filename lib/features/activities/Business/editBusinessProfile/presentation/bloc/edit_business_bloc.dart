@@ -33,7 +33,7 @@ class EditBusinessBloc extends Bloc<EditBusinessEvent, EditBusinessState> {
     emit(EditBusinessLoading());
     try {
       final business = await getBusinessById(e.token, e.id);
-      emit(EditBusinessLoaded(business));
+      emit(EditBusinessLoaded(business, updated: false));
     } catch (err) {
       emit(EditBusinessError(err.toString()));
     }
@@ -44,7 +44,7 @@ class EditBusinessBloc extends Bloc<EditBusinessEvent, EditBusinessState> {
     try {
       await updateBusiness(e.token, e.id, e.body, withImages: e.withImages);
       final business = await getBusinessById(e.token, e.id);
-      emit(EditBusinessLoaded(business, updated: true)); // 👈
+      emit(EditBusinessLoaded(business, updated: true));
     } catch (err) {
       emit(EditBusinessError(err.toString()));
     }

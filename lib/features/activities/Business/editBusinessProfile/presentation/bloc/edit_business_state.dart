@@ -12,7 +12,7 @@ class EditBusinessLoading extends EditBusinessState {}
 
 class EditBusinessLoaded extends EditBusinessState {
   final Business business;
-  final bool updated; 
+  final bool updated; // default false
 
   EditBusinessLoaded(this.business, {this.updated = false});
 

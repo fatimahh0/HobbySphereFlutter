@@ -137,15 +137,23 @@ class BusinessProfileScreen extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.edit),
               title: Text(tr.editBusinessInfo),
-              onTap: () {
-                Navigator.of(context).pushNamed(
+             onTap: () async {
+                final updated = await Navigator.pushNamed(
+                  context,
                   Routes.editBusiness,
                   arguments: EditBusinessRouteArgs(
                     token: token,
                     businessId: businessId,
                   ),
                 );
+
+                if (updated == true) {
+                  context.read<BusinessProfileBloc>().add(
+                    LoadBusinessProfile(token, businessId),
+                  ); // 
+                }
               },
+
             ),
             ListTile(
               leading: const Icon(Icons.work),
