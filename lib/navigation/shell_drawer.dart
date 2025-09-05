@@ -57,7 +57,8 @@ class ShellDrawer extends StatefulWidget {
   final AppRole role;
   final String token;
   final int businessId;
-
+  final void Function(Locale) onChangeLocale; // 👈 NEW
+  final VoidCallback onToggleTheme; // optional if you want theme switching
   final int bookingsBadge; // business only
   final int ticketsBadge; // user only
 
@@ -68,6 +69,8 @@ class ShellDrawer extends StatefulWidget {
     required this.businessId,
     this.bookingsBadge = 0,
     this.ticketsBadge = 0,
+    required this.onChangeLocale, // 👈 required now
+    required this.onToggleTheme, // 👈 if you also support theme toggle
   });
 
   @override
@@ -148,8 +151,7 @@ class _ShellDrawerState extends State<ShellDrawer> {
       ),
     ),
 
-
-      BlocProvider(
+    BlocProvider(
       create: (ctx) {
         final businessRepo = BusinessRepositoryImpl(BusinessService());
         return BusinessProfileBloc(
@@ -163,6 +165,8 @@ class _ShellDrawerState extends State<ShellDrawer> {
       child: BusinessProfileScreen(
         token: widget.token,
         businessId: widget.businessId,
+        onTabChange: (i) => setState(() => _index = i),
+        onChangeLocale: widget.onChangeLocale, // 👈 pass callback
       ),
     ),
   ];

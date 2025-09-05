@@ -27,14 +27,17 @@ class BusinessProfileBloc
     on<ChangeStatus>(_onChangeStatus);
     on<DeleteBusinessEvent>(_onDeleteBusiness);
     on<CheckStripeStatusEvent>(_onCheckStripe);
-    
   }
 
   Future<void> _onLoad(LoadBusinessProfile e, Emitter emit) async {
     emit(BusinessProfileLoading());
     try {
       final business = await getBusinessById(e.token, e.businessId);
-      emit(BusinessProfileLoaded(business));
+
+      // also check Stripe
+      final connected = await checkStripeStatus(e.token, e.businessId);
+
+      emit(BusinessProfileLoaded(business, stripeConnected: connected));
     } catch (err) {
       emit(BusinessProfileError(err.toString()));
     }
@@ -85,8 +88,4 @@ class BusinessProfileBloc
       emit(BusinessProfileError("Stripe check failed: ${err.toString()}"));
     }
   }
-
-  
-
-  
 }

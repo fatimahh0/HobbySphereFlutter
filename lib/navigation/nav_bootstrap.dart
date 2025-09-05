@@ -1,96 +1,99 @@
 // ===== Flutter 3.35.x =====
 // NavBootstrap: load theme → decide navigation type (bottom/top/drawer)
-// → build the matching shell and PASS role + token + businessId.
+// → build the matching shell and PASS role + token + businessId + callbacks.
 
-import 'package:flutter/material.dart'; // core UI widgets
-import 'package:hobby_sphere/features/activities/common/data/services/theme_service.dart'; // get active theme json
+import 'package:flutter/material.dart';
+import 'package:hobby_sphere/features/activities/common/data/services/theme_service.dart';
 
-import '../app/router/nav_type.dart'; // enum: bottom / top / drawer
-import '../app/router/nav_from_theme.dart'; // parser: json → AppNavType
-import '../core/constants/app_role.dart'; // enum: user / business / guest
+import '../app/router/nav_type.dart';
+import '../app/router/nav_from_theme.dart';
+import '../core/constants/app_role.dart';
 
-import 'shell_bottom.dart'; // bottom tabs shell (needs role, token, businessId)
-import 'shell_top.dart'; // top tabs shell (needs role, token, businessId)
-import 'shell_drawer.dart'; // drawer shell (needs role, token, businessId)
+import 'shell_bottom.dart';
+import 'shell_top.dart';
+import 'shell_drawer.dart';
 
 class NavBootstrap extends StatefulWidget {
-  final AppRole role; // current role (decides which pages to show)
-  final String token; // JWT token (BusinessHomeScreen needs it)
-  final int businessId; // business id (BusinessHomeScreen needs it)
+  final AppRole role;
+  final String token;
+  final int businessId;
+
+  // 👇 NEW: callbacks injected from AppRouter
+  final void Function(Locale) onChangeLocale;
+  final VoidCallback onToggleTheme;
 
   const NavBootstrap({
-    super.key, // widget key
-    required this.role, // pass role from login
-    required this.token, // pass token from login
-    required this.businessId, // pass business id from login
+    super.key,
+    required this.role,
+    required this.token,
+    required this.businessId,
+    required this.onChangeLocale, // 👈 required
+    required this.onToggleTheme, // 👈 required
   });
 
   @override
-  State<NavBootstrap> createState() => _NavBootstrapState(); // create state
+  State<NavBootstrap> createState() => _NavBootstrapState();
 }
 
 class _NavBootstrapState extends State<NavBootstrap> {
-  final _themeService = ThemeService(); // service to fetch active theme
-  late final Future<AppNavType> _future; // will hold nav type from backend
+  final _themeService = ThemeService();
+  late final Future<AppNavType> _future;
 
   @override
   void initState() {
-    super.initState(); // base init
-    _future = _load(); // start loading nav type once
+    super.initState();
+    _future = _load();
   }
 
   Future<AppNavType> _load() async {
     try {
-      // ask backend for active mobile theme json
-      final json = await _themeService.getActiveMobileTheme(); // GET
-      // parse to AppNavType (bottom/top/drawer)
-      return navTypeFromTheme(json); // parse safely
+      final json = await _themeService.getActiveMobileTheme();
+      return navTypeFromTheme(json);
     } catch (_) {
-      // on error, use a safe default
-      return AppNavType.bottom; // fallback to bottom tabs
+      return AppNavType.bottom;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<AppNavType>(
-      future: _future, // wait for nav type
+      future: _future,
       builder: (context, snap) {
-        // while loading show simple spinner
         if (snap.connectionState != ConnectionState.done) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()), // loader
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        // get type or fallback
-        final type = snap.data ?? AppNavType.bottom; // default bottom
+        final type = snap.data ?? AppNavType.bottom;
 
-        // build the right shell and PASS role + token + businessId
         switch (type) {
           case AppNavType.top:
-            // top tabs shell
             return ShellTop(
-              role: widget.role, // role down
-              token: widget.token, // token down
-              businessId: widget.businessId, // id down
+              role: widget.role,
+              token: widget.token,
+              businessId: widget.businessId,
+              onChangeLocale: widget.onChangeLocale, // 👈 forward
+              onToggleTheme: widget.onToggleTheme, // 👈 forward
             );
 
           case AppNavType.drawer:
-            // drawer shell
             return ShellDrawer(
-              role: widget.role, // role down
-              token: widget.token, // token down
-              businessId: widget.businessId, // id down
+              role: widget.role,
+              token: widget.token,
+              businessId: widget.businessId,
+              onChangeLocale: widget.onChangeLocale,
+              onToggleTheme: widget.onToggleTheme,
             );
 
           case AppNavType.bottom:
           default:
-            // bottom tabs shell
             return ShellBottom(
-              role: widget.role, // role down
-              token: widget.token, // token down
-              businessId: widget.businessId, // id down
+              role: widget.role,
+              token: widget.token,
+              businessId: widget.businessId,
+              onChangeLocale: widget.onChangeLocale,
+              onToggleTheme: widget.onToggleTheme,
             );
         }
       },

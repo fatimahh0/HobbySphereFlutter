@@ -10,6 +10,17 @@ import 'package:hobby_sphere/features/activities/Business/businessActivity/prese
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
+import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/data/repositories/edit_business_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/data/services/edit_business_service.dart';
+import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/delete_banner.dart';
+import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/delete_business.dart';
+import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/delete_logo.dart';
+import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/get_business_by_id.dart';
+import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/update_business.dart';
+import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/update_status.dart';
+import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/presentation/bloc/edit_business_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/presentation/screens/edit_business_screen.dart';
+import 'package:hobby_sphere/features/activities/common/presentation/PrivacyPolicyScreen.dart';
 
 // ---------- Common screens ----------
 import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
@@ -74,6 +85,8 @@ abstract class Routes {
   static const shell = '/shell';
   static const businessReviews = '/business/reviews';
   static const businessActivities = '/business/activities';
+  static const privacyPolicy = '/privacy-policy';
+  static const editBusiness = '/business/edit';
 }
 
 // ===== Route Args =====
@@ -117,6 +130,12 @@ class BusinessActivitiesRouteArgs {
     required this.token,
     required this.businessId,
   });
+}
+
+class EditBusinessRouteArgs {
+  final String token;
+  final int businessId;
+  const EditBusinessRouteArgs({required this.token, required this.businessId});
 }
 
 class BusinessReviewsRouteArgs {
@@ -182,6 +201,9 @@ class AppRouter {
 
       case Routes.login:
         return _page(const LoginPage(), settings);
+
+      case Routes.privacyPolicy:
+        return _page(const PrivacyPolicyScreen(), settings);
 
       // ===== Business Bookings =====
       case Routes.businessBookings:
@@ -288,6 +310,31 @@ class AppRouter {
           ),
         );
 
+      case Routes.editBusiness:
+        final data = args is EditBusinessRouteArgs ? args : null;
+        if (data == null) {
+          return _error("Missing EditBusinessRouteArgs (token + businessId).");
+        }
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) {
+            final repo = EditBusinessRepositoryImpl(EditBusinessService());
+            return BlocProvider(
+              create: (ctx) => EditBusinessBloc(
+                getBusinessById: GetBusinessById(repo),
+                updateBusiness: UpdateBusiness(repo),
+                deleteBusiness: DeleteBusiness(repo),
+                deleteLogo: DeleteLogo(repo),
+                deleteBanner: DeleteBanner(repo),
+              ),
+              child: EditBusinessScreen(
+                token: data.token,
+                businessId: data.businessId,
+              ),
+            );
+          },
+        );
+
       // ===== Create Activity =====
       case Routes.createBusinessActivity:
         final data = args is CreateActivityRouteArgs ? args : null;
@@ -347,10 +394,11 @@ class AppRouter {
             role: data.role,
             token: data.token,
             businessId: data.businessId,
+            onChangeLocale: onChangeLocale, // 👈 forward callback
+            onToggleTheme: onToggleTheme, // 👈 forward callback
           ),
           settings,
         );
-
       // ===== Fallback =====
       default:
         return _page(const SplashPage(), settings);

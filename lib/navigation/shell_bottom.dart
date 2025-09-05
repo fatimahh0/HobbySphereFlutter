@@ -57,6 +57,8 @@ class ShellBottom extends StatefulWidget {
   final AppRole role;
   final String token;
   final int businessId;
+  final void Function(Locale) onChangeLocale; // 👈 NEW
+  final VoidCallback onToggleTheme; // optional if you want theme switching
 
   final int bookingsBadge;
   final int ticketsBadge;
@@ -66,6 +68,8 @@ class ShellBottom extends StatefulWidget {
     required this.role,
     required this.token,
     required this.businessId,
+    required this.onChangeLocale, // 👈 required now
+    required this.onToggleTheme, // 👈 if you also support theme toggle
     this.bookingsBadge = 0,
     this.ticketsBadge = 0,
   });
@@ -161,6 +165,8 @@ class _ShellBottomState extends State<ShellBottom> {
       child: BusinessProfileScreen(
         token: widget.token,
         businessId: widget.businessId,
+        onTabChange: (i) => setState(() => _index = i),
+        onChangeLocale: widget.onChangeLocale, // 👈 pass callback
       ),
     ),
   ];

@@ -57,6 +57,10 @@ class ShellTop extends StatelessWidget {
   final String token;
   final int businessId;
 
+  // 👇 NEW
+  final void Function(Locale) onChangeLocale;
+  final VoidCallback onToggleTheme;
+
   final int bookingsBadge;
   final int ticketsBadge;
 
@@ -65,6 +69,8 @@ class ShellTop extends StatelessWidget {
     required this.role,
     required this.token,
     required this.businessId,
+    required this.onChangeLocale, // 👈 required
+    required this.onToggleTheme, // 👈 required
     this.bookingsBadge = 0,
     this.ticketsBadge = 0,
   });
@@ -159,7 +165,15 @@ class ShellTop extends StatelessWidget {
               checkStripeStatus: CheckStripeStatus(businessRepo),
             )..add(LoadBusinessProfile(token, businessId));
           },
-          child: BusinessProfileScreen(token: token, businessId: businessId),
+          child: BusinessProfileScreen(
+            token: token,
+            businessId: businessId,
+            onTabChange: (i) {
+              // For ShellTop, TabBar already handles switching,
+              // so you usually don’t need this — but keep for consistency.
+            },
+            onChangeLocale: onChangeLocale, // 👈 pass it here
+          ),
         ),
       ];
     }
