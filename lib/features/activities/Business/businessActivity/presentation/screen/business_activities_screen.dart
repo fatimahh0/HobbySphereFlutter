@@ -9,6 +9,9 @@ import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_state';
+import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/widgets/app_search_bar.dart';
 import 'package:hobby_sphere/shared/widgets/app_button.dart';
@@ -33,7 +36,29 @@ class BusinessActivitiesScreen extends StatefulWidget {
 
 class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
   String _query = '';
-  String _tab = 'Upcoming'; // Upcoming | Terminated
+  String _tab = 'Upcoming';
+  String _currency = ''; // <-- store the currency code here
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrency();
+  }
+
+  Future<void> _loadCurrency() async {
+    try {
+      // build repo + usecase (DI can be used if available)
+      final repo = CurrencyRepositoryImpl(CurrencyService());
+      final usecase = GetCurrentCurrency(repo);
+
+      final cur = await usecase(widget.token);
+      setState(() {
+        _currency = cur.code; // e.g. "CAD"
+      });
+    } catch (e) {
+      debugPrint('Error loading currency: $e');
+    }
+  }
 
   String _serverRoot() {
     final base = (g.appServerRoot ?? '');
@@ -106,116 +131,122 @@ class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
 
           // Grid
           Expanded(
-            child: BlocConsumer<BusinessActivitiesBloc, BusinessActivitiesState>(
-              listenWhen: (p, c) =>
-                  p is BusinessActivitiesError ||
-                  (c is BusinessActivitiesError),
-              listener: (context, state) {
-                if (state is BusinessActivitiesError) {
-                  _toast(context, state.message, error: true);
-                }
-              },
-              builder: (context, state) {
-                if (state is BusinessActivitiesLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (state is BusinessActivitiesLoaded) {
-                  var list = state.activities;
+            child:
+                BlocConsumer<BusinessActivitiesBloc, BusinessActivitiesState>(
+                  listenWhen: (p, c) =>
+                      p is BusinessActivitiesError ||
+                      (c is BusinessActivitiesError),
+                  listener: (context, state) {
+                    if (state is BusinessActivitiesError) {
+                      _toast(context, state.message, error: true);
+                    }
+                  },
+                  builder: (context, state) {
+                    if (state is BusinessActivitiesLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (state is BusinessActivitiesLoaded) {
+                      var list = state.activities;
 
-                  // filter by tab
-                  list = list.where((a) {
-                    final isTerminated = a.status.toLowerCase() == 'terminated';
-                    return _tab == 'Upcoming' ? !isTerminated : isTerminated;
-                  }).toList();
+                      // filter by tab
+                      list = list.where((a) {
+                        final isTerminated =
+                            a.status.toLowerCase() == 'terminated';
+                        return _tab == 'Upcoming'
+                            ? !isTerminated
+                            : isTerminated;
+                      }).toList();
 
-                  // filter by query
-                  if (_query.isNotEmpty) {
-                    list = list
-                        .where(
-                          (a) => a.name.toLowerCase().contains(
-                            _query.toLowerCase(),
-                          ),
-                        )
-                        .toList();
-                  }
+                      // filter by query
+                      if (_query.isNotEmpty) {
+                        list = list
+                            .where(
+                              (a) => a.name.toLowerCase().contains(
+                                _query.toLowerCase(),
+                              ),
+                            )
+                            .toList();
+                      }
 
-                  return UpcomingActivitiesGrid(
-                    data: list
-                        .map(
-                          (a) => {
-                            'id': a.id,
-                            'title': a.name,
-                            'type': a.description,
-                            'startDate': a.startDate,
-                            'participants': a.maxParticipants,
-                            'price': a.price,
-                            'status': a.status,
-                            'imageUrl': a.imageUrl,
-                          },
-                        )
-                        .toList(),
-                    loading: false,
-                    refreshing: false,
-                    onRefresh: () async {
-                      context.read<BusinessActivitiesBloc>().add(
-                        LoadBusinessActivities(
-                          token: widget.token,
-                          businessId: widget.businessId,
-                        ),
-                      );
-                      return Future.value();
-                    },
-                    header: const SizedBox.shrink(),
-                    emptyText: tr.activitiesEmpty,
-                    masonry: true,
-                    itemBuilder: (ctx, item) {
-                      final status = (item['status'] ?? '')
-                          .toString()
-                          .toLowerCase();
-
-                      return CardActivityBusiness(
-                        id: '${item['id']}',
-                        title: (item['title'] ?? '').toString(),
-                        subtitle: (item['type'] ?? '').toString(),
-                        startDate: item['startDate'] as DateTime?,
-                        participants: (item['participants'] as int?) ?? 0,
-                        price: (item['price'] as double?) ?? 0.0,
-                        currency: "C\$",
-                        status: (item['status'] ?? '').toString(),
-                        imageUrl: item['imageUrl']?.toString(),
-                        serverRoot: _serverRoot(),
-                        onView: () {},
-                        onEdit: () {
-                          Navigator.pushNamed(
-                            context,
-                            Routes.editBusinessActivity,
-                            arguments: EditActivityRouteArgs(
-                              itemId: item['id'] as int,
+                      return UpcomingActivitiesGrid(
+                        data: list
+                            .map(
+                              (a) => {
+                                'id': a.id,
+                                'title': a.name,
+                                'type': a.description,
+                                'startDate': a.startDate,
+                                'participants': a.maxParticipants,
+                                'price': a.price,
+                                'status': a.status,
+                                'imageUrl': a.imageUrl,
+                              },
+                            )
+                            .toList(),
+                        loading: false,
+                        refreshing: false,
+                        onRefresh: () async {
+                          context.read<BusinessActivitiesBloc>().add(
+                            LoadBusinessActivities(
+                              token: widget.token,
                               businessId: widget.businessId,
                             ),
                           );
+                          return Future.value();
                         },
-                        onDelete: () {
-                          context.read<BusinessActivitiesBloc>().add(
-                            DeleteBusinessActivityEvent(
-                              token: widget.token,
-                              id: item['id'] as int,
-                            ),
+                        header: const SizedBox.shrink(),
+                        emptyText: tr.activitiesEmpty,
+                        masonry: true,
+                        itemBuilder: (ctx, item) {
+                          final status = (item['status'] ?? '')
+                              .toString()
+                              .toLowerCase();
+
+                          return CardActivityBusiness(
+                            id: '${item['id']}',
+                            title: (item['title'] ?? '').toString(),
+                            subtitle: (item['type'] ?? '').toString(),
+                            startDate: item['startDate'] as DateTime?,
+                            participants: (item['participants'] as int?) ?? 0,
+                            price: (item['price'] as double?) ?? 0.0,
+                            currency: _currency, // <-- use loaded currency
+                            status: (item['status'] ?? '').toString(),
+                            imageUrl: item['imageUrl']?.toString(),
+                            serverRoot: _serverRoot(),
+                            onView: () {},
+                            onEdit: () {
+                              Navigator.pushNamed(
+                                context,
+                                Routes.editBusinessActivity,
+                                arguments: EditActivityRouteArgs(
+                                  itemId: item['id'] as int,
+                                  businessId: widget.businessId,
+                                ),
+                              );
+                            },
+                            onDelete: () {
+                              context.read<BusinessActivitiesBloc>().add(
+                                DeleteBusinessActivityEvent(
+                                  token: widget.token,
+                                  id: item['id'] as int,
+                                ),
+                              );
+                            },
+                            onReopen: status == 'terminated'
+                                ? () {
+                                    _toast(
+                                      ctx,
+                                      'Reopen flow for #${item["id"]}',
+                                    );
+                                  }
+                                : null,
                           );
                         },
-                        onReopen: status == 'terminated'
-                            ? () {
-                                _toast(ctx, 'Reopen flow for #${item["id"]}');
-                                // هنا بتضيف الـ event الحقيقي يلي بيعمل reopen إذا backend بيدعمه
-                              }
-                            : null,
                       );
-                    },
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
           ),
         ],
       ),

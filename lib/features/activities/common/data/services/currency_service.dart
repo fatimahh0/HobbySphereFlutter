@@ -12,8 +12,10 @@ class CurrencyService {
       HttpMethod.get,
       '$_base/current',
       headers: {'Authorization': 'Bearer $token'},
-      responseType: ResponseType.plain, // <- important
+      responseType: ResponseType.plain, // force raw string response
     );
-    return res.data.toString().replaceAll('"', '').trim(); // e.g. "CAD"
+
+    // Example: res.data = "CAD"
+    return res.data.toString().replaceAll('"', '').trim();
   }
 }

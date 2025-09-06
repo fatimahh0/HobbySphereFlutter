@@ -1,7 +1,7 @@
+// lib/features/activities/common/domain/usecases/get_current_currency.dart
 import '../entities/currency.dart';
 import '../repositories/currency_repository.dart';
 
-// UseCase: orchestrates fetching current currency
 class GetCurrentCurrency {
   final CurrencyRepository repository;
   GetCurrentCurrency(this.repository);

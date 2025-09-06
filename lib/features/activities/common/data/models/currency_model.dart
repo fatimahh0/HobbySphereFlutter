@@ -1,12 +1,13 @@
+// lib/features/activities/common/data/models/currency_model.dart
 import '../../domain/entities/currency.dart';
 
 class CurrencyModel {
-  final String code; // e.g. "CAD"
-  final String? symbol; // optional
+  final String code;
+  final String? symbol;
 
   CurrencyModel({required this.code, this.symbol});
 
-  // Old shape: JSON map from server
+  // Case 1: server sends a JSON map (future-proof)
   factory CurrencyModel.fromJson(Map<String, dynamic> json) {
     final code =
         (json['currencyType'] ?? json['code'] ?? json['currency'] ?? 'CAD')
@@ -14,10 +15,10 @@ class CurrencyModel {
     return CurrencyModel(code: code, symbol: json['symbol']?.toString());
   }
 
-  // New shape: plain string from server
+  // Case 2: server sends just a plain string like "CAD"
   factory CurrencyModel.fromCode(String code) => CurrencyModel(code: code);
 
-  // Helper that handles both cases
+  // General helper: detects type automatically
   factory CurrencyModel.fromServer(dynamic payload) {
     if (payload is String) return CurrencyModel.fromCode(payload);
     if (payload is Map<String, dynamic>) return CurrencyModel.fromJson(payload);
@@ -26,5 +27,6 @@ class CurrencyModel {
     );
   }
 
+  // Convert to domain entity
   Currency toEntity() => Currency(code: code, symbol: symbol);
 }

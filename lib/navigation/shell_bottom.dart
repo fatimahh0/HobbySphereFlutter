@@ -61,8 +61,6 @@ import 'package:hobby_sphere/features/activities/user/presentation/user_communit
 import 'package:hobby_sphere/features/activities/user/presentation/user_tickets_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_profile_screen.dart';
 
-
-
 class ShellBottom extends StatefulWidget {
   final AppRole role;
   final String token;
@@ -90,8 +88,6 @@ class ShellBottom extends StatefulWidget {
 
 class _ShellBottomState extends State<ShellBottom> {
   int _index = 0;
-
- 
 
   // ===== User pages =====
   late final List<Widget> _userPages = const [
@@ -240,8 +236,8 @@ class _ShellBottomState extends State<ShellBottom> {
         ? [
             t.tabHome,
             t.tabBookings,
-            t.tabAnalytics,
             t.tabActivities,
+            t.tabAnalytics,
             t.tabProfile,
           ]
         : [t.tabHome, t.tabExplore, t.tabSocial, t.tabTickets, t.tabProfile];
@@ -252,8 +248,8 @@ class _ShellBottomState extends State<ShellBottom> {
         ? const [
             (Icons.home_outlined, Icons.home),
             (Icons.event_available_outlined, Icons.event_available),
-            (Icons.insights_outlined, Icons.insights),
             (Icons.local_activity_outlined, Icons.local_activity),
+            (Icons.insights_outlined, Icons.insights),
             (Icons.person_outline, Icons.person),
           ]
         : const [

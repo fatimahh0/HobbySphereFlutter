@@ -5,6 +5,11 @@ import 'package:hobby_sphere/features/activities/Business/common/domain/usecases
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
 import 'package:hobby_sphere/features/activities/common/events/business_feed.dart';
 
+// currency
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
+
 import 'business_home_event.dart';
 import 'business_home_state.dart';
 
@@ -12,6 +17,8 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
   final GetBusinessActivities _getList;
   final GetBusinessActivityById _getOne;
   final DeleteBusinessActivity _deleteOne;
+
+  final GetCurrentCurrency _getCurrency; // ✅ added
 
   final String token;
   final int businessId;
@@ -29,6 +36,9 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
   }) : _getList = getList,
        _getOne = getOne,
        _deleteOne = deleteOne,
+       _getCurrency = GetCurrentCurrency(
+         CurrencyRepositoryImpl(CurrencyService()),
+       ), // ✅ init currency usecase
        super(const BusinessHomeState()) {
     // Event handlers
     on<BusinessHomeStarted>(_onStarted);
@@ -38,12 +48,12 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
     on<BusinessHomeDeleteRequested>(_onDelete);
     on<BusinessHomeFeedbackCleared>(_onClearFeedback);
 
-    // External feed → local list updates (no manual refresh).
+    // External feed → local list updates
     on<BusinessHomeExternalCreated>(_onExternalCreated);
     on<BusinessHomeExternalUpdated>(_onExternalUpdated);
     on<BusinessHomeExternalDeleted>(_onExternalDeleted);
 
-    // Subscribe to the global bus once; translate bus events to bloc events.
+    // Subscribe to global bus
     _feedSub = BusinessFeed().stream.listen((e) {
       if (e is BusinessActivityCreated) {
         add(BusinessHomeExternalCreated(e.activity));
@@ -64,7 +74,11 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
     emit(state.copyWith(loading: true, message: null, error: null));
     try {
       final list = await _getList(businessId: businessId, token: token);
-      emit(state.copyWith(loading: false, items: list));
+
+      // ✅ fetch currency
+      final cur = await _getCurrency(token);
+
+      emit(state.copyWith(loading: false, items: list, currency: cur.code));
     } catch (e) {
       emit(state.copyWith(loading: false, error: _err(e)));
     }
@@ -77,11 +91,15 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
     emit(state.copyWith(refreshing: true, message: null, error: null));
     try {
       final list = await _getList(businessId: businessId, token: token);
-      emit(state.copyWith(refreshing: false, items: list));
-      event.ack?.complete(); // ✅ signal UI that refresh finished
+
+      // ✅ fetch currency again on refresh
+      final cur = await _getCurrency(token);
+
+      emit(state.copyWith(refreshing: false, items: list, currency: cur.code));
+      event.ack?.complete();
     } catch (e) {
       emit(state.copyWith(refreshing: false, error: _err(e)));
-      event.ack?.complete(); // still complete to stop the spinner
+      event.ack?.complete();
     }
   }
 
@@ -114,14 +132,12 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
     Emitter<BusinessHomeState> emit,
   ) async {
     if (optimisticDelete) {
-      // Instant UX: remove now, rollback on error.
       final before = state.items;
       final after = before.where((a) => a.id != event.id).toList();
       emit(state.copyWith(items: after, message: null, error: null));
       try {
         await _deleteOne(token: token, id: event.id);
         emit(state.copyWith(message: 'Activity deleted'));
-        // Also inform others.
         BusinessFeed().emit(BusinessActivityDeleted(event.id));
       } catch (e) {
         emit(state.copyWith(items: before, error: _err(e)));
@@ -129,7 +145,6 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
       return;
     }
 
-    // Safe path: delete then reload.
     try {
       await _deleteOne(token: token, id: event.id);
       final list = await _getList(businessId: businessId, token: token);
@@ -144,7 +159,6 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
     BusinessHomeExternalCreated event,
     Emitter<BusinessHomeState> emit,
   ) {
-    // Prepend new activity to the list.
     emit(state.copyWith(items: [event.activity, ...state.items]));
   }
 
