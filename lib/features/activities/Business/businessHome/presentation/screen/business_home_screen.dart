@@ -71,23 +71,25 @@ class BusinessHomeScreen extends StatelessWidget {
         serverRoot: _serverRoot(),
         bottomBar: bottomBar,
         businessId: businessId,
+        token: token,
       ),
     );
   }
 }
 
 class _BusinessHomeView extends StatelessWidget {
-  final void Function(BuildContext context, int businessId)
-  onCreate; // ✅ updated
+  final void Function(BuildContext context, int businessId) onCreate;
   final String serverRoot;
   final Widget? bottomBar;
   final int businessId;
+  final String token;
 
   const _BusinessHomeView({
     required this.onCreate,
     required this.serverRoot,
     this.bottomBar,
     required this.businessId,
+    required this.token, // 👈 required
   });
 
   void _toast(BuildContext context, String msg, {bool error = false}) {
@@ -110,7 +112,17 @@ class _BusinessHomeView extends StatelessWidget {
       children: [
         WelcomeSection(
           token: context.read<BusinessHomeBloc>().token,
-          onOpenNotifications: () {},
+          onOpenNotifications: () {
+            Navigator.pushNamed(
+              context,
+              Routes.businessNotifications,
+              arguments: BusinessNotificationsRouteArgs(
+                token: token,
+                businessId: businessId,
+              ),
+            );
+          },
+
           onOpenCreateActivity: () =>
               onCreate(context, businessId), // ✅ updated
         ),

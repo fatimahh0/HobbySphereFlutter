@@ -11,6 +11,13 @@ import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/constants/app_role.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
+import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_event.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/data/repositories/business_notification_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/data/services/business_notification_service.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/usecases/get_business_notifications.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart';
@@ -24,6 +31,7 @@ import 'package:hobby_sphere/features/activities/Business/common/data/repositori
 import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 
 // ===== Business screens =====
@@ -53,6 +61,8 @@ import 'package:hobby_sphere/features/activities/user/presentation/user_communit
 import 'package:hobby_sphere/features/activities/user/presentation/user_tickets_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_profile_screen.dart';
 
+
+
 class ShellBottom extends StatefulWidget {
   final AppRole role;
   final String token;
@@ -81,6 +91,8 @@ class ShellBottom extends StatefulWidget {
 class _ShellBottomState extends State<ShellBottom> {
   int _index = 0;
 
+ 
+
   // ===== User pages =====
   late final List<Widget> _userPages = const [
     UserHomeScreen(),
@@ -92,16 +104,63 @@ class _ShellBottomState extends State<ShellBottom> {
 
   // ===== Business pages =====
   late final List<Widget> _businessPages = <Widget>[
-    BusinessHomeScreen(
-      token: widget.token,
-      businessId: widget.businessId,
-      onCreate: (ctx, bid) {
-        Navigator.pushNamed(
-          ctx,
-          Routes.createBusinessActivity,
-          arguments: CreateActivityRouteArgs(businessId: bid),
-        );
-      },
+    MultiBlocProvider(
+      providers: [
+        // Home bloc already
+        BlocProvider(
+          create: (ctx) => BusinessHomeBloc(
+            getList: GetBusinessActivities(
+              BusinessActivityRepositoryImpl(BusinessActivityService()),
+            ),
+            getOne: GetBusinessActivityById(
+              BusinessActivityRepositoryImpl(BusinessActivityService()),
+            ),
+            deleteOne: DeleteBusinessActivity(
+              BusinessActivityRepositoryImpl(BusinessActivityService()),
+            ),
+            token: widget.token,
+            businessId: widget.businessId,
+            optimisticDelete: false,
+          )..add(const BusinessHomeStarted()),
+        ),
+        // 👇 NEW: provide notification bloc here
+        BlocProvider(
+          create: (ctx) {
+            final repo = BusinessNotificationRepositoryImpl(
+              BusinessNotificationService(),
+            );
+            return BusinessNotificationBloc(
+              getBusinessNotifications: GetBusinessNotifications(repo),
+              repository: repo,
+              token: widget.token,
+            )..add(LoadUnreadCount(widget.token)); // first load unread count
+          },
+        ),
+      ],
+      child: BusinessHomeScreen(
+        token: widget.token,
+        businessId: widget.businessId,
+        onCreate: (ctx, bid) {
+          Navigator.pushNamed(
+            ctx,
+            Routes.createBusinessActivity,
+            arguments: CreateActivityRouteArgs(businessId: bid),
+          );
+        },
+      ),
+    ),
+
+    // Bookings
+    BlocProvider(
+      create: (ctx) => BusinessBookingBloc(
+        getBookings: GetBusinessBookings(
+          BusinessBookingRepositoryImpl(BusinessBookingService()),
+        ),
+        updateStatus: UpdateBookingStatus(
+          BusinessBookingRepositoryImpl(BusinessBookingService()),
+        ),
+      )..add(BusinessBookingBootstrap()),
+      child: BusinessBookingScreen(),
     ),
     BlocProvider(
       create: (ctx) => BusinessBookingBloc(

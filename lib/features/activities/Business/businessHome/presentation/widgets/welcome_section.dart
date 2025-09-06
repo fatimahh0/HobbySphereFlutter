@@ -1,9 +1,12 @@
 // ===== Flutter 3.35.x =====
-// Welcome block: title, subtitle, notifications, and "Create Activity".
+// Welcome block: title, subtitle, notifications with unread badge, and "Create Activity".
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
-// If you have this badge widget, keep the import; otherwise replace with a plain Icon.
-// import 'package:hobby_sphere/ui/widgets/business_notification_badge.dart';
+
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_state.dart';
 
 class WelcomeSection extends StatelessWidget {
   final VoidCallback? onOpenNotifications;
@@ -40,12 +43,50 @@ class WelcomeSection extends StatelessWidget {
                   ),
                 ),
               ),
-              IconButton(
-                onPressed: onOpenNotifications,
-                // Replace with your badge widget if you have it:
-                // icon: BusinessNotificationBadge(token: token, iconSize: 26),
-                icon: const Icon(Icons.notifications_outlined, size: 26),
-                tooltip: t.socialNotifications,
+              // 👇 Listen to unreadCount from Bloc
+              BlocBuilder<BusinessNotificationBloc, BusinessNotificationState>(
+                builder: (context, state) {
+                  final unreadCount = state.unreadCount;
+
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        onPressed: onOpenNotifications,
+                        icon: const Icon(
+                          Icons.notifications_outlined,
+                          size: 26,
+                        ),
+                        tooltip: t.socialNotifications,
+                      ),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: 6,
+                          top: 6,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 18,
+                              minHeight: 18,
+                            ),
+                            child: Text(
+                              '$unreadCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -61,7 +102,6 @@ class WelcomeSection extends StatelessWidget {
             width: 220,
             child: ElevatedButton.icon(
               onPressed: onOpenCreateActivity,
-              
               icon: const Icon(Icons.add_circle_outline),
               label: Text(t.businessCreateActivity),
               style: ElevatedButton.styleFrom(
@@ -74,7 +114,6 @@ class WelcomeSection extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                
               ),
             ),
           ),

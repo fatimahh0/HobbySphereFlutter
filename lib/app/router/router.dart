@@ -7,6 +7,7 @@ import 'package:hobby_sphere/features/activities/Business/BusinessReviews/presen
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/screens/business_notification_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
@@ -87,6 +88,7 @@ abstract class Routes {
   static const businessActivities = '/business/activities';
   static const privacyPolicy = '/privacy-policy';
   static const editBusiness = '/business/edit';
+  static const businessNotifications = '/business/notifications';
 }
 
 // ===== Route Args =====
@@ -121,6 +123,15 @@ class ShellRouteArgs {
 class CreateActivityRouteArgs {
   final int businessId;
   const CreateActivityRouteArgs({required this.businessId});
+}
+
+class BusinessNotificationsRouteArgs {
+  final String token;
+  final int businessId;
+  const BusinessNotificationsRouteArgs({
+    required this.token,
+    required this.businessId,
+  });
 }
 
 class BusinessActivitiesRouteArgs {
@@ -251,6 +262,22 @@ class AppRouter {
               ),
             );
           },
+        );
+
+      // ===== Business Notifications =====
+      case Routes.businessNotifications:
+        final data = args is BusinessNotificationsRouteArgs ? args : null;
+        if (data == null) {
+          return _error(
+            'Missing BusinessNotificationsRouteArgs (token + businessId).',
+          );
+        }
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => BusinessNotificationScreen(
+            token: data.token,
+            businessId: data.businessId,
+          ),
         );
 
       // ===== Business Activities =====

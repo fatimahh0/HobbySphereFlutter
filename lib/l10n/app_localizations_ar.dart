@@ -1327,6 +1327,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notificationFetchError => 'Error fetching notifications:';
 
   @override
+  String get noScreenForNotification => ' No screnn found ';
+
+  @override
+  String get deletedSuccessfully => 'notification deleted successfully';
+
+  @override
+  String get markedAsRead => ' mark as read';
+
+  @override
   String get notificationMarkReadError => 'Failed to mark as read:';
 
   @override

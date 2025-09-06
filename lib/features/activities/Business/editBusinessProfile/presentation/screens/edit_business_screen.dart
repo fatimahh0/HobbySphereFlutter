@@ -1,14 +1,16 @@
 // ===== Flutter 3.35.x =====
-// EditBusinessScreen — Facebook-like logo + banner editing with AppTheme
-// Includes Delete Account modal with password confirm.
+// EditBusinessScreen — Facebook-like logo + banner editing with AppTheme + PhoneInput + Delete Modal
 
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:intl_phone_field/country_picker_dialog.dart';
+
 import 'package:hobby_sphere/core/network/globals.dart' as g;
-import 'package:hobby_sphere/shared/theme/app_theme.dart'; // 👈 AppColors & AppTheme
+import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/shared/widgets/app_button.dart';
 import 'package:hobby_sphere/shared/widgets/app_text_field.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
@@ -36,10 +38,13 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
 
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
   final _websiteCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _deletePasswordCtrl = TextEditingController();
+
+  String? _phoneE164;
+  String? _initialIso = "US";
 
   File? _logo;
   File? _banner;
@@ -72,70 +77,67 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
       ),
       builder: (ctx) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.photo_camera, size: 32, color: cs.primary),
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    final img = await ImagePicker().pickImage(
-                      source: ImageSource.camera,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              IconButton(
+                icon: Icon(Icons.photo_camera, size: 32, color: cs.primary),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  final img = await ImagePicker().pickImage(
+                    source: ImageSource.camera,
+                  );
+                  if (img != null) {
+                    setState(() {
+                      if (isLogo) {
+                        _logo = File(img.path);
+                      } else {
+                        _banner = File(img.path);
+                      }
+                    });
+                  }
+                },
+              ),
+              IconButton(
+                icon: Icon(Icons.photo_library, size: 32, color: cs.primary),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  final img = await ImagePicker().pickImage(
+                    source: ImageSource.gallery,
+                  );
+                  if (img != null) {
+                    setState(() {
+                      if (isLogo) {
+                        _logo = File(img.path);
+                      } else {
+                        _banner = File(img.path);
+                      }
+                    });
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.delete,
+                  size: 32,
+                  color: AppColors.error,
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  if (isLogo) {
+                    context.read<EditBusinessBloc>().add(
+                      RemoveLogo(widget.token, businessId),
                     );
-                    if (img != null) {
-                      setState(() {
-                        if (isLogo) {
-                          _logo = File(img.path);
-                        } else {
-                          _banner = File(img.path);
-                        }
-                      });
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: Icon(Icons.photo_library, size: 32, color: cs.primary),
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    final img = await ImagePicker().pickImage(
-                      source: ImageSource.gallery,
+                    setState(() => _logo = null);
+                  } else {
+                    context.read<EditBusinessBloc>().add(
+                      RemoveBanner(widget.token, businessId),
                     );
-                    if (img != null) {
-                      setState(() {
-                        if (isLogo) {
-                          _logo = File(img.path);
-                        } else {
-                          _banner = File(img.path);
-                        }
-                      });
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete,
-                    size: 32,
-                    color: AppColors.error,
-                  ),
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    if (isLogo) {
-                      context.read<EditBusinessBloc>().add(
-                        RemoveLogo(widget.token, businessId),
-                      );
-                      setState(() => _logo = null);
-                    } else {
-                      context.read<EditBusinessBloc>().add(
-                        RemoveBanner(widget.token, businessId),
-                      );
-                      setState(() => _banner = null);
-                    }
-                  },
-                ),
-              ],
-            ),
+                    setState(() => _banner = null);
+                  }
+                },
+              ),
+            ],
           ),
         );
       },
@@ -148,7 +150,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
         "name": _nameCtrl.text,
         "email": _emailCtrl.text.isEmpty ? null : _emailCtrl.text,
         "description": _descCtrl.text,
-        "phoneNumber": _phoneCtrl.text,
+        "phoneNumber": _phoneE164,
         "websiteUrl": _websiteCtrl.text,
         if (_passwordCtrl.text.isNotEmpty) "password": _passwordCtrl.text,
         if (_logo != null) "logo": MultipartFile.fromFileSync(_logo!.path),
@@ -161,28 +163,25 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
     }
   }
 
-  void _confirmDelete(BuildContext context) {
+  void _confirmDelete() {
     final tr = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final pwdCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            tr.deleteAccount,
-            style: Theme.of(ctx).textTheme.titleMedium,
-          ),
+          title: Text(tr.deleteAccount),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(tr.editBusinessConfirmPassword),
               const SizedBox(height: 12),
-              AppPasswordField(controller: pwdCtrl, label: tr.enterPassword),
+              AppTextField(
+                controller: _deletePasswordCtrl,
+                label: tr.enterPassword,
+                obscure: true,
+              ),
             ],
           ),
           actions: [
@@ -191,28 +190,22 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
               child: Text(tr.cancel, style: TextStyle(color: cs.error)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: cs.primary,
-                foregroundColor: cs.onPrimary,
-              ),
               onPressed: () {
-                if (pwdCtrl.text.trim().isEmpty) {
+                if (_deletePasswordCtrl.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(tr.editProfilePasswordRequired)),
                   );
                   return;
                 }
-
                 Navigator.pop(ctx);
                 context.read<EditBusinessBloc>().add(
                   DeleteBusinessEvent(
                     widget.token,
                     widget.businessId,
-                    pwdCtrl.text.trim(),
+                    _deletePasswordCtrl.text.trim(),
                   ),
                 );
               },
-
               child: Text(tr.confirm),
             ),
           ],
@@ -227,12 +220,11 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
     final cs = Theme.of(context).colorScheme;
 
     return BlocConsumer<EditBusinessBloc, EditBusinessState>(
-      listener: (ctx, state) async {
+      listener: (ctx, state) {
         if (state is EditBusinessLoaded && state.updated) {
-          Navigator.pop(context, true); // ✅ رجوع للـ profile بعد التعديل
+          Navigator.pop(context, true);
         }
         if (state is EditBusinessInitial) {
-          // ✅ بعد الحذف الناجح → رجوع إلى LoginPage
           Navigator.of(
             context,
           ).pushNamedAndRemoveUntil('/login', (route) => false);
@@ -254,9 +246,9 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
           final b = state.business;
           _nameCtrl.text = b.name;
           _emailCtrl.text = b.email ?? '';
-          _phoneCtrl.text = b.phoneNumber;
           _websiteCtrl.text = b.websiteUrl ?? '';
           _descCtrl.text = b.description;
+          _phoneE164 = b.phoneNumber;
 
           return Scaffold(
             appBar: AppBar(title: Text(tr.editBusinessInfo)),
@@ -371,11 +363,25 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
                           label: tr.email,
                           margin: const EdgeInsets.only(bottom: 16),
                         ),
-                        AppTextField(
-                          controller: _phoneCtrl,
-                          label: tr.editBusinessPhoneNumber,
-                          keyboardType: TextInputType.phone, // 👈 Input type
-                          margin: const EdgeInsets.only(bottom: 16),
+                        IntlPhoneField(
+                          initialCountryCode: _initialIso,
+                          decoration: InputDecoration(
+                            labelText: tr.editBusinessPhoneNumber,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          initialValue: b.phoneNumber,
+                          onChanged: (p) {
+                            _phoneE164 = p.completeNumber;
+                            _initialIso = p.countryISOCode;
+                          },
+                          pickerDialogStyle: PickerDialogStyle(
+                            searchFieldInputDecoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.search),
+                              hintText: tr.searchPlaceholder,
+                            ),
+                          ),
                         ),
                         AppTextField(
                           controller: _websiteCtrl,
@@ -408,7 +414,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
                     label: tr.deleteAccount,
                     type: AppButtonType.outline,
                     expand: true,
-                    onPressed: () => _confirmDelete(context),
+                    onPressed: _confirmDelete,
                   ),
                 ],
               ),

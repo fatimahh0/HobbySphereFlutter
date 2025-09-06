@@ -137,7 +137,7 @@ class BusinessProfileScreen extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.edit),
               title: Text(tr.editBusinessInfo),
-             onTap: () async {
+              onTap: () async {
                 final updated = await Navigator.pushNamed(
                   context,
                   Routes.editBusiness,
@@ -150,10 +150,9 @@ class BusinessProfileScreen extends StatelessWidget {
                 if (updated == true) {
                   context.read<BusinessProfileBloc>().add(
                     LoadBusinessProfile(token, businessId),
-                  ); // 
+                  ); //
                 }
               },
-
             ),
             ListTile(
               leading: const Icon(Icons.work),
@@ -169,7 +168,14 @@ class BusinessProfileScreen extends StatelessWidget {
               leading: const Icon(Icons.notifications),
               title: Text(tr.notifications),
               onTap: () {
-                // TODO: implement notifications screen
+                Navigator.pushNamed(
+                  context,
+                  Routes.businessNotifications,
+                  arguments: BusinessNotificationsRouteArgs(
+                    token: token,
+                    businessId: businessId,
+                  ),
+                );
               },
             ),
             ListTile(

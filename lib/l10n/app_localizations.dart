@@ -2713,6 +2713,24 @@ abstract class AppLocalizations {
   /// **'Error fetching notifications:'**
   String get notificationFetchError;
 
+  /// No description provided for @noScreenForNotification.
+  ///
+  /// In en, this message translates to:
+  /// **' No screnn found '**
+  String get noScreenForNotification;
+
+  /// No description provided for @deletedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'notification deleted successfully'**
+  String get deletedSuccessfully;
+
+  /// No description provided for @markedAsRead.
+  ///
+  /// In en, this message translates to:
+  /// **' mark as read'**
+  String get markedAsRead;
+
   /// No description provided for @notificationMarkReadError.
   ///
   /// In en, this message translates to:
