@@ -99,10 +99,11 @@ class _ShellBottomState extends State<ShellBottom> {
   ];
 
   // ===== Business pages =====
+  // ===== Business pages =====
   late final List<Widget> _businessPages = <Widget>[
+    // 0. Home
     MultiBlocProvider(
       providers: [
-        // Home bloc already
         BlocProvider(
           create: (ctx) => BusinessHomeBloc(
             getList: GetBusinessActivities(
@@ -119,7 +120,6 @@ class _ShellBottomState extends State<ShellBottom> {
             optimisticDelete: false,
           )..add(const BusinessHomeStarted()),
         ),
-        // 👇 NEW: provide notification bloc here
         BlocProvider(
           create: (ctx) {
             final repo = BusinessNotificationRepositoryImpl(
@@ -129,7 +129,7 @@ class _ShellBottomState extends State<ShellBottom> {
               getBusinessNotifications: GetBusinessNotifications(repo),
               repository: repo,
               token: widget.token,
-            )..add(LoadUnreadCount(widget.token)); // first load unread count
+            )..add(LoadUnreadCount(widget.token));
           },
         ),
       ],
@@ -146,7 +146,7 @@ class _ShellBottomState extends State<ShellBottom> {
       ),
     ),
 
-    // Bookings
+    // 1. Bookings
     BlocProvider(
       create: (ctx) => BusinessBookingBloc(
         getBookings: GetBusinessBookings(
@@ -158,34 +158,8 @@ class _ShellBottomState extends State<ShellBottom> {
       )..add(BusinessBookingBootstrap()),
       child: BusinessBookingScreen(),
     ),
-    BlocProvider(
-      create: (ctx) => BusinessBookingBloc(
-        getBookings: GetBusinessBookings(
-          BusinessBookingRepositoryImpl(BusinessBookingService()),
-        ),
-        updateStatus: UpdateBookingStatus(
-          BusinessBookingRepositoryImpl(BusinessBookingService()),
-        ),
-      )..add(BusinessBookingBootstrap()),
-      child: BusinessBookingScreen(),
-    ),
-    BlocProvider(
-      create: (ctx) =>
-          BusinessAnalyticsBloc(
-            getBusinessAnalytics: GetBusinessAnalytics(
-              BusinessAnalyticsRepositoryImpl(BusinessAnalyticsService()),
-            ),
-          )..add(
-            LoadBusinessAnalytics(
-              token: widget.token,
-              businessId: widget.businessId,
-            ),
-          ),
-      child: BusinessAnalyticsScreen(
-        token: widget.token,
-        businessId: widget.businessId,
-      ),
-    ),
+
+    // 2. Activities
     BlocProvider(
       create: (ctx) {
         final repo = BusinessActivityRepositoryImpl(BusinessActivityService());
@@ -205,7 +179,26 @@ class _ShellBottomState extends State<ShellBottom> {
       ),
     ),
 
-    // ShellBottom business pages
+    // 3. Analytics
+    BlocProvider(
+      create: (ctx) =>
+          BusinessAnalyticsBloc(
+            getBusinessAnalytics: GetBusinessAnalytics(
+              BusinessAnalyticsRepositoryImpl(BusinessAnalyticsService()),
+            ),
+          )..add(
+            LoadBusinessAnalytics(
+              token: widget.token,
+              businessId: widget.businessId,
+            ),
+          ),
+      child: BusinessAnalyticsScreen(
+        token: widget.token,
+        businessId: widget.businessId,
+      ),
+    ),
+
+    // 4. Profile
     BlocProvider(
       create: (ctx) {
         final businessRepo = BusinessRepositoryImpl(BusinessService());
@@ -221,7 +214,7 @@ class _ShellBottomState extends State<ShellBottom> {
         token: widget.token,
         businessId: widget.businessId,
         onTabChange: (i) => setState(() => _index = i),
-        onChangeLocale: widget.onChangeLocale, // 👈 pass callback
+        onChangeLocale: widget.onChangeLocale,
       ),
     ),
   ];
