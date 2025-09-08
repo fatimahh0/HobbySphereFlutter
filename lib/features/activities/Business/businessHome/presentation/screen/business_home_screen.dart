@@ -1,5 +1,5 @@
 // ===== Flutter 3.35.x =====
-// BusinessHomeScreen — open Create/Edit via router
+// BusinessHomeScreen — open Create/Edit via router, list-only version
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -19,10 +19,9 @@ import 'package:hobby_sphere/features/activities/Business/common/data/services/b
 
 // UI widgets
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/widgets/header.dart';
-import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/widgets/upcoming_activities_grid.dart';
+import 'package:hobby_sphere/shared/widgets/BusinessListItemCard.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
-import 'package:hobby_sphere/shared/widgets/cards/card_activity_business/index.dart';
 
 // Bloc
 import '../bloc/business_home_bloc.dart';
@@ -32,8 +31,7 @@ import '../bloc/business_home_state.dart';
 class BusinessHomeScreen extends StatelessWidget {
   final String token;
   final int businessId;
-  final void Function(BuildContext context, int businessId)
-  onCreate; // ✅ updated
+  final void Function(BuildContext context, int businessId) onCreate;
   final Widget? bottomBar;
 
   const BusinessHomeScreen({
@@ -89,7 +87,7 @@ class _BusinessHomeView extends StatelessWidget {
     required this.serverRoot,
     this.bottomBar,
     required this.businessId,
-    required this.token, // 👈 required
+    required this.token,
   });
 
   void _toast(BuildContext context, String msg, {bool error = false}) {
@@ -122,9 +120,7 @@ class _BusinessHomeView extends StatelessWidget {
               ),
             );
           },
-
-          onOpenCreateActivity: () =>
-              onCreate(context, businessId), // ✅ updated
+          onOpenCreateActivity: () => onCreate(context, businessId),
         ),
         const HeaderWithBadge(),
       ],
@@ -148,25 +144,7 @@ class _BusinessHomeView extends StatelessWidget {
       builder: (context, state) {
         return Scaffold(
           backgroundColor: cs.background,
-          body: UpcomingActivitiesGrid(
-            data: state.items
-                // ✅ Filter: show only upcoming (not terminated)
-                .where((a) => (a.status.toLowerCase() != 'terminated'))
-                .map(
-                  (a) => {
-                    'id': a.id,
-                    'title': a.name,
-                    'type': a.type,
-                    'startDate': a.startDate,
-                    'participants': a.maxParticipants,
-                    'price': a.price,
-                    'status': a.status,
-                    'imageUrl': a.imageUrl,
-                  },
-                )
-                .toList(),
-            loading: state.loading,
-            refreshing: state.refreshing,
+          body: RefreshIndicator(
             onRefresh: () {
               final c = Completer<void>();
               context.read<BusinessHomeBloc>().add(
@@ -174,51 +152,56 @@ class _BusinessHomeView extends StatelessWidget {
               );
               return c.future;
             },
-            header: header,
-            emptyText: t.activitiesEmpty,
-            masonry: true,
-            itemBuilder: (ctx, item) {
-              final mq = MediaQuery.of(ctx);
-              final clamped = mq.textScaleFactor.clamp(1.0, 1.35);
-              return MediaQuery(
-                data: mq.copyWith(textScaleFactor: clamped),
-                child: CardActivityBusiness(
-                  id: '${item['id']}',
-                  title: (item['title'] ?? 'Unnamed').toString(),
-                  subtitle: (item['type'] as String?)?.isEmpty == true
-                      ? null
-                      : item['type'] as String?,
-                  startDate: item['startDate'] as DateTime?,
-                  participants: (item['participants'] as int?) ?? 0,
-                  price: (item['price'] as double?) ?? 0.0,
-                  currency: state.currency,
-                  status: (item['status'] ?? '').toString(),
-                  imageUrl: item['imageUrl']?.toString(),
-                  serverRoot: serverRoot,
-                  onView: () => context.read<BusinessHomeBloc>().add(
-                    BusinessHomeViewRequested(item['id'] as int),
-                  ),
-                  onEdit: () {
-                    final rootCtx = Navigator.of(
-                      context,
-                      rootNavigator: true,
-                    ).context;
-                    Navigator.pushNamed(
-                      rootCtx,
-                      Routes.editBusinessActivity,
-                      arguments: EditActivityRouteArgs(
-                        itemId: item['id'] as int,
-                        businessId: businessId,
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(child: header),
+                if (state.items.isEmpty && !state.loading)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Text(
+                        t.activitiesEmpty,
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                    );
-                  },
-                  onDelete: () => _confirmDelete(ctx, item['id'] as int),
-                  onReopen: null, // ❌ not in home, only in activities
-                ),
-              );
-            },
+                    ),
+                  )
+                else
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate((ctx, index) {
+                      final a = state.items[index];
+                      if (a.status.toLowerCase() == 'terminated') {
+                        return const SizedBox();
+                      }
+                      return BusinessListItemCard(
+                        id: '${a.id}',
+                        title: a.name,
+                        startDate: a.startDate,
+                        location: a.location,
+                        imageUrl: a.imageUrl,
+                        onView: () => context.read<BusinessHomeBloc>().add(
+                          BusinessHomeViewRequested(a.id),
+                        ),
+                        onEdit: () {
+                          final rootCtx = Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).context;
+                          Navigator.pushNamed(
+                            rootCtx,
+                            Routes.editBusinessActivity,
+                            arguments: EditActivityRouteArgs(
+                              itemId: a.id,
+                              businessId: businessId,
+                            ),
+                          );
+                        },
+                        onDelete: () => _confirmDelete(ctx, a.id),
+                      );
+                    }, childCount: state.items.length),
+                  ),
+              ],
+            ),
           ),
-
           bottomNavigationBar: bottomBar,
         );
       },

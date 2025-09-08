@@ -15,6 +15,14 @@ class CreateItemNameChanged extends CreateItemEvent {
   List<Object?> get props => [name];
 }
 
+class CreateItemImageUrlRetained extends CreateItemEvent {
+  final String imageUrl;
+  CreateItemImageUrlRetained(this.imageUrl);
+
+  @override
+  List<Object?> get props => [imageUrl];
+}
+
 class CreateItemTypeChanged extends CreateItemEvent {
   final int? typeId;
   CreateItemTypeChanged(this.typeId);

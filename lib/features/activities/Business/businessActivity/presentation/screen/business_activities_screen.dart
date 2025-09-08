@@ -1,5 +1,5 @@
 // ===== Flutter 3.35.x =====
-// BusinessActivitiesScreen — grid of business activities with search, tabs, delete, edit, reopen
+// BusinessActivitiesScreen — list of business activities with search, tabs, delete, edit, reopen
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -9,15 +9,30 @@ import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_state';
+import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/ReopenItemPage.dart';
+
 import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
+import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
+
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/widgets/app_search_bar.dart';
 import 'package:hobby_sphere/shared/widgets/app_button.dart';
-import 'package:hobby_sphere/shared/widgets/cards/card_activity_business/card_activity_business.dart';
+import 'package:hobby_sphere/shared/widgets/BusinessListItemCard.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
-import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/widgets/upcoming_activities_grid.dart';
+
+
+
+/// Helper: ensure image URLs are absolute
+String? resolveApiImage(String? raw) {
+  if (raw == null || raw.isEmpty) return null;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+  return '${g.serverRootNoApi()}$raw';
+}
 
 class BusinessActivitiesScreen extends StatefulWidget {
   final String token;
@@ -37,7 +52,7 @@ class BusinessActivitiesScreen extends StatefulWidget {
 class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
   String _query = '';
   String _tab = 'Upcoming';
-  String _currency = ''; // <-- store the currency code here
+  String _currency = '';
 
   @override
   void initState() {
@@ -47,22 +62,15 @@ class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
 
   Future<void> _loadCurrency() async {
     try {
-      // build repo + usecase (DI can be used if available)
       final repo = CurrencyRepositoryImpl(CurrencyService());
       final usecase = GetCurrentCurrency(repo);
-
       final cur = await usecase(widget.token);
       setState(() {
-        _currency = cur.code; // e.g. "CAD"
+        _currency = cur.code;
       });
     } catch (e) {
       debugPrint('Error loading currency: $e');
     }
-  }
-
-  String _serverRoot() {
-    final base = (g.appServerRoot ?? '');
-    return base.replaceFirst(RegExp(r'/api/?$'), '');
   }
 
   void _toast(BuildContext context, String msg, {bool error = false}) {
@@ -108,7 +116,6 @@ class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
                     type: _tab == 'Upcoming'
                         ? AppButtonType.primary
                         : AppButtonType.outline,
-                    size: AppButtonSize.md,
                     expand: true,
                     onPressed: () => setState(() => _tab = 'Upcoming'),
                   ),
@@ -120,7 +127,6 @@ class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
                     type: _tab == 'Terminated'
                         ? AppButtonType.primary
                         : AppButtonType.outline,
-                    size: AppButtonSize.md,
                     expand: true,
                     onPressed: () => setState(() => _tab = 'Terminated'),
                   ),
@@ -129,7 +135,7 @@ class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
             ),
           ),
 
-          // Grid
+          // List
           Expanded(
             child:
                 BlocConsumer<BusinessActivitiesBloc, BusinessActivitiesState>(
@@ -168,23 +174,16 @@ class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
                             .toList();
                       }
 
-                      return UpcomingActivitiesGrid(
-                        data: list
-                            .map(
-                              (a) => {
-                                'id': a.id,
-                                'title': a.name,
-                                'type': a.description,
-                                'startDate': a.startDate,
-                                'participants': a.maxParticipants,
-                                'price': a.price,
-                                'status': a.status,
-                                'imageUrl': a.imageUrl,
-                              },
-                            )
-                            .toList(),
-                        loading: false,
-                        refreshing: false,
+                      if (list.isEmpty) {
+                        return Center(
+                          child: Text(
+                            tr.activitiesEmpty,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        );
+                      }
+
+                      return RefreshIndicator(
                         onRefresh: () async {
                           context.read<BusinessActivitiesBloc>().add(
                             LoadBusinessActivities(
@@ -194,54 +193,68 @@ class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
                           );
                           return Future.value();
                         },
-                        header: const SizedBox.shrink(),
-                        emptyText: tr.activitiesEmpty,
-                        masonry: true,
-                        itemBuilder: (ctx, item) {
-                          final status = (item['status'] ?? '')
-                              .toString()
-                              .toLowerCase();
+                        child: ListView.builder(
+                          itemCount: list.length,
+                          itemBuilder: (ctx, index) {
+                            final a = list[index];
+                            final imgUrl = resolveApiImage(a.imageUrl);
 
-                          return CardActivityBusiness(
-                            id: '${item['id']}',
-                            title: (item['title'] ?? '').toString(),
-                            subtitle: (item['type'] ?? '').toString(),
-                            startDate: item['startDate'] as DateTime?,
-                            participants: (item['participants'] as int?) ?? 0,
-                            price: (item['price'] as double?) ?? 0.0,
-                            currency: _currency, // <-- use loaded currency
-                            status: (item['status'] ?? '').toString(),
-                            imageUrl: item['imageUrl']?.toString(),
-                            serverRoot: _serverRoot(),
-                            onView: () {},
-                            onEdit: () {
-                              Navigator.pushNamed(
-                                context,
-                                Routes.editBusinessActivity,
-                                arguments: EditActivityRouteArgs(
-                                  itemId: item['id'] as int,
-                                  businessId: widget.businessId,
-                                ),
-                              );
-                            },
-                            onDelete: () {
-                              context.read<BusinessActivitiesBloc>().add(
-                                DeleteBusinessActivityEvent(
-                                  token: widget.token,
-                                  id: item['id'] as int,
-                                ),
-                              );
-                            },
-                            onReopen: status == 'terminated'
-                                ? () {
-                                    _toast(
-                                      ctx,
-                                      'Reopen flow for #${item["id"]}',
-                                    );
-                                  }
-                                : null,
-                          );
-                        },
+                            return BusinessListItemCard(
+                              id: '${a.id}',
+                              title: a.name,
+                              startDate: a.startDate,
+                              location: a.location,
+                              imageUrl: imgUrl,
+                              onView: () {
+                                _toast(context, 'Open details for ${a.name}');
+                              },
+                              onEdit: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  Routes.editBusinessActivity,
+                                  arguments: EditActivityRouteArgs(
+                                    itemId: a.id,
+                                    businessId: widget.businessId,
+                                  ),
+                                );
+                              },
+                              onDelete: () {
+                                context.read<BusinessActivitiesBloc>().add(
+                                  DeleteBusinessActivityEvent(
+                                    token: widget.token,
+                                    id: a.id,
+                                  ),
+                                );
+                              },
+                              onReopen: a.status.toLowerCase() == 'terminated'
+                              ? () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ReopenItemPage(
+                                        businessId: widget.businessId,
+                                        oldItem:
+                                            a, // pass the terminated activity
+                                        getItemTypes: GetItemTypes(
+                                          // create repo inside here
+                                          ItemTypeRepositoryImpl(
+                                             ItemTypesService(),
+                                          ),
+                                        ),
+                                        getCurrentCurrency: GetCurrentCurrency(
+                                          CurrencyRepositoryImpl(
+                                            CurrencyService(),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              : null,
+
+                            );
+                          },
+                        ),
                       );
                     }
                     return const SizedBox.shrink();

@@ -9,8 +9,10 @@ import 'package:hobby_sphere/features/activities/Business/businessActivity/prese
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/screens/business_notification_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
+import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/ReopenItemPage.dart';
 import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/data/repositories/edit_business_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/data/services/edit_business_service.dart';
 import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/delete_banner.dart';
@@ -89,6 +91,7 @@ abstract class Routes {
   static const privacyPolicy = '/privacy-policy';
   static const editBusiness = '/business/edit';
   static const businessNotifications = '/business/notifications';
+  static const reopenItem='/business/reopenitem';
 }
 
 // ===== Route Args =====
@@ -148,6 +151,14 @@ class EditBusinessRouteArgs {
   final int businessId;
   const EditBusinessRouteArgs({required this.token, required this.businessId});
 }
+
+class ReopenItemRouteArgs {
+  final int businessId;
+  final BusinessActivity oldItem;
+
+  ReopenItemRouteArgs({required this.businessId, required this.oldItem});
+}
+
 
 class BusinessReviewsRouteArgs {
   final int businessId;
@@ -232,6 +243,22 @@ class AppRouter {
               child: const BusinessBookingScreen(),
             );
           },
+        );
+
+
+case Routes.reopenItem:
+        final args = settings.arguments as ReopenItemRouteArgs;
+        return MaterialPageRoute(
+          builder: (_) => ReopenItemPage(
+            businessId: args.businessId,
+            oldItem: args.oldItem,
+            getItemTypes: GetItemTypes(
+              ItemTypeRepositoryImpl(ItemTypesService()),
+            ),
+            getCurrentCurrency: GetCurrentCurrency(
+              CurrencyRepositoryImpl(CurrencyService()),
+            ),
+          ),
         );
 
       // ===== Business Analytics =====

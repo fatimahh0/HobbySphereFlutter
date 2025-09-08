@@ -1,6 +1,4 @@
 // ===== Flutter 3.35.x =====
-// BusinessProfileScreen — profile + actions, stays inside ShellBottom
-// Supports language change (EN / FR / AR)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,7 +15,6 @@ class BusinessProfileScreen extends StatelessWidget {
   final String token;
   final int businessId;
 
-  // Callbacks from ShellBottom
   final void Function(int)? onTabChange;
   final void Function(Locale)? onChangeLocale;
 
@@ -68,188 +65,211 @@ class BusinessProfileScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 32),
+      body: ListView(
+        children: [
+          const SizedBox(height: 32),
 
-            // Business Logo
-            CircleAvatar(
-              radius: 48,
-              backgroundImage:
-                  (business.logoUrl != null && business.logoUrl!.isNotEmpty)
-                  ? NetworkImage('$serverRoot${business.logoUrl}')
-                  : null,
-              child: (business.logoUrl == null || business.logoUrl!.isEmpty)
-                  ? const Icon(Icons.store, size: 48)
-                  : null,
-            ),
+          // Business Logo
+          CircleAvatar(
+            radius: 48,
+            backgroundImage:
+                (business.logoUrl != null && business.logoUrl!.isNotEmpty)
+                ? NetworkImage('$serverRoot${business.logoUrl}')
+                : null,
+            child: (business.logoUrl == null || business.logoUrl!.isEmpty)
+                ? const Icon(Icons.store, size: 48)
+                : null,
+          ),
 
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-            // Business Name
-            Text(
+          // Business Name
+          Center(
+            child: Text(
               business.name,
               style: theme.textTheme.titleLarge?.copyWith(
                 color: theme.colorScheme.primary,
                 fontWeight: FontWeight.bold,
               ),
             ),
+          ),
 
-            // Profile + Status
-            Text(
+          Center(
+            child: Text(
               "${business.isPublicProfile ? tr.publicProfile : tr.privateProfile} | ${business.status}",
               style: theme.textTheme.bodyMedium,
             ),
+          ),
 
-            const SizedBox(height: 8),
-            Text(
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
               tr.businessGrowMessage,
               style: theme.textTheme.bodySmall?.copyWith(
                 fontStyle: FontStyle.italic,
               ),
             ),
+          ),
 
-            // Stripe info
-            if (stripeConnected != null && stripeConnected) ...[
-              Text(
+          const SizedBox(height: 16),
+
+          // Stripe info
+          if (stripeConnected == true)
+            Center(
+              child: Text(
                 tr.stripeAccountConnected,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Colors.green,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-            ] else ...[
-              ElevatedButton.icon(
+            )
+          else
+            Center(
+              child: ElevatedButton.icon(
                 icon: const Icon(Icons.account_balance_wallet),
                 label: Text(tr.registerOnStripe),
                 onPressed: () {
                   // TODO: implement stripe connect flow
                 },
               ),
-            ],
+            ),
 
-            const SizedBox(height: 24),
+          const SizedBox(height: 24),
 
-            // ==========================
-            // Menu Actions
-            // ==========================
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: Text(tr.editBusinessInfo),
-              onTap: () async {
-                final updated = await Navigator.pushNamed(
-                  context,
-                  Routes.editBusiness,
-                  arguments: EditBusinessRouteArgs(
-                    token: token,
-                    businessId: businessId,
-                  ),
+          // ==========================
+          // Menu Actions (ListTiles with divider + arrow)
+          // ==========================
+          _menuTile(
+            context,
+            icon: Icons.edit,
+            title: tr.editBusinessInfo,
+            onTap: () async {
+              final updated = await Navigator.pushNamed(
+                context,
+                Routes.editBusiness,
+                arguments: EditBusinessRouteArgs(
+                  token: token,
+                  businessId: businessId,
+                ),
+              );
+              if (updated == true) {
+                context.read<BusinessProfileBloc>().add(
+                  LoadBusinessProfile(token, businessId),
                 );
+              }
+            },
+          ),
+          _menuTile(
+            context,
+            icon: Icons.work,
+            title: tr.myActivities,
+            onTap: () => onTabChange?.call(3),
+          ),
+          _menuTile(
+            context,
+            icon: Icons.analytics,
+            title: tr.analytics,
+            onTap: () => onTabChange?.call(2),
+          ),
+          _menuTile(
+            context,
+            icon: Icons.notifications,
+            title: tr.notifications,
+            onTap: () {
+              Navigator.pushNamed(
+                context,
+                Routes.businessNotifications,
+                arguments: BusinessNotificationsRouteArgs(
+                  token: token,
+                  businessId: businessId,
+                ),
+              );
+            },
+          ),
+          _menuTile(
+            context,
+            icon: Icons.person_add,
+            title: tr.inviteManager,
+            onTap: () {},
+          ),
+          _menuTile(
+            context,
+            icon: Icons.privacy_tip,
+            title: tr.privacyPolicy,
+            onTap: () => Navigator.of(context).pushNamed(Routes.privacyPolicy),
+          ),
+          _menuTile(
+            context,
+            icon: Icons.language,
+            title: tr.language,
+            onTap: () => _showLanguageSelector(context, tr),
+          ),
+          _menuTile(
+            context,
+            icon: Icons.logout,
+            title: tr.logout,
+            onTap: () => _confirmLogout(context, tr),
+          ),
 
-                if (updated == true) {
+          // Manage Account section
+          ExpansionTile(
+            leading: const Icon(Icons.settings),
+            title: Text(tr.manageAccount),
+            children: [
+              _menuTile(
+                context,
+                icon: Icons.visibility,
+                title: business.isPublicProfile
+                    ? tr.profileMakePrivate
+                    : tr.profileMakePublic,
+                onTap: () {
                   context.read<BusinessProfileBloc>().add(
-                    LoadBusinessProfile(token, businessId),
-                  ); //
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.work),
-              title: Text(tr.myActivities),
-              onTap: () => onTabChange?.call(3), // Switch tab → Activities
-            ),
-            ListTile(
-              leading: const Icon(Icons.analytics),
-              title: Text(tr.analytics),
-              onTap: () => onTabChange?.call(2), // Switch tab → Analytics
-            ),
-            ListTile(
-              leading: const Icon(Icons.notifications),
-              title: Text(tr.notifications),
-              onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  Routes.businessNotifications,
-                  arguments: BusinessNotificationsRouteArgs(
-                    token: token,
-                    businessId: businessId,
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.person_add),
-              title: Text(tr.inviteManager),
-              onTap: () {
-                // TODO: implement invite manager screen
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.privacy_tip),
-              title: Text(tr.privacyPolicy),
-              onTap: () {
-                Navigator.of(context).pushNamed(Routes.privacyPolicy);
-              },
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.language),
-              title: Text(tr.language),
-              onTap: () {
-                _showLanguageSelector(context, tr);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: Text(tr.logout),
-              onTap: () {
-                _confirmLogout(context, tr);
-              },
-            ),
-
-            // Manage Account
-            ExpansionTile(
-              leading: const Icon(Icons.settings),
-              title: Text(tr.manageAccount),
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.visibility),
-                  title: Text(
-                    business.isPublicProfile
-                        ? tr.profileMakePrivate
-                        : tr.profileMakePublic,
-                  ),
-                  onTap: () {
-                    context.read<BusinessProfileBloc>().add(
-                      ToggleVisibility(
-                        token,
-                        businessId,
-                        !business.isPublicProfile,
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.power_settings_new),
-                  title: Text(tr.setInactive),
-                  onTap: () {
-                    context.read<BusinessProfileBloc>().add(
-                      ChangeStatus(token, businessId, "INACTIVE"),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
+                    ToggleVisibility(
+                      token,
+                      businessId,
+                      !business.isPublicProfile,
+                    ),
+                  );
+                },
+              ),
+              _menuTile(
+                context,
+                icon: Icons.power_settings_new,
+                title: tr.setInactive,
+                onTap: () {
+                  context.read<BusinessProfileBloc>().add(
+                    ChangeStatus(token, businessId, "INACTIVE"),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  // ==========================
-  // Language Selector Modal
-  // ==========================
+  // Helper for consistent menu tile design
+  Widget _menuTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      children: [
+        ListTile(
+          leading: Icon(icon),
+          title: Text(title),
+          trailing: const Icon(Icons.chevron_right), // arrow effect on right
+          onTap: onTap,
+        ),
+        const Divider(height: 1), // line under each item
+      ],
+    );
+  }
+
   void _showLanguageSelector(BuildContext context, AppLocalizations tr) {
     showModalBottomSheet(
       context: context,
@@ -294,7 +314,7 @@ Future<void> _confirmLogout(BuildContext context, AppLocalizations tr) async {
     builder: (ctx) {
       return AlertDialog(
         title: Text(tr.logout),
-        content: Text(tr.profileLogoutConfirm), // Add this to your arb
+        content: Text(tr.profileLogoutConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),

@@ -1,9 +1,9 @@
 // ===== Flutter 3.35.x =====
-// Robust Splash → decide next → navigate once.
+// Robust Splash → check token expiry → decide next → navigate once.
 
+import 'dart:convert'; // for JWT decode
 import 'package:flutter/material.dart'; // UI core
 import 'package:shared_preferences/shared_preferences.dart'; // local store
-import 'package:intl/intl.dart'; // (optional)
 import 'package:hobby_sphere/core/constants/app_role.dart'; // enum
 import 'package:hobby_sphere/l10n/app_localizations.dart'
     show AppLocalizations; // i18n
@@ -11,10 +11,7 @@ import 'package:hobby_sphere/shared/theme/app_theme.dart'; // theme
 
 import 'package:hobby_sphere/services/token_store.dart'; // saved token/role
 import 'package:hobby_sphere/core/network/globals.dart' as g; // shared Dio
-import 'package:hobby_sphere/core/network/api_fetch.dart'; // http wrapper
-import 'package:hobby_sphere/core/network/api_methods.dart'; // HttpMethod
-import 'package:hobby_sphere/core/business/business_context.dart'; // 👈 NEW: business id keeper
-
+import 'package:hobby_sphere/core/business/business_context.dart'; // business id keeper
 import 'package:hobby_sphere/app/router/router.dart'
     show ShellRouteArgs; // route args
 
@@ -36,161 +33,158 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     super.initState();
 
     _progressCtrl = AnimationController(
-      // create progress anim
       vsync: this,
       duration: const Duration(seconds: 3),
-    )..forward(); // start it now
-    _progress = CurvedAnimation(
-      // ease curve
-      parent: _progressCtrl,
-      curve: Curves.easeInOut,
-    );
+    )..forward();
+    _progress = CurvedAnimation(parent: _progressCtrl, curve: Curves.easeInOut);
 
     _bgPulseCtrl = AnimationController(
-      // create bg pulse
       vsync: this,
       duration: const Duration(milliseconds: 1800),
-    )..repeat(reverse: true); // loop pulse
+    )..repeat(reverse: true);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // after 1st frame
-      _decideAndNavigate(); // run logic
+      _decideAndNavigate();
     });
 
     _progressCtrl.addStatusListener((status) async {
-      // cosmetic fade
       if (status == AnimationStatus.completed) {
-        if (!mounted || _navigated) return; // guard
-        setState(() => _pageOpacity = 0.0); // fade out
+        if (!mounted || _navigated) return;
+        setState(() => _pageOpacity = 0.0);
       }
     });
   }
 
-  void _attachTokenToGlobalDio(String token) {
-    if (g.appDio == null) return; // Dio not ready
-    g.appDio!.options.headers['Authorization'] = // set bearer
-        'Bearer $token';
+  /// Decode JWT and check expiry
+  bool _isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+
+      final payload = json.decode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      final exp = payload['exp'] as int?;
+      if (exp == null) return true;
+
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      return exp < now;
+    } catch (_) {
+      return true; // treat as expired if decode fails
+    }
   }
 
-  // Resolve businessId using the central context.
+  void _attachTokenToGlobalDio(String token) {
+    if (g.appDio == null) return;
+    g.appDio!.options.headers['Authorization'] = 'Bearer $token';
+  }
+
   Future<int> _resolveBusinessId(String token) async {
-    _attachTokenToGlobalDio(token); // ensure bearer set
-    final id = await BusinessContext.ensureId(); // memory/prefs/server
-    return id; // may be 0 if unknown
+    _attachTokenToGlobalDio(token);
+    final id = await BusinessContext.ensureId();
+    return id;
   }
 
   Future<_RouteTarget> _computeNext() async {
     try {
-      final saved = await TokenStore.read(); // read saved auth
-      final token = saved.token?.trim(); // token string
-      final roleStr =
-          (saved.role ?? 'user') // role string
-              .trim()
-              .toLowerCase();
+      final saved = await TokenStore.read();
+      final token = saved.token?.trim();
+      final roleStr = (saved.role ?? 'user').trim().toLowerCase();
 
       if (token != null && token.isNotEmpty) {
-        // logged in?
-        _attachTokenToGlobalDio(token); // attach bearer
+        // ✅ check if expired
+        if (_isTokenExpired(token)) {
+          await TokenStore.clear(); // remove expired token
+          return _RouteTarget(name: '/login'); // or '/onboarding'
+        }
 
-        final businessId = await _resolveBusinessId(
-          // get businessId
-          token,
-        ); // may be 0
+        _attachTokenToGlobalDio(token);
 
-        final appRole =
-            roleStr ==
-                'business' // map role
-            ? AppRole.business
-            : AppRole.user;
+        final businessId = await _resolveBusinessId(token);
+        final appRole = roleStr == 'business' ? AppRole.business : AppRole.user;
 
         if (appRole == AppRole.business && businessId > 0) {
-          await BusinessContext.set(businessId); // 👈 keep ready
+          await BusinessContext.set(businessId);
         }
 
         return _RouteTarget(
-          // go to shell
           name: '/shell',
           args: ShellRouteArgs(
             role: appRole,
             token: token,
-            businessId: businessId, // pass id (0 ok)
+            businessId: businessId,
           ),
         );
       }
 
-      // not logged in → onboarding / first-run
-      final sp = await SharedPreferences.getInstance(); // prefs
-      final seen = sp.getBool('seen_onboarding') ?? false; // flag
+      final sp = await SharedPreferences.getInstance();
+      final seen = sp.getBool('seen_onboarding') ?? false;
       return _RouteTarget(name: seen ? '/onboardingScreen' : '/onboarding');
     } catch (e) {
-      debugPrint('Splash decision error: $e'); // log
-      return _RouteTarget(name: '/onboarding'); // safe default
+      debugPrint('Splash decision error: $e');
+      return _RouteTarget(name: '/onboarding');
     }
   }
 
   Future<void> _decideAndNavigate() async {
-    final splashDelay = Future<void>.delayed(
-      const Duration(milliseconds: 900),
-    ); // small wait
-    final next = _computeNext(); // compute
+    final splashDelay = Future<void>.delayed(const Duration(milliseconds: 900));
+    final next = _computeNext();
 
-    final target =
-        await Future.wait([splashDelay, next]) // wait both
-            .then((list) => list[1] as _RouteTarget); // take route
+    final target = await Future.wait([
+      splashDelay,
+      next,
+    ]).then((list) => list[1] as _RouteTarget);
 
-    if (!mounted || _navigated) return; // guard
-    _navigated = true; // lock
+    if (!mounted || _navigated) return;
+    _navigated = true;
 
     try {
-      setState(() => _pageOpacity = 0.0); // fade
-      await Future.delayed(const Duration(milliseconds: 180)); // tiny wait
-      if (!mounted) return; // guard
+      setState(() => _pageOpacity = 0.0);
+      await Future.delayed(const Duration(milliseconds: 180));
+      if (!mounted) return;
 
       Navigator.of(context).pushNamedAndRemoveUntil(
-        // navigate
         target.name,
         (r) => false,
         arguments: target.args,
       );
     } catch (e) {
-      debugPrint('Splash navigation error: $e'); // log
-      if (!mounted) return; // guard
+      debugPrint('Splash navigation error: $e');
+      if (!mounted) return;
       Navigator.of(
         context,
-      ).pushNamedAndRemoveUntil('/onboarding', (r) => false); // fallback
+      ).pushNamedAndRemoveUntil('/onboarding', (r) => false);
     }
   }
 
   @override
   void dispose() {
-    _progressCtrl.dispose(); // cleanup
-    _bgPulseCtrl.dispose(); // cleanup
+    _progressCtrl.dispose();
+    _bgPulseCtrl.dispose();
     super.dispose();
   }
 
   Color _adjustLightness(Color c, double d) {
-    // color util
     final hsl = HSLColor.fromColor(c);
     return hsl.withLightness((hsl.lightness + d).clamp(0.0, 1.0)).toColor();
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!; // strings
-    final primary = AppColors.primary; // base color
-    final lighter = _adjustLightness(primary, 0.14); // lighter
-    final darker = _adjustLightness(primary, -0.14); // darker
+    final l10n = AppLocalizations.of(context)!;
+    final primary = AppColors.primary;
+    final lighter = _adjustLightness(primary, 0.14);
+    final darker = _adjustLightness(primary, -0.14);
 
     return Scaffold(
-      backgroundColor: AppColors.background, // bg
+      backgroundColor: AppColors.background,
       body: AnimatedOpacity(
-        opacity: _pageOpacity, // fade val
-        duration: const Duration(milliseconds: 240), // fade ms
+        opacity: _pageOpacity,
+        duration: const Duration(milliseconds: 240),
         child: Stack(
           fit: StackFit.expand,
           children: [
             AnimatedBuilder(
-              // bg grad
               animation: _bgPulseCtrl,
               builder: (context, _) {
                 final t = _bgPulseCtrl.value;
@@ -210,7 +204,6 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               },
             ),
             Center(
-              // logo/title
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -245,7 +238,6 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               ),
             ),
             Positioned(
-              // bottom bar
               left: 0,
               right: 0,
               bottom: 0,
@@ -284,7 +276,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 }
 
 class _RouteTarget {
-  final String name; // route name
-  final Object? args; // optional args
+  final String name;
+  final Object? args;
   _RouteTarget({required this.name, this.args});
 }

@@ -23,6 +23,7 @@ class CreateItemState extends Equatable {
   final DateTime? end;
 
   final File? image;
+  final String? imageUrl;
 
   final List<ItemType> types;
   final Currency? currency;
@@ -45,6 +46,7 @@ class CreateItemState extends Equatable {
     this.start,
     this.end,
     this.image,
+    this.imageUrl,
     this.types = const [],
     this.currency,
     this.businessId,
@@ -62,7 +64,8 @@ class CreateItemState extends Equatable {
       (price ?? -1) >= 0 &&
       start != null &&
       end != null &&
-      businessId != null;
+      businessId != null &&
+      (image != null || imageUrl?.isNotEmpty == true);
 
   CreateItemState copyWith({
     bool? loading,
@@ -79,10 +82,12 @@ class CreateItemState extends Equatable {
     DateTime? start,
     DateTime? end,
     File? image,
+
     List<ItemType>? types,
     Currency? currency,
     int? businessId,
     String? status,
+    String? imageUrl,
   }) {
     return CreateItemState(
       loading: loading ?? this.loading,
@@ -99,6 +104,7 @@ class CreateItemState extends Equatable {
       start: start ?? this.start,
       end: end ?? this.end,
       image: image ?? this.image,
+      imageUrl: imageUrl ?? this.imageUrl,
       types: types ?? this.types,
       currency: currency ?? this.currency,
       businessId: businessId ?? this.businessId,
@@ -122,6 +128,7 @@ class CreateItemState extends Equatable {
     start,
     end,
     image?.path,
+    imageUrl,
     types,
     currency?.code,
     businessId,

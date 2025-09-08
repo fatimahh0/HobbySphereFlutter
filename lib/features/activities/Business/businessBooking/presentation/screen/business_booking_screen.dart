@@ -1,5 +1,5 @@
 // ===== Flutter 3.35.x =====
-// BusinessBookingScreen — bookings with search + filter tabs (scrollable)
+// BusinessBookingScreen — responsive fixed filter tabs
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -23,6 +23,7 @@ class BusinessBookingScreen extends StatefulWidget {
 class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
   String _searchQuery = '';
 
+  /// Get localized label for filter
   String _labelForFilter(AppLocalizations l10n, String filter) {
     switch (filter) {
       case 'all':
@@ -46,6 +47,7 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
+      // Search bar in AppBar
       appBar: AppSearchAppBar(
         hint: l10n.searchPlaceholder,
         onQueryChanged: (q) => setState(() => _searchQuery = q.toLowerCase()),
@@ -69,7 +71,7 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
             );
           }
 
-          // filter bookings by tab + search
+          // Filter bookings by tab + search
           final filtered = state.bookings.where((b) {
             final matchesFilter =
                 state.filter == 'all' ||
@@ -83,23 +85,22 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
 
           return Column(
             children: [
-              // ==== FILTER TABS (scrollable row of buttons) ====
+              // ==== RESPONSIVE FIXED FILTER TABS ====
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 width: double.infinity,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children:
-                        [
-                          'all',
-                          'pending',
-                          'completed',
-                          'rejected',
-                          'canceled',
-                        ].map((f) {
-                          final active = state.filter == f;
-                          return Padding(
+                child: Row(
+                  children:
+                      [
+                        'all',
+                        'pending',
+                        'completed',
+                        'rejected',
+                        'canceled',
+                      ].map((f) {
+                        final active = state.filter == f;
+                        return Expanded(
+                          child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             child: AppButton(
                               label: _labelForFilter(l10n, f),
@@ -112,10 +113,16 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                                   ? AppButtonType.primary
                                   : AppButtonType.outline,
                               size: AppButtonSize.sm,
+                              textStyle: theme.textTheme.labelSmall?.copyWith(
+                                fontSize: 12, // base size
+                                fontWeight: active
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
+                              ),
                             ),
-                          );
-                        }).toList(),
-                  ),
+                          ),
+                        );
+                      }).toList(),
                 ),
               ),
 

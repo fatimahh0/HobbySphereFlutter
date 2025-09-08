@@ -14,6 +14,7 @@ class CreateItemRequest {
   final String status; // e.g. "ACTIVE"
   final int businessId;
   final File? image;
+  final String? imageUrl;
 
   CreateItemRequest({
     required this.itemName,
@@ -29,5 +30,24 @@ class CreateItemRequest {
     required this.status,
     required this.businessId,
     this.image,
+    this.imageUrl,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'itemName': itemName,
+      'itemTypeId': itemTypeId,
+      'description': description,
+      'location': location,
+      'latitude': latitude,
+      'longitude': longitude,
+      'maxParticipants': maxParticipants,
+      'price': price,
+      'startDatetime': startDatetime.toIso8601String(),
+      'endDatetime': endDatetime.toIso8601String(),
+      'status': status,
+      'businessId': businessId,
+      if (imageUrl != null) 'imageUrl': imageUrl,
+    };
+  }
 }

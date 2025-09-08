@@ -1,59 +1,59 @@
 // ===== Flutter 3.35.x =====
 import 'package:flutter/material.dart'; // core Flutter UI
 
-// button variants (visual styles)
-enum AppButtonType { primary, secondary, outline, text } // 4 variants
+// Button variants (visual styles)
+enum AppButtonType { primary, secondary, outline, text }
 
-// button sizes (semantic sizes)
-enum AppButtonSize { sm, md, lg } // 3 sizes
+// Button sizes (semantic sizes)
+enum AppButtonSize { sm, md, lg }
 
-// a single responsive, theme-aware button used across the app
+// A single responsive, theme-aware button used across the app
 class AppButton extends StatelessWidget {
-  // text label (nullable to allow icon-only)
-  final String? label; // button text
-  // tap callback (null means disabled)
-  final VoidCallback? onPressed; // action
+  // text label (nullable → allows icon-only)
+  final String? label;
+  // tap callback (null → disabled)
+  final VoidCallback? onPressed;
   // visual style
-  final AppButtonType type; // variant+
+  final AppButtonType type;
   // semantic size
-  final AppButtonSize size; // size
+  final AppButtonSize size;
   // full-width if true
-  final bool expand; // stretch horizontally
+  final bool expand;
   // show spinner instead of content
-  final bool isBusy; // loading state
+  final bool isBusy;
   // leading icon widget
-  final Widget? leading; // left icon
+  final Widget? leading;
   // trailing icon widget
-  final Widget? trailing; // right icon
+  final Widget? trailing;
   // external spacing around the button
-  final EdgeInsetsGeometry? margin; // outer padding
+  final EdgeInsetsGeometry? margin;
   // optional text style override
-  final TextStyle? textStyle; // custom typography
+  final TextStyle? textStyle;
   // corner radius override
-  final double? borderRadius; // corners
-  // focus node (a11y/keyboard)
-  final FocusNode? focusNode; // focus
+  final double? borderRadius;
+  // focus node (for accessibility/keyboard)
+  final FocusNode? focusNode;
   // screen reader label
-  final String? semanticLabel; // accessibility label
+  final String? semanticLabel;
 
   const AppButton({
-    super.key, // widget key
-    required this.onPressed, // action (nullable)
-    this.label, // optional text
-    this.type = AppButtonType.primary, // default: primary fill
-    this.size = AppButtonSize.md, // default: medium
-    this.expand = false, // not full width by default
-    this.isBusy = false, // not loading by default
-    this.leading, // optional icon
-    this.trailing, // optional icon
-    this.margin, // outer spacing
-    this.textStyle, // custom text style
-    this.borderRadius, // override radius
-    this.focusNode, // focus
-    this.semanticLabel, // a11y label
+    super.key,
+    required this.onPressed,
+    this.label,
+    this.type = AppButtonType.primary,
+    this.size = AppButtonSize.md,
+    this.expand = false,
+    this.isBusy = false,
+    this.leading,
+    this.trailing,
+    this.margin,
+    this.textStyle,
+    this.borderRadius,
+    this.focusNode,
+    this.semanticLabel,
   });
 
-  // ===== responsive metrics (padding / font / spinner / min height / radius) =====
+  // Responsive metrics (padding / font / spinner / min height / radius)
   ({
     EdgeInsets padding,
     double font,
@@ -62,26 +62,22 @@ class AppButton extends StatelessWidget {
     double radius,
   })
   _metrics(BuildContext ctx) {
-    // screen info
-    final mq = MediaQuery.of(ctx); // media query
-    final size = mq.size; // screen size
-    final shortest = size.shortestSide; // phone vs tablet
-    final width = size.width; // width
-    final textScale = mq.textScaleFactor; // user font scale
+    final mq = MediaQuery.of(ctx);
+    final size = mq.size;
+    final shortest = size.shortestSide;
+    final width = size.width;
+    final textScale = mq.textScaleFactor;
 
-    // base scale from width (390 is iPhone 12-ish width)
-    final widthScale = (width / 390).clamp(0.9, 1.2); // clamp so it stays nice
+    // Scale based on width (390 ~ iPhone 12 baseline)
+    final widthScale = (width / 390).clamp(0.9, 1.2);
 
-    // cap text scale slightly (avoid blowing layout)
-    final layoutTextScale = textScale.clamp(
-      1.0,
-      1.3,
-    ); // allow a bit larger text
+    // Limit text scale factor to avoid huge fonts
+    final layoutTextScale = textScale.clamp(1.0, 1.3);
 
-    // detect tablet by shortestSide
-    final bool isTablet = shortest >= 600; // rough heuristic
+    // Rough heuristic for tablet
+    final bool isTablet = shortest >= 600;
 
-    // base tokens by semantic size (values tuned for phone baseline)
+    // Base values depending on button size
     double baseH, baseV, baseFont, baseSpinner, baseMinH, baseRadius;
     switch (sizeEnumToString(this.size)) {
       case 'sm':
@@ -110,30 +106,21 @@ class AppButton extends StatelessWidget {
         baseRadius = 16;
     }
 
-    // apply width scaling and light tablet boost
-    final scale = isTablet
-        ? widthScale * 1.06
-        : widthScale; // on tablets slightly larger
+    // Apply width scaling (slightly larger on tablets)
+    final scale = isTablet ? widthScale * 1.06 : widthScale;
 
-    // final responsive values (respect user text scale)
-    final font = (baseFont * scale * layoutTextScale).clamp(
-      12.0,
-      20.0,
-    ); // keep readable
-    final spinner = (baseSpinner * scale).clamp(14.0, 24.0); // spinner size
-    final hPad = (baseH * scale).clamp(10.0, 24.0); // horizontal padding
-    final vPad = (baseV * scale).clamp(8.0, 20.0); // vertical padding
-    final minHeight = (baseMinH * scale).clamp(40.0, 58.0); // tap target
-    final radius =
-        borderRadius ?? (baseRadius * scale).clamp(12.0, 22.0); // corners
+    // Final responsive values
+    final font = (baseFont * scale * layoutTextScale).clamp(12.0, 20.0);
+    final spinner = (baseSpinner * scale).clamp(14.0, 24.0);
+    final hPad = (baseH * scale).clamp(10.0, 24.0);
+    final vPad = (baseV * scale).clamp(8.0, 20.0);
+    final minHeight = (baseMinH * scale).clamp(40.0, 58.0);
+    final radius = borderRadius ?? (baseRadius * scale).clamp(12.0, 22.0);
 
-    // lighten padding for text variant (link-like)
+    // Less padding for text-only style
     final EdgeInsets padding = (type == AppButtonType.text)
-        ? EdgeInsets.symmetric(
-            horizontal: hPad * 0.6,
-            vertical: vPad * 0.7,
-          ) // lighter feel
-        : EdgeInsets.symmetric(horizontal: hPad, vertical: vPad); // normal
+        ? EdgeInsets.symmetric(horizontal: hPad * 0.6, vertical: vPad * 0.7)
+        : EdgeInsets.symmetric(horizontal: hPad, vertical: vPad);
 
     return (
       padding: padding,
@@ -144,47 +131,47 @@ class AppButton extends StatelessWidget {
     );
   }
 
-  // helper: map enum to string (small + tidy)
+  // Map enum to string
   String sizeEnumToString(AppButtonSize s) {
     switch (s) {
       case AppButtonSize.sm:
-        return 'sm'; // small
+        return 'sm';
       case AppButtonSize.lg:
-        return 'lg'; // large
+        return 'lg';
       case AppButtonSize.md:
       default:
-        return 'md'; // medium
+        return 'md';
     }
   }
 
-  // compute colors from theme + variant
+  // Compute colors from theme + variant
   ({Color bg, Color fg, Color border, Color overlay}) _colors(
     BuildContext ctx,
   ) {
-    final cs = Theme.of(ctx).colorScheme; // scheme from app theme
+    final cs = Theme.of(ctx).colorScheme;
     switch (type) {
-      case AppButtonType.primary: // solid primary
+      case AppButtonType.primary:
         return (
           bg: cs.primary,
           fg: cs.onPrimary,
           border: Colors.transparent,
           overlay: cs.onPrimary.withOpacity(.08),
         );
-      case AppButtonType.secondary: // filled softer
+      case AppButtonType.secondary:
         return (
           bg: cs.secondaryContainer,
           fg: cs.onSecondaryContainer,
           border: Colors.transparent,
           overlay: cs.onSecondaryContainer.withOpacity(.06),
         );
-      case AppButtonType.outline: // transparent stroke
+      case AppButtonType.outline:
         return (
           bg: Colors.transparent,
           fg: cs.primary,
           border: cs.outlineVariant,
           overlay: cs.primary.withOpacity(.06),
         );
-      case AppButtonType.text: // link-like
+      case AppButtonType.text:
         return (
           bg: Colors.transparent,
           fg: cs.primary,
@@ -194,87 +181,81 @@ class AppButton extends StatelessWidget {
     }
   }
 
-  // build inner content (spinner or label+icons)
+  // Build inner content (spinner or label+icons)
   Widget _buildContent(
     BuildContext ctx,
     double font,
     double spinner,
     Color fg,
   ) {
-    // busy → show progress
+    // Show loading spinner
     if (isBusy) {
       return SizedBox(
-        width: spinner, // spinner width
-        height: spinner, // spinner height
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: fg,
-        ), // thin spinner
+        width: spinner,
+        height: spinner,
+        child: CircularProgressIndicator(strokeWidth: 2, color: fg),
       );
     }
 
-    // merge provided text style with theme + responsive font
+    // Merge provided style with theme
     final style = (textStyle ?? Theme.of(ctx).textTheme.titleMedium)?.copyWith(
-      fontSize: font, // responsive font
-      color: fg, // text color
-      fontWeight: FontWeight.w600, // semi-bold
-      letterSpacing: 0.2, // tiny tracking
+      fontSize: font,
+      color: fg,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.2,
     );
 
-    // pieces row (leading, label, trailing)
     final List<Widget> pieces = [];
 
+    // Leading icon
     if (leading != null) {
       pieces.add(
         Padding(
-          padding: EdgeInsets.only(
-            right: (font * 0.55).clamp(6, 10),
-          ), // responsive gap
+          padding: EdgeInsets.only(right: (font * 0.55).clamp(6, 10)),
           child: IconTheme.merge(
-            data: IconThemeData(color: fg, size: font + 1), // icon color/size
-            child: leading!, // icon
+            data: IconThemeData(color: fg, size: font + 1),
+            child: leading!,
           ),
         ),
       );
     }
 
+    // Label text (responsive using FittedBox)
     if (label != null) {
       pieces.add(
         Flexible(
-          child: Text(
-            label!, // the text
-            maxLines: 1, // single line
-            overflow: TextOverflow.ellipsis, // clip long text
-            style: style, // style
+          child: FittedBox(
+            fit: BoxFit.scaleDown, // shrink text if too big
+            child: Text(
+              label!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: style,
+            ),
           ),
         ),
       );
     }
 
+    // Trailing icon
     if (trailing != null) {
       pieces.add(
         Padding(
-          padding: EdgeInsets.only(
-            left: (font * 0.55).clamp(6, 10),
-          ), // responsive gap
+          padding: EdgeInsets.only(left: (font * 0.55).clamp(6, 10)),
           child: IconTheme.merge(
-            data: IconThemeData(color: fg, size: font + 1), // icon color/size
-            child: trailing!, // icon
+            data: IconThemeData(color: fg, size: font + 1),
+            child: trailing!,
           ),
         ),
       );
     }
 
-    // if no text nor icons, preserve height
+    // No content → keep minimum size
     if (pieces.isEmpty) {
-      final side = (font + 6).clamp(18, 28); // keep touch size
-      return SizedBox(
-        height: side.toDouble(),
-        width: side.toDouble(),
-      ); // minimal footprint
+      final side = (font + 6).clamp(18, 28);
+      return SizedBox(height: side.toDouble(), width: side.toDouble());
     }
 
-    // centered row with tight main size
     return Row(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -284,140 +265,125 @@ class AppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme; // theme colors
-    final m = _metrics(context); // responsive metrics
-    final c = _colors(context); // variant colors
+    final cs = Theme.of(context).colorScheme;
+    final m = _metrics(context);
+    final c = _colors(context);
 
-    // enabled = has onPressed and not busy
-    final bool enabled = onPressed != null && !isBusy; // clickable
+    final bool enabled = onPressed != null && !isBusy;
 
-    // effective colors (disabled fallbacks)
-    final Color bg = enabled
-        ? c.bg
-        : cs.surfaceVariant.withOpacity(.6); // background
-    final Color fg = enabled
-        ? c.fg
-        : cs.onSurface.withOpacity(.38); // foreground
+    final Color bg = enabled ? c.bg : cs.surfaceVariant.withOpacity(.6);
+    final Color fg = enabled ? c.fg : cs.onSurface.withOpacity(.38);
     final Color br = (type == AppButtonType.outline)
         ? c.border
-        : Colors.transparent; // border
+        : Colors.transparent;
 
-    // core material for ripple
     Widget core = Material(
-      color: bg, // fill
+      color: bg,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(m.radius), // responsive corners
+        borderRadius: BorderRadius.circular(m.radius),
         side: type == AppButtonType.outline
             ? BorderSide(color: br, width: 1)
-            : BorderSide.none, // outline stroke
+            : BorderSide.none,
       ),
       child: InkWell(
-        onTap: enabled ? onPressed : null, // tap
-        borderRadius: BorderRadius.circular(m.radius), // ripple radius
-        splashColor: c.overlay, // ripple
-        highlightColor: c.overlay, // press
-        focusNode: focusNode, // focus
+        onTap: enabled ? onPressed : null,
+        borderRadius: BorderRadius.circular(m.radius),
+        splashColor: c.overlay,
+        highlightColor: c.overlay,
+        focusNode: focusNode,
         child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: m.minHeight), // min tap target
+          constraints: BoxConstraints(minHeight: m.minHeight),
           child: Padding(
-            padding: m.padding, // responsive padding
-            child: Center(
-              child: _buildContent(context, m.font, m.spinner, fg),
-            ), // content
+            padding: m.padding,
+            child: Center(child: _buildContent(context, m.font, m.spinner, fg)),
           ),
         ),
       ),
     );
 
-    // semantics wrapper
+    // Add semantics for accessibility
     core = Semantics(
-      button: true, // role
-      enabled: enabled, // state
-      label: semanticLabel ?? label, // a11y label
-      child: core, // child
+      button: true,
+      enabled: enabled,
+      label: semanticLabel ?? label,
+      child: core,
     );
 
-    // expand full width if requested
-    if (expand)
-      core = SizedBox(width: double.infinity, child: core); // full width
+    if (expand) {
+      core = SizedBox(width: double.infinity, child: core);
+    }
 
-    // add outer margin if provided
-    if (margin != null)
-      core = Padding(padding: margin!, child: core); // external spacing
+    if (margin != null) {
+      core = Padding(padding: margin!, child: core);
+    }
 
-    // final widget
-    return core; // done
+    return core;
   }
 }
 
-// round icon-only button (responsive size)
+// Round icon-only button (responsive size)
 class AppIconButton extends StatelessWidget {
-  final VoidCallback? onPressed; // action (nullable)
-  final Widget icon; // icon widget
-  final String? tooltip; // tooltip text
-  final bool isFilled; // filled or outline
-  final double size; // diameter baseline
-  final bool isBusy; // loading state
+  final VoidCallback? onPressed;
+  final Widget icon;
+  final String? tooltip;
+  final bool isFilled;
+  final double size;
+  final bool isBusy;
 
   const AppIconButton({
-    super.key, // key
-    required this.icon, // icon
-    this.onPressed, // action
-    this.tooltip, // optional tooltip
-    this.isFilled = true, // default filled
-    this.size = 44, // baseline diameter
-    this.isBusy = false, // not loading by default
+    super.key,
+    required this.icon,
+    this.onPressed,
+    this.tooltip,
+    this.isFilled = true,
+    this.size = 44,
+    this.isBusy = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context); // media
-    final widthScale = (mq.size.width / 390).clamp(0.9, 1.2); // scale
-    final diameter = (size * widthScale).clamp(40.0, 56.0); // responsive dia
+    final mq = MediaQuery.of(context);
+    final widthScale = (mq.size.width / 390).clamp(0.9, 1.2);
+    final diameter = (size * widthScale).clamp(40.0, 56.0);
 
-    final cs = Theme.of(context).colorScheme; // colors
-    final bool enabled = onPressed != null && !isBusy; // clickable
-    final Color bg = isFilled ? cs.primary : Colors.transparent; // bg
-    final Color fg = isFilled ? cs.onPrimary : cs.primary; // fg
-    final Color br = isFilled
-        ? Colors.transparent
-        : cs.outlineVariant; // border
+    final cs = Theme.of(context).colorScheme;
+    final bool enabled = onPressed != null && !isBusy;
+    final Color bg = isFilled ? cs.primary : Colors.transparent;
+    final Color fg = isFilled ? cs.onPrimary : cs.primary;
+    final Color br = isFilled ? Colors.transparent : cs.outlineVariant;
 
     final Widget content = isBusy
         ? SizedBox(
-            width: (diameter * 0.45).clamp(18.0, 22.0), // spinner size
-            height: (diameter * 0.45).clamp(18.0, 22.0), // spinner size
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: fg,
-            ), // spinner
+            width: (diameter * 0.45).clamp(18.0, 22.0),
+            height: (diameter * 0.45).clamp(18.0, 22.0),
+            child: CircularProgressIndicator(strokeWidth: 2, color: fg),
           )
         : IconTheme.merge(
             data: IconThemeData(
               color: fg,
               size: (diameter * 0.5).clamp(20.0, 26.0),
-            ), // icon size
-            child: icon, // icon
+            ),
+            child: icon,
           );
 
     Widget btn = Material(
-      color: enabled ? bg : cs.surfaceVariant.withOpacity(.6), // bg disabled
-      shape: CircleBorder(side: BorderSide(color: br, width: 1)), // circle
+      color: enabled ? bg : cs.surfaceVariant.withOpacity(.6),
+      shape: CircleBorder(side: BorderSide(color: br, width: 1)),
       child: InkWell(
-        onTap: enabled ? onPressed : null, // tap
-        customBorder: const CircleBorder(), // ripple mask
+        onTap: enabled ? onPressed : null,
+        customBorder: const CircleBorder(),
         child: SizedBox(
-          width: diameter, // responsive diameter
-          height: diameter, // responsive diameter
-          child: Center(child: content), // center inner
+          width: diameter,
+          height: diameter,
+          child: Center(child: content),
         ),
       ),
     );
 
     if (tooltip != null && tooltip!.isNotEmpty) {
-      btn = Tooltip(message: tooltip!, child: btn); // optional tooltip
+      btn = Tooltip(message: tooltip!, child: btn);
     }
 
-    return btn; // done
+    return btn;
   }
 }

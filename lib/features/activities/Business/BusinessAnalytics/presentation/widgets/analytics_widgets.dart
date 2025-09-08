@@ -1,10 +1,8 @@
 // ===== Flutter 3.35.x =====
-// Analytics Widgets (Grid + Chart) with i18n + AppTheme
+// Analytics Widgets (Grid + Chart) with unified green icons
 
 import 'package:flutter/material.dart';
-
 import 'package:hobby_sphere/l10n/app_localizations.dart';
-import 'package:intl/intl.dart';
 import '../../domain/entities/business_analytics.dart';
 
 class AnalyticsMetricsGrid extends StatelessWidget {
@@ -17,42 +15,48 @@ class AnalyticsMetricsGrid extends StatelessWidget {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
 
+    final Color accentColor = theme.colorScheme.primary;
+
     final metrics = [
       _MetricData(
         icon: Icons.attach_money,
         label: tr.analyticsTotalRevenue,
         value: '\$${analytics.totalRevenue.toStringAsFixed(0)}',
-        color: theme.colorScheme.primary,
+        color: accentColor,
       ),
       _MetricData(
         icon: Icons.emoji_events,
         label: tr.analyticsTopActivity,
-        value: analytics.topActivity.isNotEmpty ? analytics.topActivity : '—',
-        color: theme.colorScheme.secondary,
+        value: analytics.topActivity.isNotEmpty
+            ? analytics.topActivity
+            : tr.noBookings,
+        color: accentColor,
       ),
       _MetricData(
         icon: Icons.trending_up,
         label: tr.analyticsBookingGrowth,
         value: '${analytics.bookingGrowth.toStringAsFixed(1)}%',
-        color: theme.colorScheme.tertiary,
+        color: accentColor,
       ),
       _MetricData(
         icon: Icons.schedule,
         label: tr.analyticsPeakHours,
-        value: analytics.peakHours.isNotEmpty ? analytics.peakHours : '—',
-        color: theme.colorScheme.outline,
+        value: analytics.peakHours.isNotEmpty
+            ? analytics.peakHours
+            : tr.analyticsReportDate,
+        color: accentColor,
       ),
       _MetricData(
         icon: Icons.group,
         label: tr.analyticsCustomerRetention,
         value: '${analytics.customerRetention.toStringAsFixed(1)}%',
-        color: theme.colorScheme.primary,
+        color: accentColor,
       ),
       _MetricData(
         icon: Icons.calendar_today,
         label: tr.analyticsReportDate,
-        value: analytics.analyticsDate, // use backend date directly
-        color: theme.colorScheme.secondary,
+        value: analytics.analyticsDate,
+        color: accentColor,
       ),
     ];
 
@@ -99,7 +103,7 @@ class MetricCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(metric.icon, color: metric.color, size: 24),
+          Icon(metric.icon, color: metric.color, size: 32), // ✅ unified green
           const SizedBox(height: 8),
           Text(
             metric.label,
@@ -153,7 +157,7 @@ class RevenueOverviewChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            tr.analyticsRevenueOverview, // i18n
+            tr.analyticsRevenueOverview,
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -165,7 +169,7 @@ class RevenueOverviewChart extends StatelessWidget {
               size: const Size(double.infinity, 200),
               painter: _SimpleChartPainter(
                 theme: theme,
-                data: [0, 0], // TODO: pass real revenue data
+                data: [0, 0], // TODO: hook up real revenue data
               ),
             ),
           ),
@@ -174,13 +178,13 @@ class RevenueOverviewChart extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               Text(
-                tr.analyticsToday, // i18n
+                tr.analyticsToday,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
               Text(
-                tr.analyticsYesterday, // i18n
+                tr.analyticsYesterday,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
@@ -216,7 +220,8 @@ class _SimpleChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = theme.colorScheme.outline.withOpacity(0.2)
+      ..color = theme.colorScheme.primary
+          .withOpacity(0.3) // ✅ green grid
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
@@ -226,19 +231,19 @@ class _SimpleChartPainter extends CustomPainter {
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
 
-    // grid lines
+    // Horizontal grid
     for (int i = 0; i <= 5; i++) {
       final y = size.height * i / 5;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
-    // vertical divisions
+    // Vertical grid
     for (int i = 0; i <= 4; i++) {
       final x = size.width * i / 4;
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
 
-    // data path
+    // Data line
     final path = Path();
     final pointSpacing = size.width / (data.length - 1);
 

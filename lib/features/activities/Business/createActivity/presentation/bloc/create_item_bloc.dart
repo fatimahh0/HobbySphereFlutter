@@ -9,7 +9,6 @@ import '../../domain/entities/create_item_request.dart';
 import 'create_item_event.dart';
 import 'create_item_state.dart';
 
-
 class CreateItemBloc extends Bloc<CreateItemEvent, CreateItemState> {
   final CreateItem createItem;
   final GetItemTypes getItemTypes;
@@ -36,15 +35,22 @@ class CreateItemBloc extends Bloc<CreateItemEvent, CreateItemState> {
     on<CreateItemMaxChanged>(
       (e, emit) => emit(state.copyWith(maxParticipants: e.max)),
     );
+
+    // 👇 هنا أضفنا imageUrl
+    on<CreateItemImageUrlRetained>(
+      (e, emit) => emit(
+        state.copyWith(imageUrl: e.imageUrl, error: null, success: null),
+      ),
+    );
+
     on<CreateItemPriceChanged>(
       (e, emit) => emit(state.copyWith(price: e.price)),
     );
     on<CreateItemStartChanged>((e, emit) {
-      emit(state.copyWith(start: e.dt)); // e.dt can be null → clear
+      emit(state.copyWith(start: e.dt));
     });
-
     on<CreateItemEndChanged>((e, emit) {
-      emit(state.copyWith(end: e.dt)); // e.dt can be null → clear
+      emit(state.copyWith(end: e.dt));
     });
 
     on<CreateItemImagePicked>(
@@ -89,7 +95,6 @@ class CreateItemBloc extends Bloc<CreateItemEvent, CreateItemState> {
       final auth = await TokenStore.read();
       final token = auth.token ?? '';
 
-      //  auto status:
       final now = DateTime.now();
       final computedStatus = (state.start != null && state.start!.isAfter(now))
           ? 'Upcoming'
@@ -108,9 +113,10 @@ class CreateItemBloc extends Bloc<CreateItemEvent, CreateItemState> {
           price: state.price!,
           startDatetime: state.start!,
           endDatetime: state.end!,
-          status: computedStatus, // ✅ here
+          status: computedStatus,
           businessId: state.businessId!,
-          image: state.image,
+          image: state.image, 
+          imageUrl: state.imageUrl, 
         ),
       );
 
