@@ -7,14 +7,16 @@ class InsightRepositoryImpl implements InsightRepository {
   InsightRepositoryImpl(this.service);
 
   @override
-  Future<List<InsightBooking>> getBusinessBookings(String token) async {
-    final res = await service.fetchBusinessBookings(token);
+  Future<List<InsightBooking>> getBookings(String token, int itemId) async {
+    final res = await service.fetchBusinessBookings(token, itemId: itemId);
     final List data = res.data;
+
     return data.map((json) {
       final user = json["user"];
       final item = json["item"];
       return InsightBooking(
         id: json["id"],
+        businessUserId: json["businessUserId"], // 👈 from backend
         clientName: user != null
             ? "${user["firstName"] ?? ""} ${user["lastName"] ?? ""}".trim()
             : json["bookedByName"] ?? "Unknown",

@@ -1,30 +1,42 @@
 // ===== Flutter 3.35.x =====
-// BusinessUsersScreen — professional UI with add + assign actions
+// BusinessUsersScreen — full updated version with Add + Assign functionality
+// - Auto-pop back to Insights after assigning
+// - Hide users already enrolled in the activity
+// - Fixed Add User form
+// - Assign dialog lets you set participants + paid/unpaid
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessUser/domain/usecases/book_cash.dart';
+
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/shared/widgets/app_search_bar.dart';
 import 'package:hobby_sphere/shared/widgets/app_button.dart';
 
+// Bloc
 import '../bloc/business_users_bloc.dart';
 import '../bloc/business_users_event.dart';
 import '../bloc/business_users_state.dart';
+
+// Domain / Repository / Usecases
 import '../../data/repositories/business_users_repository_impl.dart';
 import '../../data/services/business_users_service.dart';
 import '../../domain/usecases/get_business_users.dart';
 import '../../domain/usecases/create_business_user.dart';
+import '../../domain/usecases/book_cash.dart';
 
 class BusinessUsersScreen extends StatefulWidget {
   final String token;
   final int businessId;
+  final int itemId; // 👈 the activity id to assign users to
+  final List<int> enrolledUserIds; // 👈 users already assigned
 
   const BusinessUsersScreen({
     super.key,
     required this.token,
     required this.businessId,
+    required this.itemId,
+    this.enrolledUserIds = const [],
   });
 
   @override
@@ -50,14 +62,20 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
         )..add(LoadBusinessUsers(widget.token));
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(tr.businessUsersTitle), centerTitle: true),
-        floatingActionButton: FloatingActionButton.extended(
-          icon: const Icon(Icons.person_add_alt_1),
-          label: Text(tr.addUser),
-          onPressed: () => _showAddUserDialog(context, tr),
+        appBar: AppBar(
+          title: Text(tr.businessUsersTitle),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.person_add_alt_1),
+              tooltip: tr.addUser,
+              onPressed: () => _showAddUserDialog(context, tr),
+            ),
+          ],
         ),
         body: Column(
           children: [
+            // Search bar
             Padding(
               padding: const EdgeInsets.all(12),
               child: AppSearchBar(
@@ -66,14 +84,28 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
               ),
             ),
             Expanded(
-              child: BlocBuilder<BusinessUsersBloc, BusinessUsersState>(
+              child: BlocConsumer<BusinessUsersBloc, BusinessUsersState>(
+                listener: (context, state) {
+                  if (state is BusinessUserBookingSuccess) {
+                    Navigator.pop(context, true); // 👈 return to Insights
+                  } else if (state is BusinessUsersError) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(state.message)));
+                  }
+                },
                 builder: (context, state) {
                   if (state is BusinessUsersLoading) {
                     return const Center(child: CircularProgressIndicator());
                   } else if (state is BusinessUsersLoaded) {
                     var list = state.users;
 
-                    // apply search filter
+                    // Remove already enrolled users
+                    list = list
+                        .where((u) => !widget.enrolledUserIds.contains(u.id))
+                        .toList();
+
+                    // Apply search filter
                     if (_query.isNotEmpty) {
                       list = list
                           .where(
@@ -116,53 +148,33 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(12),
+                            leading: CircleAvatar(
+                              backgroundColor: cs.primary.withOpacity(0.15),
+                              child: Icon(Icons.person, color: cs.primary),
+                            ),
+                            title: Text(
+                              "${u.firstname} ${u.lastname}",
+                              style: tt.titleMedium,
+                            ),
+                            subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    CircleAvatar(
-                                      backgroundColor: cs.primary.withOpacity(
-                                        0.15,
-                                      ),
-                                      child: Icon(
-                                        Icons.person,
-                                        color: cs.primary,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            "${u.firstname} ${u.lastname}",
-                                            style: tt.titleMedium,
-                                          ),
-                                          if (u.email != null)
-                                            Text(u.email!, style: tt.bodySmall),
-                                          if (u.phoneNumber != null)
-                                            Text(
-                                              u.phoneNumber!,
-                                              style: tt.bodySmall,
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                AppButton(
-                                  label: tr.assignToActivity,
-                                  type: AppButtonType.outline,
-                                  onPressed: () {
-                                    _showAssignDialog(context, tr, u.id);
-                                  },
-                                ),
+                                if (u.email != null)
+                                  Text(u.email!, style: tt.bodySmall),
+                                if (u.phoneNumber != null)
+                                  Text(u.phoneNumber!, style: tt.bodySmall),
                               ],
+                            ),
+                            trailing: SizedBox(
+                              width: 140,
+                              child: AppButton(
+                                label: tr.assignToActivity,
+                                type: AppButtonType.outline,
+                                onPressed: () =>
+                                    _showAssignDialog(context, u.id),
+                              ),
                             ),
                           ),
                         );
@@ -182,12 +194,19 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
             ),
           ],
         ),
+        floatingActionButton: FloatingActionButton.extended(
+          icon: const Icon(Icons.person_add_alt_1),
+          label: Text(tr.addUser),
+          onPressed: () => _showAddUserDialog(context, tr),
+        ),
       ),
     );
   }
 
-  /// Dialog to add new BusinessUser (by email or phone)
+  /// Dialog to add new business user (either by email OR phone)
   void _showAddUserDialog(BuildContext context, AppLocalizations tr) {
+    final parentContext = context; // 👈 capture the bloc-aware context
+
     final firstCtrl = TextEditingController();
     final lastCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
@@ -240,22 +259,36 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
                 AppButton(
                   label: tr.save,
                   onPressed: () {
-                    if (!usePhone && emailCtrl.text.isEmpty ||
-                        usePhone && phoneCtrl.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                    final first = firstCtrl.text.trim();
+                    final last = lastCtrl.text.trim();
+                    final email = emailCtrl.text.trim();
+                    final phone = phoneCtrl.text.trim();
+
+                    if (first.isEmpty || last.isEmpty) {
+                      ScaffoldMessenger.of(parentContext).showSnackBar(
                         SnackBar(content: Text(tr.bookingErrorFailed)),
                       );
                       return;
                     }
-                    context.read<BusinessUsersBloc>().add(
+                    if (!usePhone && email.isEmpty ||
+                        usePhone && phone.isEmpty) {
+                      ScaffoldMessenger.of(parentContext).showSnackBar(
+                        SnackBar(content: Text(tr.bookingErrorFailed)),
+                      );
+                      return;
+                    }
+
+                    // 👇 use parentContext here
+                    BlocProvider.of<BusinessUsersBloc>(parentContext).add(
                       CreateBusinessUserEvent(
                         token: widget.token,
-                        firstname: firstCtrl.text,
-                        lastname: lastCtrl.text,
-                        email: !usePhone ? emailCtrl.text : null,
-                        phoneNumber: usePhone ? phoneCtrl.text : null,
+                        firstname: first,
+                        lastname: last,
+                        email: !usePhone ? email : null,
+                        phoneNumber: usePhone ? phone : null,
                       ),
                     );
+
                     Navigator.pop(ctx);
                   },
                   type: AppButtonType.primary,
@@ -268,17 +301,13 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
     );
   }
 
-  /// Dialog to manually assign BusinessUser to an activity (bookCash)
-  void _showAssignDialog(
-    BuildContext context,
-    AppLocalizations tr,
-    int businessUserId,
-  ) {
+  /// Dialog to assign user with participants + paid toggle
+  void _showAssignDialog(BuildContext context, int userId) async {
+    final tr = AppLocalizations.of(context)!;
     final participantsCtrl = TextEditingController(text: "1");
     bool wasPaid = false;
-    final itemIdCtrl = TextEditingController();
 
-    showDialog(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) {
         return StatefulBuilder(
@@ -290,10 +319,10 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
                 children: [
                   TextField(
                     controller: participantsCtrl,
-                    decoration: const InputDecoration(
-                      labelText: "Participants",
-                    ),
                     keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: tr.bookingParticipants,
+                    ),
                   ),
                   SwitchListTile(
                     title: Text(tr.paid),
@@ -308,18 +337,13 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
                   child: Text(tr.cancel),
                 ),
                 AppButton(
-                  label: tr.confirm,
+                  label: tr.save,
+                  type: AppButtonType.primary,
                   onPressed: () {
-                    context.read<BusinessUsersBloc>().add(
-                      BookCashEvent(
-                        token: widget.token,
-                        itemId: int.tryParse(itemIdCtrl.text) ?? 0,
-                        businessUserId: businessUserId,
-                        participants: int.tryParse(participantsCtrl.text) ?? 1,
-                        wasPaid: wasPaid,
-                      ),
-                    );
-                    Navigator.pop(ctx);
+                    Navigator.pop(ctx, {
+                      "participants": int.tryParse(participantsCtrl.text) ?? 1,
+                      "wasPaid": wasPaid,
+                    });
                   },
                 ),
               ],
@@ -328,5 +352,17 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
         );
       },
     );
+
+    if (result != null) {
+      context.read<BusinessUsersBloc>().add(
+        BookCashEvent(
+          token: widget.token,
+          itemId: widget.itemId,
+          businessUserId: userId,
+          participants: result["participants"],
+          wasPaid: result["wasPaid"],
+        ),
+      );
+    }
   }
 }

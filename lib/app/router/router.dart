@@ -97,7 +97,7 @@ abstract class Routes {
   static const reopenItem = '/business/reopenitem';
   static const businessActivityDetails = '/business/activity/details';
   static const businessInsights = '/business/insights';
-  static const businessUsers='/business/businessUser';
+  static const businessUsers = '/business/businessUser';
 }
 
 // ===== Route Args =====
@@ -142,16 +142,24 @@ class BusinessActivityDetailsRouteArgs {
 class BusinessInsightsRouteArgs {
   final String token;
   final int businessId;
-  const BusinessInsightsRouteArgs({
+  final int itemId;
+
+  BusinessInsightsRouteArgs({
     required this.token,
     required this.businessId,
+    required this.itemId,
   });
 }
 
 class BusinessUsersRouteArgs {
   final String token;
   final int businessId;
-  const BusinessUsersRouteArgs({required this.token, required this.businessId});
+  final int itemId;
+  const BusinessUsersRouteArgs({
+    required this.token,
+    required this.businessId,
+    required this.itemId, required enrolledUserIds,
+  });
 }
 
 class CreateActivityRouteArgs {
@@ -331,22 +339,24 @@ class AppRouter {
           settings: settings,
           builder: (_) => BusinessInsightsScreen(
             token: data.token,
-            businessId: data.businessId, // 👈 add this
+            businessId: data.businessId,
+            itemId: data.itemId, // 👈 add this
           ),
         );
 
-case Routes.businessUsers:
-  final data = args is BusinessUsersRouteArgs ? args : null;
-  if (data == null) {
-    return _error('Missing BusinessUsersRouteArgs (token + businessId).');
-  }
-  return MaterialPageRoute(
-    settings: settings,
-    builder: (_) => BusinessUsersScreen(
-      token: data.token,
-      businessId: data.businessId,
-    ),
-  );
+      case Routes.businessUsers:
+        final data = args is BusinessUsersRouteArgs ? args : null;
+        if (data == null) {
+          return _error('Missing BusinessUsersRouteArgs (token + businessId).');
+        }
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => BusinessUsersScreen(
+            token: data.token,
+            businessId: data.businessId,
+            itemId: data.itemId,
+          ),
+        );
 
       // ===== Business Analytics =====
       case Routes.businessAnalytics:

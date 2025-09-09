@@ -4,7 +4,7 @@ import 'package:hobby_sphere/core/network/globals.dart' as g;
 class InsightService {
   final Dio _dio = g.dio();
 
-  Future<Response> fetchBusinessBookings(String token) {
+  Future<Response> fetchBusinessBookings(String token, {int? itemId}) {
     return _dio.get(
       "${g.appServerRoot}/api/bookings/mybusinessbookings",
       options: Options(headers: {"Authorization": "Bearer $token"}),

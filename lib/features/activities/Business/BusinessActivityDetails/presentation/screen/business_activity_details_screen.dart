@@ -253,6 +253,7 @@ class _DetailsView extends StatelessWidget {
                             arguments: BusinessInsightsRouteArgs(
                               token: token,
                               businessId: activity.businessId ?? 0,
+                              itemId: activity.id,
                             ),
                           );
                         },

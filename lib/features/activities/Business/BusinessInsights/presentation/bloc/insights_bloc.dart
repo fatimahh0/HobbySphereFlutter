@@ -16,10 +16,13 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
     on<MarkAsPaid>(_onMarkPaid);
   }
 
-  Future<void> _onLoad(LoadInsights event, Emitter<InsightsState> emit) async {
+ Future<void> _onLoad(LoadInsights event, Emitter<InsightsState> emit) async {
     emit(InsightsLoading());
     try {
-      final bookings = await getBookings(event.token);
+      final bookings = await getBookings(
+        event.token,
+        event.itemId,
+      ); // 👈 include itemId
       emit(InsightsLoaded(bookings));
     } catch (e) {
       emit(InsightsError(e.toString()));
@@ -32,10 +35,15 @@ class InsightsBloc extends Bloc<InsightsEvent, InsightsState> {
   ) async {
     try {
       await markPaid(event.token, event.bookingId);
-      final bookings = await getBookings(event.token);
+      // refresh with itemId
+      final bookings = await getBookings(
+        event.token,
+        event.itemId,
+      ); // 👈 add itemId
       emit(InsightsLoaded(bookings));
     } catch (e) {
       emit(InsightsError(e.toString()));
     }
   }
+
 }

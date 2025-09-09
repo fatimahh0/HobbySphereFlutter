@@ -20,11 +20,13 @@ import 'package:hobby_sphere/app/router/router.dart';
 class BusinessInsightsScreen extends StatefulWidget {
   final String token;
   final int businessId;
+  final int itemId;
 
   const BusinessInsightsScreen({
     super.key,
     required this.token,
     required this.businessId,
+    required this.itemId,
   });
 
   @override
@@ -32,7 +34,7 @@ class BusinessInsightsScreen extends StatefulWidget {
 }
 
 class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
-  String _filter = "All";
+  String _filter = "Not Paid";
   String _query = "";
 
   @override
@@ -47,30 +49,50 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
           InsightRepositoryImpl(InsightService()),
         ),
         markPaid: MarkBookingPaid(InsightRepositoryImpl(InsightService())),
-      )..add(LoadInsights(widget.token)),
+      )..add(LoadInsights(widget.token, itemId: widget.itemId)),
       child: Scaffold(
         appBar: AppBar(
           title: Text(tr.activityInsightsTitle, style: tt.headlineSmall),
           centerTitle: true,
           actions: [
-            // 👇 Top-right button → go to Business Users screen
-            AppIconButton(
-              icon: const Icon(Icons.group_add),
-              onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  Routes.businessUsers,
-                  arguments: BusinessUsersRouteArgs(
-                    token: widget.token,
-                    businessId: widget.businessId,
-                  ),
-                );
+            BlocBuilder<InsightsBloc, InsightsState>(
+              builder: (context, state) {
+                if (state is InsightsLoaded) {
+                  // 👇 Collect enrolled userIds
+                  final enrolledIds = state.bookings
+                      .map((b) => b.businessUserId)
+                      .whereType<int>()
+                      .toList();
+
+                  return AppIconButton(
+                    icon: const Icon(Icons.group_add),
+                    onPressed: () async {
+                      final refresh = await Navigator.pushNamed(
+                        context,
+                        Routes.businessUsers,
+                        arguments: BusinessUsersRouteArgs(
+                          token: widget.token,
+                          businessId: widget.businessId,
+                          itemId: widget.itemId,
+                          enrolledUserIds: enrolledIds, // 👈 safe now
+                        ),
+                      );
+
+                      if (refresh == true) {
+                        context.read<InsightsBloc>().add(
+                          LoadInsights(widget.token, itemId: widget.itemId),
+                        );
+                      }
+                    },
+                  );
+                }
+                return const SizedBox.shrink();
               },
             ),
-
             const SizedBox(width: 12),
           ],
         ),
+
         body: BlocBuilder<InsightsBloc, InsightsState>(
           builder: (context, state) {
             if (state is InsightsLoading) {
@@ -219,14 +241,21 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
                                     ],
                                   ),
                                   trailing: !b.wasPaid
-                                      ? AppButton(
-                                          label: tr.markAsPaid,
-                                          type: AppButtonType.outline,
-                                          onPressed: () {
-                                            context.read<InsightsBloc>().add(
-                                              MarkAsPaid(widget.token, b.id),
-                                            );
-                                          },
+                                      ? SizedBox(
+                                          width: 120, // 👈 control the width
+                                          child: AppButton(
+                                            label: tr.markAsPaid,
+                                            type: AppButtonType.outline,
+                                            onPressed: () {
+                                              context.read<InsightsBloc>().add(
+                                                MarkAsPaid(
+                                                  widget.token,
+                                                  b.id,
+                                                  itemId: widget.itemId,
+                                                ),
+                                              );
+                                            },
+                                          ),
                                         )
                                       : null,
                                 ),
