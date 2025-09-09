@@ -1,5 +1,4 @@
-// ===== Flutter 3.35.x =====
-// BusinessHomeScreen — open Create/Edit via router, list-only version
+// lib/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -20,13 +19,16 @@ import 'package:hobby_sphere/features/activities/Business/common/data/services/b
 // UI widgets
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/widgets/header.dart';
 import 'package:hobby_sphere/shared/widgets/BusinessListItemCard.dart';
+
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
-import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
+import 'package:hobby_sphere/l10n/app_localizations.dart';
 
 // Bloc
 import '../bloc/business_home_bloc.dart';
 import '../bloc/business_home_event.dart';
 import '../bloc/business_home_state.dart';
+
+// New: Activity details
 
 class BusinessHomeScreen extends StatelessWidget {
   final String token;
@@ -178,9 +180,23 @@ class _BusinessHomeView extends StatelessWidget {
                         startDate: a.startDate,
                         location: a.location,
                         imageUrl: a.imageUrl,
-                        onView: () => context.read<BusinessHomeBloc>().add(
-                          BusinessHomeViewRequested(a.id),
-                        ),
+                        onView: () async {
+                          final result = await Navigator.pushNamed(
+                            context,
+                            Routes.businessActivityDetails,
+                            arguments: BusinessActivityDetailsRouteArgs(
+                              token: token,
+                              activityId: a.id,
+                            ),
+                          );
+
+                          if (result == true) {
+                            context.read<BusinessHomeBloc>().add(
+                              const BusinessHomeStarted(),
+                            );
+                          }
+                        },
+
                         onEdit: () {
                           final rootCtx = Navigator.of(
                             context,

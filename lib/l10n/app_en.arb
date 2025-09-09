@@ -754,6 +754,14 @@
     "deleteAccount": "Delete Account",
 "stripeAccountNotConnected":"stripe Account not connected",
 "registerOnStripe":" register on stripe account",
+"businessUsersTitle": "Business Users",
+"addUser": "Add User",
+"phoneNumber": "Phone Number",
+"provideEmailOrPhone": " provide email or phoneNumber",
+
+
+
+
   "@bookingMaxParticipants": {
     "placeholders": {
       "count": {

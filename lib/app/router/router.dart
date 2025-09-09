@@ -3,7 +3,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessActivityDetails/presentation/screen/business_activity_details_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessInsights/presentation/screens/business_insights_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessReviews/presentation/screens/business_reviews_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessUser/presentation/screens/business_users_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
@@ -91,7 +94,10 @@ abstract class Routes {
   static const privacyPolicy = '/privacy-policy';
   static const editBusiness = '/business/edit';
   static const businessNotifications = '/business/notifications';
-  static const reopenItem='/business/reopenitem';
+  static const reopenItem = '/business/reopenitem';
+  static const businessActivityDetails = '/business/activity/details';
+  static const businessInsights = '/business/insights';
+  static const businessUsers='/business/businessUser';
 }
 
 // ===== Route Args =====
@@ -121,6 +127,31 @@ class ShellRouteArgs {
     required this.token,
     required this.businessId,
   });
+}
+
+class BusinessActivityDetailsRouteArgs {
+  final String token;
+  final int activityId;
+
+  const BusinessActivityDetailsRouteArgs({
+    required this.token,
+    required this.activityId,
+  });
+}
+
+class BusinessInsightsRouteArgs {
+  final String token;
+  final int businessId;
+  const BusinessInsightsRouteArgs({
+    required this.token,
+    required this.businessId,
+  });
+}
+
+class BusinessUsersRouteArgs {
+  final String token;
+  final int businessId;
+  const BusinessUsersRouteArgs({required this.token, required this.businessId});
 }
 
 class CreateActivityRouteArgs {
@@ -158,7 +189,6 @@ class ReopenItemRouteArgs {
 
   ReopenItemRouteArgs({required this.businessId, required this.oldItem});
 }
-
 
 class BusinessReviewsRouteArgs {
   final int businessId;
@@ -245,8 +275,7 @@ class AppRouter {
           },
         );
 
-
-case Routes.reopenItem:
+      case Routes.reopenItem:
         final args = settings.arguments as ReopenItemRouteArgs;
         return MaterialPageRoute(
           builder: (_) => ReopenItemPage(
@@ -260,6 +289,64 @@ case Routes.reopenItem:
             ),
           ),
         );
+
+      case Routes.businessActivityDetails:
+        final data = args is BusinessActivityDetailsRouteArgs ? args : null;
+        if (data == null) {
+          return _error(
+            "Missing BusinessActivityDetailsRouteArgs (token + activityId).",
+          );
+        }
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) {
+            final repo = BusinessActivityRepositoryImpl(
+              BusinessActivityService(),
+            );
+            final getOne = GetBusinessActivityById(repo);
+
+            final currencyRepo = CurrencyRepositoryImpl(CurrencyService());
+            final getCurrency = GetCurrentCurrency(currencyRepo);
+            final deleteOne = DeleteBusinessActivity(repo);
+
+            return BusinessActivityDetailsScreen(
+              activityId: data.activityId,
+              token: data.token,
+              getById: getOne,
+              getCurrency: getCurrency,
+              deleteActivity: deleteOne,
+            );
+          },
+        );
+
+      // ===== Business Insights =====
+      case Routes.businessInsights:
+        final data = args is BusinessInsightsRouteArgs ? args : null;
+        if (data == null) {
+          return _error(
+            'Missing BusinessInsightsRouteArgs (token + businessId).',
+          );
+        }
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => BusinessInsightsScreen(
+            token: data.token,
+            businessId: data.businessId, // 👈 add this
+          ),
+        );
+
+case Routes.businessUsers:
+  final data = args is BusinessUsersRouteArgs ? args : null;
+  if (data == null) {
+    return _error('Missing BusinessUsersRouteArgs (token + businessId).');
+  }
+  return MaterialPageRoute(
+    settings: settings,
+    builder: (_) => BusinessUsersScreen(
+      token: data.token,
+      businessId: data.businessId,
+    ),
+  );
 
       // ===== Business Analytics =====
       case Routes.businessAnalytics:

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:hobby_sphere/features/activities/Business/createActivity/data/repositories/create_item_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/createActivity/domain/usecases/create_item.dart';
@@ -11,11 +12,11 @@ import 'package:hobby_sphere/features/activities/common/domain/usecases/get_curr
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 
-// common widgets
+// shared widgets
 import 'package:hobby_sphere/shared/widgets/app_button.dart';
 import 'package:hobby_sphere/shared/widgets/app_text_field.dart';
 
-// DI targets
+// DI
 import '../../../createActivity/data/services/create_item_service.dart';
 
 // Bloc
@@ -28,7 +29,6 @@ import '../../../createActivity/presentation/widgets/map_location_picker.dart';
 
 // Domain
 import '../../domain/entities/business_activity.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class ReopenItemPage extends StatelessWidget {
   final int businessId;
@@ -55,7 +55,7 @@ class ReopenItemPage extends StatelessWidget {
         getItemTypes: getItemTypes,
         getCurrentCurrency: getCurrentCurrency,
         businessId: businessId,
-      )..add(CreateItemBootstrap()), // load dropdown + currency
+      )..add(CreateItemBootstrap()), // bootstrap dropdown + currency
       child: _ReopenItemView(oldItem: oldItem),
     );
   }
@@ -80,13 +80,13 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
   @override
   void initState() {
     super.initState();
-    // Prefill controllers from old item
+    // prefill controllers from old item
     _name.text = widget.oldItem.name;
     _desc.text = widget.oldItem.description;
     _price.text = widget.oldItem.price.toStringAsFixed(0);
     _max.text = widget.oldItem.maxParticipants.toString();
 
-    // Dispatch initial values to Bloc
+    // send initial values to Bloc
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final bloc = context.read<CreateItemBloc>();
       bloc.add(CreateItemNameChanged(widget.oldItem.name));
@@ -103,8 +103,7 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
           widget.oldItem.longitude,
         ),
       );
-
-      // ✅ اعتبر الصورة القديمة صورة موجودة
+      // 👇 treat old image as valid if exists
       if (widget.oldItem.imageUrl != null &&
           widget.oldItem.imageUrl!.isNotEmpty) {
         bloc.add(CreateItemImageUrlRetained(widget.oldItem.imageUrl!));
@@ -146,12 +145,16 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
             ),
             ListTile(
               leading: const Icon(Icons.photo_library),
-              title: const Text('Pick from gallery'),
+              title: Text(
+                AppLocalizations.of(context)!.createActivityChooseLibrary,
+              ),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             ListTile(
               leading: const Icon(Icons.photo_camera),
-              title: const Text('Take a photo'),
+              title: Text(
+                AppLocalizations.of(context)!.createActivityTakePhoto,
+              ),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             const SizedBox(height: 6),
@@ -161,7 +164,6 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
     );
 
     if (src == null) return;
-
     final x = await picker.pickImage(source: src, imageQuality: 85);
     if (!mounted) return;
 
@@ -211,19 +213,19 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    // Title
+                    // Activity name
                     AppTextField(
                       controller: _name,
-                      label: loc.fieldTitle,
+                      label: loc.createActivityActivityName,
                       filled: true,
                       margin: const EdgeInsets.only(bottom: 12),
                       onChanged: (v) => bloc.add(CreateItemNameChanged(v)),
                     ),
 
-                    // Activity Type dropdown
+                    // Activity type
                     InputDecorator(
                       decoration: InputDecoration(
-                        labelText: loc.selectActivityType,
+                        labelText: loc.createActivitySelectType,
                         filled: true,
                         fillColor: cs.surfaceContainerHighest,
                         border: OutlineInputBorder(
@@ -235,7 +237,7 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                         child: DropdownButton<int>(
                           isExpanded: true,
                           value: state.itemTypeId,
-                          hint: Text(loc.selectActivityType),
+                          hint: Text(loc.createActivitySelectType),
                           items: state.types
                               .map(
                                 (t) => DropdownMenuItem<int>(
@@ -254,7 +256,7 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                     // Description
                     AppTextField(
                       controller: _desc,
-                      label: loc.fieldDescription,
+                      label: loc.createActivityDescription,
                       filled: true,
                       maxLines: 5,
                       margin: const EdgeInsets.only(top: 12, bottom: 12),
@@ -262,9 +264,9 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                           bloc.add(CreateItemDescriptionChanged(v)),
                     ),
 
-                    // Map picker
+                    // Map location
                     MapLocationPicker(
-                      hintText: loc.searchLocation,
+                      hintText: loc.createActivityLocation,
                       initialAddress: widget.oldItem.location,
                       initialLatLng: LatLng(
                         widget.oldItem.latitude,
@@ -279,7 +281,7 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                     // Max participants
                     AppTextField(
                       controller: _max,
-                      label: loc.fieldMaxParticipants,
+                      label: loc.createActivityMaxParticipants,
                       keyboardType: TextInputType.number,
                       filled: true,
                       margin: const EdgeInsets.only(bottom: 12),
@@ -287,13 +289,13 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                           bloc.add(CreateItemMaxChanged(int.tryParse(v))),
                     ),
 
-                    // Price + currency
+                    // Price
                     Row(
                       children: [
                         Expanded(
                           child: AppTextField(
                             controller: _price,
-                            label: loc.fieldPrice,
+                            label: loc.createActivityPrice,
                             hint: '0',
                             filled: true,
                             keyboardType: const TextInputType.numberWithOptions(
@@ -324,9 +326,9 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
 
                     const SizedBox(height: 12),
 
-                    // Start / End times
+                    // Start datetime
                     _DateField(
-                      label: loc.fieldStartDateTime,
+                      label: loc.createActivityStartDate,
                       value: state.start,
                       fmt: _fmtDate,
                       onPick: (dt) {
@@ -343,23 +345,20 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                       onClear: () => bloc.add(CreateItemStartChanged(null)),
                     ),
                     const SizedBox(height: 10),
+
+                    // End datetime
                     _DateField(
-                      label: loc.fieldEndDateTime,
+                      label: loc.createActivityEndDate,
                       value: state.end,
                       fmt: _fmtDate,
                       onPick: (dt) {
-                        final start = context
-                            .read<CreateItemBloc>()
-                            .state
-                            .start;
+                        final start = bloc.state.start;
                         if (start != null && !dt.isAfter(start)) {
                           final fixed = start.add(const Duration(hours: 1));
                           bloc.add(CreateItemEndChanged(fixed));
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'End must be after start. Adjusted by +1h.',
-                              ),
+                            SnackBar(
+                              content: Text(loc.createActivityErrorRequired),
                             ),
                           );
                         } else {
@@ -368,12 +367,13 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                       },
                       onClear: () => bloc.add(CreateItemEndChanged(null)),
                     ),
+
                     if (hasDateConflict) ...[
                       const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'End must be after Start.',
+                          loc.createActivityErrorRequired,
                           style: TextStyle(color: cs.error),
                         ),
                       ),
@@ -381,7 +381,7 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
 
                     const SizedBox(height: 12),
 
-                    // Image picker
+                    // Image (old or new)
                     GestureDetector(
                       onTap: () => _pickImage(context),
                       child: Container(
@@ -390,24 +390,27 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                         decoration: BoxDecoration(
                           color: cs.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: cs.outlineVariant),
+                          border: Border.all(
+                            color: cs.outlineVariant,
+                          ), // ✅ Correct
                         ),
+
                         clipBehavior: Clip.antiAlias,
-                        child: _pickedImage == null
-                            ? (widget.oldItem.imageUrl != null
+                        child: _pickedImage != null
+                            ? Image.file(_pickedImage!, fit: BoxFit.cover)
+                            : (widget.oldItem.imageUrl != null
                                   ? Image.network(
                                       widget.oldItem.imageUrl!,
                                       fit: BoxFit.cover,
                                     )
                                   : Center(
                                       child: Text(
-                                        'Tap to add image',
+                                        loc.createActivityTapToPick,
                                         style: tt.bodyMedium?.copyWith(
                                           color: cs.onSurfaceVariant,
                                         ),
                                       ),
-                                    ))
-                            : Image.file(_pickedImage!, fit: BoxFit.cover),
+                                    )),
                       ),
                     ),
 
@@ -415,21 +418,23 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
 
                     // Submit
                     AppButton(
-                      label: loc.submit,
+                      label: loc.createActivitySubmit,
                       expand: true,
                       isBusy: state.loading,
                       onPressed:
                           state.ready && !hasDateConflict && !state.loading
-                          ? () => context.read<CreateItemBloc>().add(
-                              CreateItemSubmitPressed(),
-                            )
+                          ? () => bloc.add(CreateItemSubmitPressed())
                           : null,
                     ),
 
-                    if (state.error != null && state.error!.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Text(state.error!, style: TextStyle(color: cs.error)),
-                    ],
+                    if (state.error != null && state.error!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(
+                          state.error!,
+                          style: TextStyle(color: cs.error),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -441,6 +446,7 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
   }
 }
 
+// date picker field widget
 class _DateField extends StatelessWidget {
   final String label;
   final DateTime? value;
@@ -465,8 +471,9 @@ class _DateField extends StatelessWidget {
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cs.outlineVariant),
+        border: Border.all(color: cs.outlineVariant), // ✅ Correct
       ),
+
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
@@ -481,11 +488,7 @@ class _DateField extends StatelessWidget {
                   style: tt.labelLarge?.copyWith(color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  fmt(value),
-                  style: tt.bodyMedium,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                Text(fmt(value), style: tt.bodyMedium),
               ],
             ),
           ),
@@ -493,7 +496,6 @@ class _DateField extends StatelessWidget {
             IconButton(
               tooltip: 'Clear',
               icon: const Icon(Icons.clear),
-              color: cs.onSurfaceVariant,
               onPressed: onClear,
             ),
           TextButton.icon(
@@ -509,9 +511,7 @@ class _DateField extends StatelessWidget {
               if (date == null) return;
               final time = await showTimePicker(
                 context: context,
-                initialTime: TimeOfDay.fromDateTime(
-                  init.isBefore(now) ? now : init,
-                ),
+                initialTime: TimeOfDay.fromDateTime(init),
               );
               if (time == null) return;
               onPick(
@@ -525,7 +525,7 @@ class _DateField extends StatelessWidget {
               );
             },
             icon: const Icon(Icons.edit_calendar),
-            label: const Text('Pick'),
+            label: Text(AppLocalizations.of(context)!.createActivityChange),
           ),
         ],
       ),

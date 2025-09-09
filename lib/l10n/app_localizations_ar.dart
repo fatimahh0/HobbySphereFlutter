@@ -1327,7 +1327,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notificationFetchError => 'Error fetching notifications:';
 
   @override
-  String get noScreenForNotification => ' No screnn found ';
+  String get noScreenForNotification => ' No screen linked ';
 
   @override
   String get deletedSuccessfully => 'notification deleted successfully';
@@ -2259,4 +2259,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get registerOnStripe => ' register on stripe account';
+
+  @override
+  String get businessUsersTitle => 'Business Users';
+
+  @override
+  String get addUser => 'Add User';
+
+  @override
+  String get phoneNumber => 'Phone Number';
+
+  @override
+  String get save => 'Save';
 }

@@ -1,7 +1,7 @@
+// lib/shared/widgets/business_list_item_card.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:hobby_sphere/l10n/app_localizations.dart';
 
 class BusinessListItemCard extends StatelessWidget {
   final String id;
@@ -12,7 +12,7 @@ class BusinessListItemCard extends StatelessWidget {
   final VoidCallback? onView;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
-  final VoidCallback? onReopen; // ✅ new for terminated items
+  final VoidCallback? onReopen;
 
   const BusinessListItemCard({
     super.key,
@@ -27,12 +27,10 @@ class BusinessListItemCard extends StatelessWidget {
     this.onReopen,
   });
 
-  /// Build image widget safely (supports local File or remote URL)
   Widget _buildImage(double size, ColorScheme cs) {
     Widget img;
-
     if (imageUrl != null && imageUrl!.isNotEmpty) {
-      if (imageUrl!.startsWith('http://') || imageUrl!.startsWith('https://')) {
+      if (imageUrl!.startsWith('http')) {
         img = Image.network(
           imageUrl!,
           width: size,
@@ -57,12 +55,9 @@ class BusinessListItemCard extends StatelessWidget {
     } else {
       img = _fallbackIcon(size, cs);
     }
-
-    // ✅ Rounded (circle)
     return ClipOval(child: img);
   }
 
-  /// Fallback icon if no image
   Widget _fallbackIcon(double size, ColorScheme cs) {
     return Container(
       width: size,
@@ -118,7 +113,6 @@ class BusinessListItemCard extends StatelessWidget {
             ),
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               _buildImage(imageSize, cs),
               const SizedBox(width: 12),
@@ -126,7 +120,6 @@ class BusinessListItemCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title
                     Text(
                       title,
                       style: tt.titleMedium?.copyWith(
@@ -137,8 +130,6 @@ class BusinessListItemCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-
-                    // Date
                     if (startDate != null)
                       Text(
                         MaterialLocalizations.of(
@@ -147,11 +138,7 @@ class BusinessListItemCard extends StatelessWidget {
                         style: tt.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-
-                    // Location
                     Text(
                       location,
                       style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),

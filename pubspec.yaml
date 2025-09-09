@@ -38,7 +38,7 @@ dependencies:
   intl: ^0.20.2
   flutter_localizations:
     sdk: flutter
-  flutter_gen: ^5.11.0
+  flutter_gen: 5.10.0
   http: ^1.2.2
   shared_preferences: ^2.3.2 
   country_picker: ^2.0.25
@@ -68,6 +68,12 @@ dependencies:
   flutter_slidable: ^3.1.0
   auto_size_text: ^3.0.0
   material_symbols_icons: ^4.2719.1
+  path_provider: ^2.1.2
+  excel: ^4.0.2
+  open_filex: ^4.4.0
+
+
+
 flutter_localizations:
   sdk: flutter
 intl: ^0.19.0

@@ -25,8 +25,6 @@ import 'package:hobby_sphere/shared/widgets/app_button.dart';
 import 'package:hobby_sphere/shared/widgets/BusinessListItemCard.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 
-
-
 /// Helper: ensure image URLs are absolute
 String? resolveApiImage(String? raw) {
   if (raw == null || raw.isEmpty) return null;
@@ -137,96 +135,109 @@ class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
 
           // List
           Expanded(
-            child:
-                BlocConsumer<BusinessActivitiesBloc, BusinessActivitiesState>(
-                  listenWhen: (p, c) =>
-                      p is BusinessActivitiesError ||
-                      (c is BusinessActivitiesError),
-                  listener: (context, state) {
-                    if (state is BusinessActivitiesError) {
-                      _toast(context, state.message, error: true);
-                    }
-                  },
-                  builder: (context, state) {
-                    if (state is BusinessActivitiesLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (state is BusinessActivitiesLoaded) {
-                      var list = state.activities;
+            child: BlocConsumer<BusinessActivitiesBloc, BusinessActivitiesState>(
+              listenWhen: (p, c) =>
+                  p is BusinessActivitiesError ||
+                  (c is BusinessActivitiesError),
+              listener: (context, state) {
+                if (state is BusinessActivitiesError) {
+                  _toast(context, state.message, error: true);
+                }
+              },
+              builder: (context, state) {
+                if (state is BusinessActivitiesLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (state is BusinessActivitiesLoaded) {
+                  var list = state.activities;
 
-                      // filter by tab
-                      list = list.where((a) {
-                        final isTerminated =
-                            a.status.toLowerCase() == 'terminated';
-                        return _tab == 'Upcoming'
-                            ? !isTerminated
-                            : isTerminated;
-                      }).toList();
+                  // filter by tab
+                  list = list.where((a) {
+                    final isTerminated = a.status.toLowerCase() == 'terminated';
+                    return _tab == 'Upcoming' ? !isTerminated : isTerminated;
+                  }).toList();
 
-                      // filter by query
-                      if (_query.isNotEmpty) {
-                        list = list
-                            .where(
-                              (a) => a.name.toLowerCase().contains(
-                                _query.toLowerCase(),
-                              ),
-                            )
-                            .toList();
-                      }
-
-                      if (list.isEmpty) {
-                        return Center(
-                          child: Text(
-                            tr.activitiesEmpty,
-                            style: theme.textTheme.bodyMedium,
+                  // filter by query
+                  if (_query.isNotEmpty) {
+                    list = list
+                        .where(
+                          (a) => a.name.toLowerCase().contains(
+                            _query.toLowerCase(),
                           ),
-                        );
-                      }
+                        )
+                        .toList();
+                  }
 
-                      return RefreshIndicator(
-                        onRefresh: () async {
-                          context.read<BusinessActivitiesBloc>().add(
-                            LoadBusinessActivities(
-                              token: widget.token,
-                              businessId: widget.businessId,
-                            ),
-                          );
-                          return Future.value();
-                        },
-                        child: ListView.builder(
-                          itemCount: list.length,
-                          itemBuilder: (ctx, index) {
-                            final a = list[index];
-                            final imgUrl = resolveApiImage(a.imageUrl);
+                  if (list.isEmpty) {
+                    return Center(
+                      child: Text(
+                        tr.activitiesEmpty,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    );
+                  }
 
-                            return BusinessListItemCard(
-                              id: '${a.id}',
-                              title: a.name,
-                              startDate: a.startDate,
-                              location: a.location,
-                              imageUrl: imgUrl,
-                              onView: () {
-                                _toast(context, 'Open details for ${a.name}');
-                              },
-                              onEdit: () {
-                                Navigator.pushNamed(
-                                  context,
-                                  Routes.editBusinessActivity,
-                                  arguments: EditActivityRouteArgs(
-                                    itemId: a.id,
-                                    businessId: widget.businessId,
-                                  ),
-                                );
-                              },
-                              onDelete: () {
-                                context.read<BusinessActivitiesBloc>().add(
-                                  DeleteBusinessActivityEvent(
-                                    token: widget.token,
-                                    id: a.id,
-                                  ),
-                                );
-                              },
-                              onReopen: a.status.toLowerCase() == 'terminated'
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      context.read<BusinessActivitiesBloc>().add(
+                        LoadBusinessActivities(
+                          token: widget.token,
+                          businessId: widget.businessId,
+                        ),
+                      );
+                      return Future.value();
+                    },
+                    child: ListView.builder(
+                      itemCount: list.length,
+                      itemBuilder: (ctx, index) {
+                        final a = list[index];
+                        final imgUrl = resolveApiImage(a.imageUrl);
+
+                        return BusinessListItemCard(
+                          id: '${a.id}',
+                          title: a.name,
+                          startDate: a.startDate,
+                          location: a.location,
+                          imageUrl: imgUrl,
+                          onView: () async {
+                            final result = await Navigator.pushNamed(
+                              context,
+                              Routes.businessActivityDetails,
+                              arguments: BusinessActivityDetailsRouteArgs(
+                                token: widget.token,
+                                activityId: a.id,
+                              ),
+                            );
+
+                            if (result == true) {
+                              context.read<BusinessActivitiesBloc>().add(
+                                LoadBusinessActivities(
+                                  token: widget.token,
+                                  businessId: widget.businessId,
+                                ),
+                              );
+                            }
+                          },
+
+                          onEdit: () {
+                            Navigator.pushNamed(
+                              context,
+                              Routes.editBusinessActivity,
+                              arguments: EditActivityRouteArgs(
+                                itemId: a.id,
+                                businessId: widget.businessId,
+                              ),
+                            );
+                          },
+                          onDelete: () {
+                            context.read<BusinessActivitiesBloc>().add(
+                              DeleteBusinessActivityEvent(
+                                token: widget.token,
+                                id: a.id,
+                              ),
+                            );
+                          },
+                          onReopen: a.status.toLowerCase() == 'terminated'
                               ? () {
                                   Navigator.push(
                                     context,
@@ -238,7 +249,7 @@ class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
                                         getItemTypes: GetItemTypes(
                                           // create repo inside here
                                           ItemTypeRepositoryImpl(
-                                             ItemTypesService(),
+                                            ItemTypesService(),
                                           ),
                                         ),
                                         getCurrentCurrency: GetCurrentCurrency(
@@ -251,15 +262,14 @@ class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
                                   );
                                 }
                               : null,
-
-                            );
-                          },
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
+                        );
+                      },
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
           ),
         ],
       ),

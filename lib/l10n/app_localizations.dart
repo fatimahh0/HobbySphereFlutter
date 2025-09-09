@@ -2716,7 +2716,7 @@ abstract class AppLocalizations {
   /// No description provided for @noScreenForNotification.
   ///
   /// In en, this message translates to:
-  /// **' No screnn found '**
+  /// **' No screen linked '**
   String get noScreenForNotification;
 
   /// No description provided for @deletedSuccessfully.
@@ -4572,6 +4572,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **' register on stripe account'**
   String get registerOnStripe;
+
+  /// No description provided for @businessUsersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Business Users'**
+  String get businessUsersTitle;
+
+  /// No description provided for @addUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Add User'**
+  String get addUser;
+
+  /// No description provided for @phoneNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone Number'**
+  String get phoneNumber;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

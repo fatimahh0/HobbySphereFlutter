@@ -22,7 +22,9 @@ class CreateItemRepositoryImpl implements CreateItemRepository {
       'endDatetime': req.endDatetime.toIso8601String(),
       'status': req.status,
       'businessId': req.businessId,
-      'image': req.image,
+      if (req.image != null) 'image': req.image, // multipart
+      if (req.imageUrl != null && req.imageUrl!.isNotEmpty)
+        'imageUrl': req.imageUrl, // fallback url
     };
 
     final res = await service.createMultipart(token, payload);

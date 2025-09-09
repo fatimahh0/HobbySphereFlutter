@@ -31,12 +31,18 @@ class CreateItemService {
       fields['endDatetime'] = _isoNoMillis(fields['endDatetime'] as DateTime);
     }
 
-    // add non-file fields
+    // ✅ Add non-file fields
     fields.forEach((k, v) {
       if (v == null) return;
       if (v is File) return;
       form.fields.add(MapEntry(k, v.toString()));
     });
+
+    // ✅ Explicitly handle old imageUrl
+    if (fields['imageUrl'] != null &&
+        fields['imageUrl'].toString().isNotEmpty) {
+      form.fields.add(MapEntry('imageUrl', fields['imageUrl'].toString()));
+    }
 
     // add optional image
     if (fields['image'] is File) {
@@ -53,20 +59,25 @@ class CreateItemService {
       );
     }
 
-
+    print("=== DEBUG FORM FIELDS ===");
+    for (final f in form.fields) {
+      print("${f.key}: ${f.value}");
+    }
+    print("=========================");
 
     return _fetch.fetch(
       HttpMethod.post,
-      '$_base/create', // -> /api/items/create
+      '$_base/create',
       data: form,
-      headers: {
-        'Authorization': 'Bearer $token',
-        // Don't set Content-Type manually; Dio sets multipart boundary.
-      },
+      headers: {'Authorization': 'Bearer $token'},
     );
   }
 
-Future<Response> updateMultipart(String token, int id, Map<String, dynamic> body) async {
+  Future<Response> updateMultipart(
+    String token,
+    int id,
+    Map<String, dynamic> body,
+  ) async {
     final form = await _toForm(body);
     return _fetch.fetch(
       HttpMethod.put,
@@ -82,9 +93,11 @@ Future<Response> updateMultipart(String token, int id, Map<String, dynamic> body
   Future<FormData> _toForm(Map<String, dynamic> body) async {
     final form = FormData();
     for (final e in body.entries) {
-      final k = e.key; final v = e.value;
+      final k = e.key;
+      final v = e.value;
       if (v == null) continue;
-      if (k == 'imageRemoved') { // booleans must be strings for some servers
+      if (k == 'imageRemoved') {
+        // booleans must be strings for some servers
         form.fields.add(MapEntry(k, (v == true) ? 'true' : 'false'));
         continue;
       }

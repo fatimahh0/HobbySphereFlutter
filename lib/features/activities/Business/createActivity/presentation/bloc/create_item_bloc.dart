@@ -90,6 +90,13 @@ class CreateItemBloc extends Bloc<CreateItemEvent, CreateItemState> {
       return;
     }
 
+    final rawUrl = state.imageUrl;
+
+    String? normalizedUrl;
+    if (rawUrl != null && rawUrl.contains('uploads/')) {
+      normalizedUrl = rawUrl.substring(rawUrl.indexOf('uploads/'));
+    }
+
     emit(state.copyWith(loading: true, error: null, success: null));
     try {
       final auth = await TokenStore.read();
@@ -115,10 +122,27 @@ class CreateItemBloc extends Bloc<CreateItemEvent, CreateItemState> {
           endDatetime: state.end!,
           status: computedStatus,
           businessId: state.businessId!,
-          image: state.image, 
-          imageUrl: state.imageUrl, 
+          image: state.image,
+          imageUrl: normalizedUrl,
         ),
       );
+
+      // 👇 Debug what is being sent
+      print('===== CREATE ITEM DEBUG =====');
+      print('name: ${state.name}');
+      print('typeId: ${state.itemTypeId}');
+      print('desc: ${state.description}');
+      print('location: ${state.address}');
+      print('lat/lng: ${state.lat}, ${state.lng}');
+      print('maxParticipants: ${state.maxParticipants}');
+      print('price: ${state.price}');
+      print('start: ${state.start}');
+      print('end: ${state.end}');
+      print('status: $computedStatus');
+      print('businessId: ${state.businessId}');
+      print('image file: ${state.image?.path}');
+      print('imageUrl: $normalizedUrl');
+      print('=============================');
 
       emit(state.copyWith(loading: false, success: msg));
     } catch (e) {
