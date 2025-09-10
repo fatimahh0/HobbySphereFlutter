@@ -10,22 +10,19 @@ import 'business_booking_state.dart';
 
 class BusinessBookingBloc
     extends Bloc<BusinessBookingEvent, BusinessBookingState> {
-  // Use cases from domain layer
   final GetBusinessBookings getBookings;
   final UpdateBookingStatus updateStatus;
 
-  // Named params constructor (cleaner than positional)
   BusinessBookingBloc({required this.getBookings, required this.updateStatus})
     : super(const BusinessBookingState()) {
-    // ✅ now state is never null
     on<BusinessBookingBootstrap>(_onBootstrap);
     on<BusinessBookingFilterChanged>(_onFilterChanged);
     on<RejectBooking>(_onRejectBooking);
     on<UnrejectBooking>(_onUnrejectBooking);
     on<MarkPaidBooking>(_onMarkPaidBooking);
+    on<ApproveCancelBooking>(_onApproveCancelBooking);
+    on<RejectCancelBooking>(_onRejectCancelBooking);
   }
-
-  // ===== Event Handlers =====
 
   Future<void> _onBootstrap(
     BusinessBookingBootstrap event,
@@ -33,13 +30,9 @@ class BusinessBookingBloc
   ) async {
     emit(state.copyWith(loading: true, error: null));
     try {
-      // 1. Read saved token from TokenStore
       final auth = await TokenStore.read();
       final token = auth.token ?? '';
-
-      // 2. Pass token to the usecase
       final bookings = await getBookings(token);
-
       emit(state.copyWith(bookings: bookings, loading: false));
     } catch (e) {
       emit(state.copyWith(error: e.toString(), loading: false));
@@ -61,7 +54,7 @@ class BusinessBookingBloc
       final auth = await TokenStore.read();
       final token = auth.token ?? '';
       await updateStatus(token, event.bookingId, 'Rejected');
-      add(BusinessBookingBootstrap()); // reload
+      add(BusinessBookingBootstrap());
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -75,7 +68,7 @@ class BusinessBookingBloc
       final auth = await TokenStore.read();
       final token = auth.token ?? '';
       await updateStatus(token, event.bookingId, 'Pending');
-      add(BusinessBookingBootstrap()); // reload
+      add(BusinessBookingBootstrap());
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -89,7 +82,35 @@ class BusinessBookingBloc
       final auth = await TokenStore.read();
       final token = auth.token ?? '';
       await updateStatus(token, event.bookingId, 'Paid');
-      add(BusinessBookingBootstrap()); // reload
+      add(BusinessBookingBootstrap());
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onApproveCancelBooking(
+    ApproveCancelBooking event,
+    Emitter<BusinessBookingState> emit,
+  ) async {
+    try {
+      final auth = await TokenStore.read();
+      final token = auth.token ?? '';
+      await updateStatus(token, event.bookingId, 'cancel_approved');
+      add(BusinessBookingBootstrap());
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onRejectCancelBooking(
+    RejectCancelBooking event,
+    Emitter<BusinessBookingState> emit,
+  ) async {
+    try {
+      final auth = await TokenStore.read();
+      final token = auth.token ?? '';
+      await updateStatus(token, event.bookingId, 'cancel_rejected');
+      add(BusinessBookingBootstrap());
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }

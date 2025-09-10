@@ -16,7 +16,7 @@ class InsightRepositoryImpl implements InsightRepository {
       final item = json["item"];
       return InsightBooking(
         id: json["id"],
-        businessUserId: json["businessUserId"], // 👈 from backend
+        businessUserId: json["businessUser"]?["id"], // 👈 from backend
         clientName: user != null
             ? "${user["firstName"] ?? ""} ${user["lastName"] ?? ""}".trim()
             : json["bookedByName"] ?? "Unknown",

@@ -65,8 +65,8 @@ class ShellBottom extends StatefulWidget {
   final AppRole role;
   final String token;
   final int businessId;
-  final void Function(Locale) onChangeLocale; // 👈 NEW
-  final VoidCallback onToggleTheme; // optional if you want theme switching
+  final void Function(Locale) onChangeLocale;
+  final VoidCallback onToggleTheme;
 
   final int bookingsBadge;
   final int ticketsBadge;
@@ -76,8 +76,8 @@ class ShellBottom extends StatefulWidget {
     required this.role,
     required this.token,
     required this.businessId,
-    required this.onChangeLocale, // 👈 required now
-    required this.onToggleTheme, // 👈 if you also support theme toggle
+    required this.onChangeLocale,
+    required this.onToggleTheme,
     this.bookingsBadge = 0,
     this.ticketsBadge = 0,
   });
@@ -98,7 +98,6 @@ class _ShellBottomState extends State<ShellBottom> {
     UserProfileScreen(),
   ];
 
-  // ===== Business pages =====
   // ===== Business pages =====
   late final List<Widget> _businessPages = <Widget>[
     // 0. Home
@@ -156,7 +155,7 @@ class _ShellBottomState extends State<ShellBottom> {
           BusinessBookingRepositoryImpl(BusinessBookingService()),
         ),
       )..add(BusinessBookingBootstrap()),
-      child: BusinessBookingScreen(),
+      child: const BusinessBookingScreen(),
     ),
 
     // 2. Activities
@@ -263,7 +262,6 @@ class _ShellBottomState extends State<ShellBottom> {
       ),
     );
 
-    final scheme = Theme.of(context).colorScheme;
     final pages = _pagesFor(widget.role);
     final labels = _labelsFor(context, widget.role);
     final icons = _iconsFor(widget.role);
@@ -272,14 +270,12 @@ class _ShellBottomState extends State<ShellBottom> {
 
     return Scaffold(
       extendBody: false,
-      appBar: AppBar(
-        title: Text(labels[_index]),
-        centerTitle: true,
-        backgroundColor: scheme.background,
-        foregroundColor: scheme.onBackground,
-        elevation: 0,
+      body: SafeArea(
+        // 👈 أضفنا SafeArea
+        top: true,
+        bottom: false, // خلي الـ bottom مفتوح عشان يضل مع الـ nav bar
+        child: IndexedStack(index: _index, children: pages),
       ),
-      body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(

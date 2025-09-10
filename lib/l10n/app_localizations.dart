@@ -4591,11 +4591,29 @@ abstract class AppLocalizations {
   /// **'Phone Number'**
   String get phoneNumber;
 
+  /// No description provided for @provideEmailOrPhone.
+  ///
+  /// In en, this message translates to:
+  /// **' provide email or phoneNumber'**
+  String get provideEmailOrPhone;
+
+  /// No description provided for @alreadyBooked.
+  ///
+  /// In en, this message translates to:
+  /// **' alreadyBooked'**
+  String get alreadyBooked;
+
   /// No description provided for @save.
   ///
   /// In en, this message translates to:
-  /// **'Save'**
+  /// **'save'**
   String get save;
+
+  /// No description provided for @bookingsFiltersCancelRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'cancel request'**
+  String get bookingsFiltersCancelRequested;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

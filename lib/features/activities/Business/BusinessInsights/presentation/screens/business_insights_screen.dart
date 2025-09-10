@@ -2,6 +2,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:excel/excel.dart';
+import 'package:hobby_sphere/core/network/globals.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessUser/data/repositories/business_users_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessUser/data/services/business_users_service.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessUser/domain/usecases/book_cash.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessUser/domain/usecases/create_business_user.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessUser/domain/usecases/get_business_users.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessUser/presentation/bloc/business_users_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessUser/presentation/bloc/business_users_event.dart';
+import 'package:hobby_sphere/features/activities/Business/BusinessUser/presentation/screens/business_users_screen.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 
@@ -34,7 +43,7 @@ class BusinessInsightsScreen extends StatefulWidget {
 }
 
 class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
-  String _filter = "Not Paid";
+  String _filter = "Paid";
   String _query = "";
 
   @override
@@ -67,14 +76,27 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
                   return AppIconButton(
                     icon: const Icon(Icons.group_add),
                     onPressed: () async {
-                      final refresh = await Navigator.pushNamed(
+                      final refresh = await Navigator.push(
                         context,
-                        Routes.businessUsers,
-                        arguments: BusinessUsersRouteArgs(
-                          token: widget.token,
-                          businessId: widget.businessId,
-                          itemId: widget.itemId,
-                          enrolledUserIds: enrolledIds, // 👈 safe now
+                        MaterialPageRoute(
+                          builder: (_) {
+                            final repo = BusinessUsersRepositoryImpl(
+                              BusinessUsersService(),
+                            );
+                            return BlocProvider(
+                              create: (_) => BusinessUsersBloc(
+                                getUsers: GetBusinessUsers(repo),
+                                createUser: CreateBusinessUser(repo),
+                                bookCash: BookCash(repo),
+                              )..add(LoadBusinessUsers(widget.token)),
+                              child: BusinessUsersScreen(
+                                token: widget.token,
+                                businessId: widget.businessId,
+                                itemId: widget.itemId,
+                                enrolledUserIds: enrolledIds,
+                              ),
+                            );
+                          },
                         ),
                       );
 
@@ -99,6 +121,11 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
               return const Center(child: CircularProgressIndicator());
             } else if (state is InsightsLoaded) {
               var list = state.bookings;
+
+              final enrolledIds = state.bookings
+                  .map((b) => b.businessUserId) // 👈 link to BusinessUser
+                  .whereType<int>() // filter out nulls
+                  .toList();
 
               // === Apply filters ===
               if (_filter == "Paid") {

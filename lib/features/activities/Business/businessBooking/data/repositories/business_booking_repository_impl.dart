@@ -12,7 +12,6 @@ class BusinessBookingRepositoryImpl implements BusinessBookingRepository {
     return raw.map((e) => BusinessBooking.fromJson(e)).toList();
   }
 
-
   @override
   Future<void> rejectBooking(String token, int id) =>
       service.rejectBooking(token, id);
@@ -23,4 +22,12 @@ class BusinessBookingRepositoryImpl implements BusinessBookingRepository {
 
   @override
   Future<void> markPaid(String token, int id) => service.markPaid(token, id);
+
+  @override
+  Future<void> approveCancel(String token, int id) =>
+      service.approveCancel(token, id);
+
+  @override
+  Future<void> rejectCancel(String token, int id) =>
+      service.rejectCancel(token, id);
 }

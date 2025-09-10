@@ -2270,5 +2270,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get phoneNumber => 'Phone Number';
 
   @override
-  String get save => 'Save';
+  String get provideEmailOrPhone => ' provide email or phoneNumber';
+
+  @override
+  String get alreadyBooked => ' alreadyBooked';
+
+  @override
+  String get save => 'save';
+
+  @override
+  String get bookingsFiltersCancelRequested => 'cancel request';
 }

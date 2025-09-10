@@ -35,6 +35,22 @@ class BusinessBookingService {
     );
   }
 
+  Future<void> approveCancel(String token, int id) async {
+    await _fetch.fetch(
+      HttpMethod.put,
+      '$_base/cancel/approve/$id',
+      headers: {'Authorization': 'Bearer $token'},
+    );
+  }
+
+  Future<void> rejectCancel(String token, int id) async {
+    await _fetch.fetch(
+      HttpMethod.put,
+      '$_base/cancel/reject/$id',
+      headers: {'Authorization': 'Bearer $token'},
+    );
+  }
+
   Future<void> markPaid(String token, int id) async {
     await _fetch.fetch(
       HttpMethod.put,

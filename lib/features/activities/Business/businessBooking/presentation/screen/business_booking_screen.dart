@@ -1,5 +1,5 @@
 // ===== Flutter 3.35.x =====
-// BusinessBookingScreen — responsive fixed filter tabs
+// BusinessBookingScreen — responsive fixed filter tabs + pull refresh
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -23,7 +23,6 @@ class BusinessBookingScreen extends StatefulWidget {
 class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
   String _searchQuery = '';
 
-  /// Get localized label for filter
   String _labelForFilter(AppLocalizations l10n, String filter) {
     switch (filter) {
       case 'all':
@@ -35,7 +34,7 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
       case 'rejected':
         return l10n.bookingsFiltersRejected;
       case 'canceled':
-        return l10n.bookingsFiltersCanceled;
+        return l10n.bookingsFiltersCanceled; // includes CancelRequested too
       default:
         return filter;
     }
@@ -47,7 +46,6 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      // Search bar in AppBar
       appBar: AppSearchAppBar(
         hint: l10n.searchPlaceholder,
         onQueryChanged: (q) => setState(() => _searchQuery = q.toLowerCase()),
@@ -71,11 +69,14 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
             );
           }
 
-          // Filter bookings by tab + search
+          // === Filter bookings ===
           final filtered = state.bookings.where((b) {
+            final status = b.status.trim().toLowerCase();
             final matchesFilter =
                 state.filter == 'all' ||
-                b.status.toLowerCase() == state.filter.toLowerCase();
+                (state.filter == 'canceled'
+                    ? (status == 'canceled' || status == 'cancel_requested')
+                    : status == state.filter.toLowerCase());
             final matchesSearch =
                 _searchQuery.isEmpty ||
                 (b.itemName?.toLowerCase().contains(_searchQuery) ?? false) ||
@@ -85,7 +86,7 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
 
           return Column(
             children: [
-              // ==== RESPONSIVE FIXED FILTER TABS ====
+              // ==== FIXED FILTER TABS ====
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 width: double.infinity,
@@ -96,7 +97,7 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                         'pending',
                         'completed',
                         'rejected',
-                        'canceled',
+                        'canceled', // includes cancel_requested too
                       ].map((f) {
                         final active = state.filter == f;
                         return Expanded(
@@ -114,7 +115,7 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                                   : AppButtonType.outline,
                               size: AppButtonSize.sm,
                               textStyle: theme.textTheme.labelSmall?.copyWith(
-                                fontSize: 12, // base size
+                                fontSize: 12,
                                 fontWeight: active
                                     ? FontWeight.bold
                                     : FontWeight.w500,
@@ -126,21 +127,35 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                 ),
               ),
 
-              // ==== BOOKINGS LIST ====
+              // ==== BOOKINGS LIST with PullRefresh ====
               Expanded(
-                child: filtered.isEmpty
-                    ? Center(
-                        child: Text(
-                          l10n.bookingsNoBookings(state.filter),
-                          style: theme.textTheme.bodyMedium,
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    context.read<BusinessBookingBloc>().add(
+                      BusinessBookingBootstrap(),
+                    );
+                  },
+                  child: filtered.isEmpty
+                      ? ListView(
+                          children: [
+                            SizedBox(
+                              height: 300,
+                              child: Center(
+                                child: Text(
+                                  l10n.bookingsNoBookings(state.filter),
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          itemCount: filtered.length,
+                          itemBuilder: (ctx, i) =>
+                              BookingCardBusiness(booking: filtered[i]),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        itemCount: filtered.length,
-                        itemBuilder: (ctx, i) =>
-                            BookingCardBusiness(booking: filtered[i]),
-                      ),
+                ),
               ),
             ],
           );

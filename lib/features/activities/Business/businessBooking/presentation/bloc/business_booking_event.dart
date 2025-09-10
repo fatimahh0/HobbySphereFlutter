@@ -1,7 +1,3 @@
-// ===== Flutter 3.35.x =====
-// Events for BusinessBookingBloc
-// Each event represents a user action or lifecycle trigger.
-
 import 'package:equatable/equatable.dart';
 
 abstract class BusinessBookingEvent extends Equatable {
@@ -11,41 +7,43 @@ abstract class BusinessBookingEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-// Bootstrap: fetch all bookings when screen loads
+// Bootstrap: fetch all bookings
 class BusinessBookingBootstrap extends BusinessBookingEvent {}
 
-// Filter bookings by status (all, pending, completed, rejected, canceled)
+// Filter bookings
 class BusinessBookingFilterChanged extends BusinessBookingEvent {
   final String filter;
   const BusinessBookingFilterChanged(this.filter);
-
   @override
   List<Object?> get props => [filter];
 }
 
-// Reject a booking by ID
+// Reject a booking
 class RejectBooking extends BusinessBookingEvent {
   final int bookingId;
   const RejectBooking(this.bookingId);
-
-  @override
-  List<Object?> get props => [bookingId];
 }
 
-// Unreject (move rejected back to pending)
+// Unreject (back to pending)
 class UnrejectBooking extends BusinessBookingEvent {
   final int bookingId;
   const UnrejectBooking(this.bookingId);
-
-  @override
-  List<Object?> get props => [bookingId];
 }
 
-// Mark a booking as paid
+// Mark as paid
 class MarkPaidBooking extends BusinessBookingEvent {
   final int bookingId;
   const MarkPaidBooking(this.bookingId);
+}
 
-  @override
-  List<Object?> get props => [bookingId];
+// Approve cancel
+class ApproveCancelBooking extends BusinessBookingEvent {
+  final int bookingId;
+  const ApproveCancelBooking(this.bookingId);
+}
+
+// Reject cancel
+class RejectCancelBooking extends BusinessBookingEvent {
+  final int bookingId;
+  const RejectCancelBooking(this.bookingId);
 }

@@ -1,16 +1,32 @@
 // ===== Flutter 3.35.x =====
 // ShellDrawer — drawer navigation for user & business roles.
-// Fixed: BusinessActivitiesScreen now receives token + businessId.
+// Final: Clean AppBar (menu icon only), full drawer with scrollbar.
 
-import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/constants/app_role.dart';
+
+// ==== Business Activity ====
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
+import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
+
+// ==== Business Home ====
+import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_event.dart';
+import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
+
+// ==== Business Notifications ====
+import 'package:hobby_sphere/features/activities/Business/businessNotification/data/repositories/business_notification_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/data/services/business_notification_service.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/usecases/get_business_notifications.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_event.dart';
+
+// ==== Business Profile ====
 import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart';
@@ -20,14 +36,9 @@ import 'package:hobby_sphere/features/activities/Business/businessProfile/domain
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_visibility.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_event.dart';
-import 'package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
-import 'package:hobby_sphere/l10n/app_localizations.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
 
-// ===== Business screens =====
-import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
+// ==== Business Booking ====
 import 'package:hobby_sphere/features/activities/Business/businessBooking/data/repositories/business_booking_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/data/services/business_booking_service.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/domain/usecases/get_business_bookings.dart';
@@ -36,6 +47,7 @@ import 'package:hobby_sphere/features/activities/Business/businessBooking/presen
 import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/bloc/business_booking_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart';
 
+// ==== Business Analytics ====
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/data/repositories/business_analytics_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/data/services/business_analytics_service.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/domain/usecases/get_business_analytics.dart';
@@ -43,24 +55,31 @@ import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/pres
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
 
-import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
+// ==== Common UseCases ====
+import 'package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
 
-// ===== User screens =====
+// ==== User Screens ====
 import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_explore_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_community_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_tickets_screen.dart';
 import 'package:hobby_sphere/features/activities/user/presentation/user_profile_screen.dart';
 
+// ==== Localization ====
+import 'package:hobby_sphere/l10n/app_localizations.dart';
+
 class ShellDrawer extends StatefulWidget {
   final AppRole role;
   final String token;
   final int businessId;
-  final void Function(Locale) onChangeLocale; // 👈 NEW
-  final VoidCallback onToggleTheme; // optional if you want theme switching
-  final int bookingsBadge; // business only
-  final int ticketsBadge; // user only
+  final void Function(Locale) onChangeLocale;
+  final VoidCallback onToggleTheme;
+  final int bookingsBadge;
+  final int ticketsBadge;
 
   const ShellDrawer({
     super.key,
@@ -69,8 +88,8 @@ class ShellDrawer extends StatefulWidget {
     required this.businessId,
     this.bookingsBadge = 0,
     this.ticketsBadge = 0,
-    required this.onChangeLocale, // 👈 required now
-    required this.onToggleTheme, // 👈 if you also support theme toggle
+    required this.onChangeLocale,
+    required this.onToggleTheme,
   });
 
   @override
@@ -91,16 +110,48 @@ class _ShellDrawerState extends State<ShellDrawer> {
 
   // ===== Business pages =====
   late final List<Widget> _businessPages = <Widget>[
-    BusinessHomeScreen(
-      token: widget.token,
-      businessId: widget.businessId,
-      onCreate: (ctx, bid) {
-        Navigator.pushNamed(
-          ctx,
-          Routes.createBusinessActivity,
-          arguments: CreateActivityRouteArgs(businessId: bid),
-        );
-      },
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (ctx) => BusinessHomeBloc(
+            getList: GetBusinessActivities(
+              BusinessActivityRepositoryImpl(BusinessActivityService()),
+            ),
+            getOne: GetBusinessActivityById(
+              BusinessActivityRepositoryImpl(BusinessActivityService()),
+            ),
+            deleteOne: DeleteBusinessActivity(
+              BusinessActivityRepositoryImpl(BusinessActivityService()),
+            ),
+            token: widget.token,
+            businessId: widget.businessId,
+            optimisticDelete: false,
+          )..add(const BusinessHomeStarted()),
+        ),
+        BlocProvider(
+          create: (ctx) {
+            final repo = BusinessNotificationRepositoryImpl(
+              BusinessNotificationService(),
+            );
+            return BusinessNotificationBloc(
+              getBusinessNotifications: GetBusinessNotifications(repo),
+              repository: repo,
+              token: widget.token,
+            )..add(LoadUnreadCount(widget.token));
+          },
+        ),
+      ],
+      child: BusinessHomeScreen(
+        token: widget.token,
+        businessId: widget.businessId,
+        onCreate: (ctx, bid) {
+          Navigator.pushNamed(
+            ctx,
+            Routes.createBusinessActivity,
+            arguments: CreateActivityRouteArgs(businessId: bid),
+          );
+        },
+      ),
     ),
     BlocProvider(
       create: (ctx) => BusinessBookingBloc(
@@ -130,8 +181,6 @@ class _ShellDrawerState extends State<ShellDrawer> {
         businessId: widget.businessId,
       ),
     ),
-
-    // ✅ FIXED: Pass token + businessId to activities screen
     BlocProvider(
       create: (ctx) {
         final repo = BusinessActivityRepositoryImpl(BusinessActivityService());
@@ -150,7 +199,6 @@ class _ShellDrawerState extends State<ShellDrawer> {
         businessId: widget.businessId,
       ),
     ),
-
     BlocProvider(
       create: (ctx) {
         final businessRepo = BusinessRepositoryImpl(BusinessService());
@@ -166,11 +214,12 @@ class _ShellDrawerState extends State<ShellDrawer> {
         token: widget.token,
         businessId: widget.businessId,
         onTabChange: (i) => setState(() => _index = i),
-        onChangeLocale: widget.onChangeLocale, // 👈 pass callback
+        onChangeLocale: widget.onChangeLocale,
       ),
     ),
   ];
 
+  // ===== Menus =====
   List<({String title, IconData icon, Widget page, int? badge})> _businessMenu(
     BuildContext context,
   ) {
@@ -265,18 +314,6 @@ class _ShellDrawerState extends State<ShellDrawer> {
 
     return Scaffold(
       drawerScrimColor: Colors.black.withOpacity(0.35),
-      appBar: AppBar(
-        title: Text(menu[_index].title),
-        centerTitle: true,
-        backgroundColor: scheme.surface,
-        foregroundColor: scheme.onSurface,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-      ),
-      body: IndexedStack(
-        index: _index,
-        children: menu.map((m) => m.page).toList(),
-      ),
       drawer: Drawer(
         width: 304,
         backgroundColor: scheme.surface,
@@ -303,6 +340,28 @@ class _ShellDrawerState extends State<ShellDrawer> {
           ),
         ),
       ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ✅ Menu icon only
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Builder(
+                builder: (ctx) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+                ),
+              ),
+            ),
+            Expanded(
+              child: IndexedStack(
+                index: _index,
+                children: menu.map((m) => m.page).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -324,74 +383,29 @@ class _DrawerContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: activeColor.withOpacity(0.15),
-                ),
-                child: Icon(Icons.hub, color: activeColor),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      t.appTitle,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      t.tabProfile,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
-        ...List.generate(items.length, (i) {
-          final it = items[i];
-          return _AnimatedDrawerTile(
-            icon: it.icon,
-            label: it.title,
-            selected: i == index,
-            onTap: () => onTap(i),
-            iconBaseColor: iconBaseColor,
-            activeColor: activeColor,
-            badge: it.badge,
-          );
-        }),
-        const Divider(height: 1),
-        _AnimatedDrawerTile(
-          icon: Icons.settings_outlined,
-          label: t.tabSettings,
-          selected: false,
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('${t.tabSettings} coming soon')),
+    return Scrollbar(
+      thumbVisibility: true,
+      radius: const Radius.circular(12),
+      thickness: 4,
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          const Divider(height: 1),
+          ...List.generate(items.length, (i) {
+            final it = items[i];
+            return _AnimatedDrawerTile(
+              icon: it.icon,
+              label: it.title,
+              selected: i == index,
+              onTap: () => onTap(i),
+              iconBaseColor: iconBaseColor,
+              activeColor: activeColor,
+              badge: it.badge,
             );
-          },
-          iconBaseColor: iconBaseColor,
-          activeColor: activeColor,
-        ),
-        const SizedBox(height: 12),
-      ],
+          }),
+          const Divider(height: 1),
+        ],
+      ),
     );
   }
 }
@@ -418,17 +432,15 @@ class _AnimatedDrawerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const duration = Duration(milliseconds: 220);
-    const curve = Curves.easeOutCubic;
 
     return InkWell(
       onTap: onTap,
       child: TweenAnimationBuilder<double>(
         duration: duration,
-        curve: curve,
+        curve: Curves.easeOutCubic,
         tween: Tween<double>(begin: 0, end: selected ? 1 : 0),
         builder: (context, t, _) {
           final Color ic = Color.lerp(iconBaseColor, activeColor, t)!;
-          final FontWeight fw = t > 0 ? FontWeight.w600 : FontWeight.w500;
           final Color textColor = Color.lerp(
             Theme.of(context).colorScheme.onSurface,
             activeColor,
@@ -441,15 +453,6 @@ class _AnimatedDrawerTile extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               color: activeColor.withOpacity(0.08 * t),
-              boxShadow: t > 0.0
-                  ? [
-                      BoxShadow(
-                        color: activeColor.withOpacity(0.20 * t),
-                        blurRadius: 14 * t,
-                        offset: Offset(0, 6 * t),
-                      ),
-                    ]
-                  : null,
             ),
             child: Row(
               children: [
@@ -460,7 +463,7 @@ class _AnimatedDrawerTile extends StatelessWidget {
                     label,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: textColor,
-                      fontWeight: fw,
+                      fontWeight: t > 0 ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
                 ),

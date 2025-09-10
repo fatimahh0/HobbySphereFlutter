@@ -758,7 +758,9 @@
 "addUser": "Add User",
 "phoneNumber": "Phone Number",
 "provideEmailOrPhone": " provide email or phoneNumber",
-
+"alreadyBooked":" alreadyBooked",
+"save":"save",
+"bookingsFiltersCancelRequested":"cancel request",
 
 
 

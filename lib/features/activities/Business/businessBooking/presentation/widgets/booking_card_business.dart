@@ -1,6 +1,5 @@
 // ===== Flutter 3.35.x =====
-// BookingCardBusiness — professional booking card UI
-// Responsive, supports currency, wraps date, no overflow.
+// BookingCardBusiness — reject/unreject + approve/reject cancel
 
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -17,7 +16,6 @@ class BookingCardBusiness extends StatelessWidget {
   final BusinessBooking booking;
   const BookingCardBusiness({super.key, required this.booking});
 
-  // === Handle both network & local images ===
   Widget _buildImage(String? url) {
     if (url == null || url.isEmpty) {
       return Container(
@@ -34,7 +32,6 @@ class BookingCardBusiness extends StatelessWidget {
     }
   }
 
-  // === Status chip colors ===
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
@@ -45,6 +42,8 @@ class BookingCardBusiness extends StatelessWidget {
         return AppColors.rejected;
       case 'canceled':
         return AppColors.canceled;
+      case 'cancel_requested':
+        return Colors.orange;
       default:
         return AppColors.muted;
     }
@@ -55,6 +54,8 @@ class BookingCardBusiness extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
+    final status = booking.status.trim().toLowerCase();
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -64,11 +65,10 @@ class BookingCardBusiness extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ==== HEADER (image + title + status) ====
+            // ==== HEADER ====
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Image thumbnail
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: SizedBox(
@@ -78,13 +78,10 @@ class BookingCardBusiness extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // Title + Status
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Title + Status row
                       Row(
                         children: [
                           Expanded(
@@ -108,19 +105,11 @@ class BookingCardBusiness extends StatelessWidget {
                               ),
                             ),
                             backgroundColor: _statusColor(booking.status),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 0,
-                            ),
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 6),
-
-                      // Booked By + Date (wrap into 3 lines max)
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           CircleAvatar(
                             radius: 14,
@@ -148,7 +137,7 @@ class BookingCardBusiness extends StatelessWidget {
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
-                                  maxLines: 3, // ✅ wrap to max 3 lines
+                                  maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ],
@@ -164,89 +153,53 @@ class BookingCardBusiness extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // ==== DETAILS ROW ====
-            Wrap(
-              spacing: 12,
-              runSpacing: 6,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.group, size: 16),
-                    const SizedBox(width: 4),
-                    Text("${booking.participants} ${l10n.bookingParticipants}"),
-                  ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.attach_money, size: 16),
-                    const SizedBox(width: 2),
-                    Text(
-                      "${booking.currency?.symbol ?? ''}${booking.price.toStringAsFixed(2)} "
-                      "(${booking.currency?.code ?? ''})",
-                    ),
-                  ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.credit_card, size: 16),
-                    const SizedBox(width: 2),
-                    Text(booking.paymentMethod),
-                  ],
-                ),
-              ],
-            ),
-
-            if (booking.wasPaid)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  l10n.bookingsPaid,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.paid,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-
-            const SizedBox(height: 12),
-
             // ==== ACTION BUTTONS ====
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (booking.status.toLowerCase() == 'pending')
+                if (status == 'pending')
                   AppButton(
                     label: l10n.bookingReject,
-                    onPressed: () {
-                      context.read<BusinessBookingBloc>().add(
-                        RejectBooking(booking.id),
-                      );
-                    },
+                    onPressed: () => context.read<BusinessBookingBloc>().add(
+                      RejectBooking(booking.id),
+                    ),
                     type: AppButtonType.outline,
                     size: AppButtonSize.sm,
                   ),
-                if (booking.status.toLowerCase() == 'rejected')
+                if (status == 'rejected')
                   AppButton(
                     label: l10n.bookingUnreject,
-                    onPressed: () {
-                      context.read<BusinessBookingBloc>().add(
-                        UnrejectBooking(booking.id),
-                      );
-                    },
+                    onPressed: () => context.read<BusinessBookingBloc>().add(
+                      UnrejectBooking(booking.id),
+                    ),
                     type: AppButtonType.text,
                     size: AppButtonSize.sm,
                   ),
+                if (status == 'cancel_requested') ...[
+                  AppButton(
+                    label: l10n.bookingConfirm_approveCancel,
+                    onPressed: () => context.read<BusinessBookingBloc>().add(
+                      ApproveCancelBooking(booking.id),
+                    ),
+                    type: AppButtonType.secondary,
+                    size: AppButtonSize.sm,
+                  ),
+                  const SizedBox(width: 6),
+                  AppButton(
+                    label: l10n.bookingRejectCancel,
+                    onPressed: () => context.read<BusinessBookingBloc>().add(
+                      RejectCancelBooking(booking.id),
+                    ),
+                    type: AppButtonType.outline,
+                    size: AppButtonSize.sm,
+                  ),
+                ],
                 if (!booking.wasPaid)
                   AppButton(
                     label: l10n.markAsPaid,
-                    onPressed: () {
-                      context.read<BusinessBookingBloc>().add(
-                        MarkPaidBooking(booking.id),
-                      );
-                    },
+                    onPressed: () => context.read<BusinessBookingBloc>().add(
+                      MarkPaidBooking(booking.id),
+                    ),
                     type: AppButtonType.secondary,
                     size: AppButtonSize.sm,
                   ),

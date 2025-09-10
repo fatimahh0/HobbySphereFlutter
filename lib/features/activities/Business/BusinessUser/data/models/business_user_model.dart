@@ -20,11 +20,16 @@ class BusinessUserModel extends BusinessUser {
   factory BusinessUserModel.fromJson(Map<String, dynamic> json) {
     return BusinessUserModel(
       id: json['id'],
-      firstname: json['firstname'],
-      lastname: json['lastname'],
+      firstname: json['firstname'] ?? json['firstName'],
+      lastname: json['lastname'] ?? json['lastName'],
       email: json['email'],
       phoneNumber: json['phoneNumber'],
-      businessName: json['businessName'],
+      businessName:
+          json['businessName'] ??
+          (json['business'] != null
+              ? json['business']['businessName']
+              : null) ??
+          '', // fallback empty string
     );
   }
 

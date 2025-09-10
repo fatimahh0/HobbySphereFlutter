@@ -1,12 +1,13 @@
 // ===== Flutter 3.35.x =====
-// BusinessUsersScreen — full updated version with Add + Assign functionality
+// BusinessUsersScreen — show all business users + badge if already booked
 // - Auto-pop back to Insights after assigning
-// - Hide users already enrolled in the activity
-// - Fixed Add User form
+// - Keep Add User form with phone/email toggle
 // - Assign dialog lets you set participants + paid/unpaid
+// - Users already booked are visible with a badge and no assign button
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/features/authentication/presentation/login/widgets/phone_input.dart';
 
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
@@ -18,18 +19,11 @@ import '../bloc/business_users_bloc.dart';
 import '../bloc/business_users_event.dart';
 import '../bloc/business_users_state.dart';
 
-// Domain / Repository / Usecases
-import '../../data/repositories/business_users_repository_impl.dart';
-import '../../data/services/business_users_service.dart';
-import '../../domain/usecases/get_business_users.dart';
-import '../../domain/usecases/create_business_user.dart';
-import '../../domain/usecases/book_cash.dart';
-
 class BusinessUsersScreen extends StatefulWidget {
   final String token;
   final int businessId;
   final int itemId; // 👈 the activity id to assign users to
-  final List<int> enrolledUserIds; // 👈 users already assigned
+  final List<int> enrolledUserIds; // 👈 users already assigned/booked
 
   const BusinessUsersScreen({
     super.key,
@@ -46,167 +40,174 @@ class BusinessUsersScreen extends StatefulWidget {
 class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
   String _query = "";
 
+
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
-    return BlocProvider(
-      create: (_) {
-        final repo = BusinessUsersRepositoryImpl(BusinessUsersService());
-        return BusinessUsersBloc(
-          getUsers: GetBusinessUsers(repo),
-          createUser: CreateBusinessUser(repo),
-          bookCash: BookCash(repo),
-        )..add(LoadBusinessUsers(widget.token));
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(tr.businessUsersTitle),
-          centerTitle: true,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.person_add_alt_1),
-              tooltip: tr.addUser,
-              onPressed: () => _showAddUserDialog(context, tr),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(tr.businessUsersTitle),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_add_alt_1),
+            tooltip: tr.addUser,
+            onPressed: () => _showAddUserDialog(context, tr),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: AppSearchBar(
+              hint: tr.searchPlaceholder,
+              onQueryChanged: (q) => setState(() => _query = q),
             ),
-          ],
-        ),
-        body: Column(
-          children: [
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: AppSearchBar(
-                hint: tr.searchPlaceholder,
-                onQueryChanged: (q) => setState(() => _query = q),
-              ),
-            ),
-            Expanded(
-              child: BlocConsumer<BusinessUsersBloc, BusinessUsersState>(
-                listener: (context, state) {
-                  if (state is BusinessUserBookingSuccess) {
-                    Navigator.pop(context, true); // 👈 return to Insights
-                  } else if (state is BusinessUsersError) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(state.message)));
-                  }
-                },
-                builder: (context, state) {
-                  if (state is BusinessUsersLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (state is BusinessUsersLoaded) {
-                    var list = state.users;
+          ),
+          Expanded(
+            child: BlocConsumer<BusinessUsersBloc, BusinessUsersState>(
+              listener: (context, state) {
+                if (state is BusinessUserBookingSuccess) {
+                  Navigator.pop(context, true); // 👈 return to Insights
+                } else if (state is BusinessUsersError) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(state.message)));
+                }
+              },
+              builder: (context, state) {
+                if (state is BusinessUsersLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (state is BusinessUsersLoaded) {
+                  var list = state.users;
 
-                    // Remove already enrolled users
+                  // Apply search filter
+                  if (_query.isNotEmpty) {
                     list = list
-                        .where((u) => !widget.enrolledUserIds.contains(u.id))
-                        .toList();
-
-                    // Apply search filter
-                    if (_query.isNotEmpty) {
-                      list = list
-                          .where(
-                            (u) =>
-                                (u.firstname + u.lastname)
-                                    .toLowerCase()
-                                    .contains(_query.toLowerCase()) ||
-                                (u.email ?? "").toLowerCase().contains(
-                                  _query.toLowerCase(),
-                                ) ||
-                                (u.phoneNumber ?? "").toLowerCase().contains(
-                                  _query.toLowerCase(),
-                                ),
-                          )
-                          .toList();
-                    }
-
-                    if (list.isEmpty) {
-                      return Center(
-                        child: Text(
-                          tr.noAvailableUsers,
-                          style: tt.bodyMedium?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                      );
-                    }
-
-                    return ListView.separated(
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) =>
-                          Divider(color: cs.outlineVariant, thickness: 0.8),
-                      itemBuilder: (_, i) {
-                        final u = list[i];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(12),
-                            leading: CircleAvatar(
-                              backgroundColor: cs.primary.withOpacity(0.15),
-                              child: Icon(Icons.person, color: cs.primary),
-                            ),
-                            title: Text(
-                              "${u.firstname} ${u.lastname}",
-                              style: tt.titleMedium,
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (u.email != null)
-                                  Text(u.email!, style: tt.bodySmall),
-                                if (u.phoneNumber != null)
-                                  Text(u.phoneNumber!, style: tt.bodySmall),
-                              ],
-                            ),
-                            trailing: SizedBox(
-                              width: 140,
-                              child: AppButton(
-                                label: tr.assignToActivity,
-                                type: AppButtonType.outline,
-                                onPressed: () =>
-                                    _showAssignDialog(context, u.id),
+                        .where(
+                          (u) =>
+                              (u.firstname + u.lastname).toLowerCase().contains(
+                                _query.toLowerCase(),
+                              ) ||
+                              (u.email ?? "").toLowerCase().contains(
+                                _query.toLowerCase(),
+                              ) ||
+                              (u.phoneNumber ?? "").toLowerCase().contains(
+                                _query.toLowerCase(),
                               ),
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  } else if (state is BusinessUsersError) {
+                        )
+                        .toList();
+                  }
+
+                  if (list.isEmpty) {
                     return Center(
                       child: Text(
-                        state.message,
-                        style: tt.bodyMedium?.copyWith(color: AppColors.error),
+                        tr.noAvailableUsers,
+                        style: tt.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
                       ),
                     );
                   }
-                  return const SizedBox();
-                },
-              ),
+
+                  return ListView.separated(
+                    itemCount: list.length,
+                    separatorBuilder: (_, __) =>
+                        Divider(color: cs.outlineVariant, thickness: 0.8),
+                    itemBuilder: (_, i) {
+                      final u = list[i];
+                      final isBooked = widget.enrolledUserIds.contains(u.id);
+
+                      print(
+                        "User: ${u.id}, enrolled: ${widget.enrolledUserIds}",
+                      );
+
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(12),
+                          leading: CircleAvatar(
+                            backgroundColor: cs.primary.withOpacity(0.15),
+                            child: Icon(Icons.person, color: cs.primary),
+                          ),
+                          title: Text(
+                            "${u.firstname} ${u.lastname}",
+                            style: tt.titleMedium,
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (u.email != null)
+                                Text(u.email!, style: tt.bodySmall),
+                              if (u.phoneNumber != null)
+                                Text(u.phoneNumber!, style: tt.bodySmall),
+                              if (isBooked)
+                                Text(
+                                  tr.alreadyBooked, // new translation key
+                                  style: tt.labelSmall?.copyWith(
+                                    color: AppColors.completed,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                
+                            ],
+                          ),
+                          // If already booked, show badge only
+                          // Else show assign button
+                          trailing: isBooked
+                              ? Icon(
+                                  Icons.check_circle,
+                                  color: AppColors.completed,
+                                )
+                              : SizedBox(
+                                  width: 140,
+                                  child: AppButton(
+                                    label: tr.assignToActivity,
+                                    type: AppButtonType.outline,
+                                    onPressed: () =>
+                                        _showAssignDialog(context, u.id),
+                                  ),
+                                ),
+                        ),
+                      );
+                    },
+                  );
+                } else if (state is BusinessUsersError) {
+                  return Center(
+                    child: Text(
+                      state.message,
+                      style: tt.bodyMedium?.copyWith(color: AppColors.error),
+                    ),
+                  );
+                }
+                return const SizedBox();
+              },
             ),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          icon: const Icon(Icons.person_add_alt_1),
-          label: Text(tr.addUser),
-          onPressed: () => _showAddUserDialog(context, tr),
-        ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.person_add_alt_1),
+        label: Text(tr.addUser),
+        onPressed: () => _showAddUserDialog(context, tr),
       ),
     );
   }
 
-  /// Dialog to add new business user (either by email OR phone)
+  /// Dialog to add new business user (phone/email toggle)
   void _showAddUserDialog(BuildContext context, AppLocalizations tr) {
-    final parentContext = context; // 👈 capture the bloc-aware context
-
     final firstCtrl = TextEditingController();
     final lastCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
@@ -237,10 +238,13 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
                       onChanged: (val) => setLocal(() => usePhone = val),
                     ),
                     if (usePhone)
-                      TextField(
-                        controller: phoneCtrl,
-                        decoration: InputDecoration(labelText: tr.phoneNumber),
-                        keyboardType: TextInputType.phone,
+                      PhoneInput(
+                        initialIso: 'CA',
+                        onChanged: (e164, national, iso) {
+                          phoneCtrl.text = e164;
+                        },
+                        onSwapToEmail: () => setLocal(() => usePhone = false),
+                        submittedOnce: false,
                       )
                     else
                       TextField(
@@ -265,21 +269,20 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
                     final phone = phoneCtrl.text.trim();
 
                     if (first.isEmpty || last.isEmpty) {
-                      ScaffoldMessenger.of(parentContext).showSnackBar(
+                      ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(tr.bookingErrorFailed)),
                       );
                       return;
                     }
-                    if (!usePhone && email.isEmpty ||
-                        usePhone && phone.isEmpty) {
-                      ScaffoldMessenger.of(parentContext).showSnackBar(
+                    if ((!usePhone && email.isEmpty) ||
+                        (usePhone && phone.isEmpty)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(tr.bookingErrorFailed)),
                       );
                       return;
                     }
 
-                    // 👇 use parentContext here
-                    BlocProvider.of<BusinessUsersBloc>(parentContext).add(
+                    context.read<BusinessUsersBloc>().add(
                       CreateBusinessUserEvent(
                         token: widget.token,
                         firstname: first,

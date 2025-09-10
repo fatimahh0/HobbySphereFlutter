@@ -22,13 +22,15 @@ class BusinessUsersService {
     final res = await _dio.post(
       "${g.appServerRoot}/api/business-users/create",
       data: {
-        "firstname": firstname,
-        "lastname": lastname,
+        "firstName": firstname, // 👈 fix casing
+        "lastName": lastname, // 👈 fix casing
         "email": email,
         "phoneNumber": phoneNumber,
       },
       options: Options(headers: {"Authorization": token}),
     );
+    print("CreateUser response: ${res.data}");
+
     return res.data;
   }
 
