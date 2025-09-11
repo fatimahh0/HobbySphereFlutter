@@ -1,65 +1,95 @@
-import 'package:dio/dio.dart';
-import '../../../../../../core/network/globals.dart' as g;
+import 'package:hobby_sphere/core/network/api_fetch.dart';
+import 'package:hobby_sphere/core/network/api_methods.dart';
 
 class BusinessService {
-  final Dio _dio = g.appDio!;
+  final _fetch = ApiFetch();
+  static const _base = '/businesses';
 
-  // Ensure we hit /api even if baseUrl lacks it; avoid double /api if it has it.
-  String _p(String raw) {
-    final base = Uri.parse(_dio.options.baseUrl);
-    final baseHasApi = base.pathSegments.contains('api');
-    final cleaned = raw.startsWith('/') ? raw.substring(1) : raw;
-    final withApi = baseHasApi ? cleaned : 'api/$cleaned';
-    // IMPORTANT: return a relative path (no leading slash) so Dio appends to baseUrl.
-    return withApi;
-  }
+  String _auth(String token) =>
+      token.startsWith('Bearer ') ? token : 'Bearer $token';
 
+  /// GET /api/businesses/{id}
   Future<Map<String, dynamic>> getBusinessById(String token, int id) async {
-    final res = await _dio.get(
-      _p('businesses/$id'),
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    final res = await _fetch.fetch(
+      HttpMethod.get,
+      '$_base/$id',
+      headers: {'Authorization': _auth(token)},
     );
     return (res.data as Map).cast<String, dynamic>();
   }
 
-  Future<void> updateVisibility(String token, int id, bool isPublic) async {
-    await _dio.put(
-      _p('businesses/$id/visibility'),
-      data: {"isPublicProfile": isPublic},
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
+  /// PUT /api/businesses/{id}/visibility
+  Future<void> updateVisibility(
+    String token,
+    int id,
+    bool isPublic,
+  ) async {
+    await _fetch.fetch(
+      HttpMethod.put,
+      '$_base/$id/visibility',
+      headers: {'Authorization': _auth(token)},
+      data: {'isPublicProfile': isPublic},
     );
   }
 
+  /// PUT /api/businesses/{id}/status
+  /// When status == INACTIVE, backend requires { password }.
   Future<void> updateStatus(
     String token,
     int id,
     String status, {
     String? password,
   }) async {
-    await _dio.put(
-      _p('businesses/$id/status'),
-      data: {"status": status, if (password != null) "password": password},
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    final body = <String, dynamic>{'status': status};
+    if (password != null) body['password'] = password;
+
+    await _fetch.fetch(
+      HttpMethod.put,
+      '$_base/$id/status',
+      headers: {'Authorization': _auth(token)},
+      data: body,
     );
   }
 
-  Future<void> deleteBusiness(String token, int id, String password) async {
-    await _dio.delete(
-      _p('businesses/$id'),
-      data: {"password": password},
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
+  /// DELETE /api/businesses/{id}
+  Future<void> deleteBusiness(
+    String token,
+    int id,
+    String password,
+  ) async {
+    await _fetch.fetch(
+      HttpMethod.delete,
+      '$_base/$id',
+      headers: {'Authorization': _auth(token)},
+      data: {'password': password},
     );
   }
 
+  /// GET /api/businesses/{id}/stripe-status
   Future<bool> checkStripeStatus(String token, int id) async {
-    final res = await _dio.get(
-      _p('businesses/$id/stripe-status'),
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    final res = await _fetch.fetch(
+      HttpMethod.get,
+      '$_base/$id/stripe-status',
+      headers: {'Authorization': _auth(token)},
     );
     final data = res.data;
     if (data is Map && data['stripeConnected'] is bool) {
       return data['stripeConnected'] as bool;
     }
     return false;
+  }
+
+  /// (Optional) POST /api/businesses/{id}/send-manager-invite
+  Future<void> sendManagerInvite(
+    String token,
+    int id,
+    String email,
+  ) async {
+    await _fetch.fetch(
+      HttpMethod.post,
+      '$_base/$id/send-manager-invite',
+      headers: {'Authorization': _auth(token)},
+      data: {'email': email},
+    );
   }
 }
