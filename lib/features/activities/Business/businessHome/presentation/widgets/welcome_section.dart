@@ -98,24 +98,55 @@ class WelcomeSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: 220,
-            child: ElevatedButton.icon(
-              onPressed: onOpenCreateActivity,
-              icon: const Icon(Icons.add_circle_outline),
-              label: Text(t.businessCreateActivity),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: scheme.primary,
-                foregroundColor: scheme.onPrimary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
+
+          // 🔥 Responsive, not stuck to the edge, bigger button
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final shortest = MediaQuery.of(context).size.shortestSide;
+              final isTablet = shortest >= 600;
+
+              // if width is unbounded, fallback to screen width - padding (32)
+              final available = constraints.hasBoundedWidth
+                  ? constraints.maxWidth
+                  : MediaQuery.of(context).size.width - 32;
+
+              // keep the button pleasantly wide but not full-bleed
+              final double btnWidth =
+                  (available.isFinite ? available.clamp(280.0, 520.0) : 520.0)
+                      .toDouble();
+              final double btnHeight = isTablet ? 56.0 : 52.0;
+
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints.tightFor(
+                    width: btnWidth,
+                    height: btnHeight,
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: onOpenCreateActivity,
+                    icon: const Icon(Icons.add_circle_outline, size: 22),
+                    label: Text(
+                      t.businessCreateActivity,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      textStyle: text.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 1,
+                    ),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
+              );
+            },
           ),
         ],
       ),
