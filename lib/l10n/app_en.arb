@@ -762,6 +762,18 @@
 "save":"save",
 "bookingsFiltersCancelRequested":"cancel request",
 
+  "inviteManagerTitle": "Invite Manager",
+  "inviteManagerInstruction": "Enter the manager's email. We’ll send them an invitation.",
+  "managerEmailLabel": "Manager Email",
+  "managerEmailHint": "name@example.com",
+  "sendInvite": "Send Invite",
+  "sending": "Sending…",
+ 
+  "invalidEmail": "Please enter a valid email address",
+ "deactivateTitle": "Are you sure you want to deactivate your account?",
+  "deactivateWarning": "After 30 days, it will be permanently deleted and you won't be able to log in again.",
+  "currentPasswordLabel": "Current Password",
+  "fieldRequired": "This field is required",
 
 
   "@bookingMaxParticipants": {

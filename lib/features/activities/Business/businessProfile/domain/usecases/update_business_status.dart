@@ -1,3 +1,4 @@
+// domain/usecases/update_business_status.dart
 import '../repositories/business_repository.dart';
 
 class UpdateBusinessStatus {

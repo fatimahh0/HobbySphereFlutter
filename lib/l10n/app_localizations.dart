@@ -4614,6 +4614,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'cancel request'**
   String get bookingsFiltersCancelRequested;
+
+  /// No description provided for @inviteManagerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite Manager'**
+  String get inviteManagerTitle;
+
+  /// No description provided for @inviteManagerInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the manager\'s email. We’ll send them an invitation.'**
+  String get inviteManagerInstruction;
+
+  /// No description provided for @managerEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Manager Email'**
+  String get managerEmailLabel;
+
+  /// No description provided for @managerEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'name@example.com'**
+  String get managerEmailHint;
+
+  /// No description provided for @sendInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Invite'**
+  String get sendInvite;
+
+  /// No description provided for @sending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get sending;
+
+  /// No description provided for @invalidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get invalidEmail;
+
+  /// No description provided for @deactivateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to deactivate your account?'**
+  String get deactivateTitle;
+
+  /// No description provided for @deactivateWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'After 30 days, it will be permanently deleted and you won\'t be able to log in again.'**
+  String get deactivateWarning;
+
+  /// No description provided for @currentPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Password'**
+  String get currentPasswordLabel;
+
+  /// No description provided for @fieldRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'This field is required'**
+  String get fieldRequired;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

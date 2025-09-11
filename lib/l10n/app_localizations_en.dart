@@ -2280,4 +2280,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookingsFiltersCancelRequested => 'cancel request';
+
+  @override
+  String get inviteManagerTitle => 'Invite Manager';
+
+  @override
+  String get inviteManagerInstruction => 'Enter the manager\'s email. We’ll send them an invitation.';
+
+  @override
+  String get managerEmailLabel => 'Manager Email';
+
+  @override
+  String get managerEmailHint => 'name@example.com';
+
+  @override
+  String get sendInvite => 'Send Invite';
+
+  @override
+  String get sending => 'Sending…';
+
+  @override
+  String get invalidEmail => 'Please enter a valid email address';
+
+  @override
+  String get deactivateTitle => 'Are you sure you want to deactivate your account?';
+
+  @override
+  String get deactivateWarning => 'After 30 days, it will be permanently deleted and you won\'t be able to log in again.';
+
+  @override
+  String get currentPasswordLabel => 'Current Password';
+
+  @override
+  String get fieldRequired => 'This field is required';
 }

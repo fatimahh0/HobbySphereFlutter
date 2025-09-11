@@ -22,4 +22,6 @@ class Business {
     required this.isPublicProfile,
     required this.stripeConnected,
   });
+
+  
 }

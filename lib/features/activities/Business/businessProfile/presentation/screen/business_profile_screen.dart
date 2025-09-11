@@ -1,16 +1,28 @@
 // ===== Flutter 3.35.x =====
-// BusinessProfileScreen — fixed spacing + de-zoomed logo + removed Activities/Analytics
+// BusinessProfileScreen — clean; deactivation via old Business service stack
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/cubit/deactivate_account_cubit.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/widgets/deactivate_account_dialog.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/entities/business.dart';
+import 'package:hobby_sphere/l10n/app_localizations.dart';
+
+// Invite route args
+import 'package:hobby_sphere/features/activities/Business/BusinessUserInvite/presentation/screens/invite_manager_screen.dart';
+
+// Profile bloc
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_state.dart';
-import 'package:hobby_sphere/l10n/app_localizations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+// OLD business service stack
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart';
 
 class BusinessProfileScreen extends StatelessWidget {
   final String token;
@@ -27,6 +39,7 @@ class BusinessProfileScreen extends StatelessWidget {
     this.onChangeLocale,
   });
 
+  // For images (strip /api)
   String _serverRoot() {
     final base = (g.appServerRoot ?? '');
     return base.replaceFirst(RegExp(r'/api/?$'), '');
@@ -64,19 +77,15 @@ class BusinessProfileScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final serverRoot = _serverRoot();
 
-    const double avatarSize = 96; // CHANGED: slightly smaller and consistent
+    const double avatarSize = 96;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
       body: SafeArea(
-        // CHANGED: avoid top overlap; better spacing
         child: ListView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ), // CHANGED: consistent padding
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           children: [
-            // De-zoomed Logo (no cropping)
+            // Logo
             Center(
               child: Container(
                 width: avatarSize,
@@ -94,7 +103,7 @@ class BusinessProfileScreen extends StatelessWidget {
                       (business.logoUrl != null && business.logoUrl!.isNotEmpty)
                       ? Image.network(
                           '$serverRoot${business.logoUrl}',
-                          fit: BoxFit.contain, // CHANGED: no zoom/crop
+                          fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) =>
                               const Icon(Icons.store, size: 44),
                         )
@@ -103,8 +112,8 @@ class BusinessProfileScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 12), // CHANGED: tighter
-            // Business Name
+            const SizedBox(height: 12),
+
             Text(
               business.name,
               textAlign: TextAlign.center,
@@ -116,7 +125,6 @@ class BusinessProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 6),
 
-            // Visibility + Status
             Text(
               "${business.isPublicProfile ? tr.publicProfile : tr.privateProfile} | ${business.status}",
               textAlign: TextAlign.center,
@@ -132,8 +140,8 @@ class BusinessProfileScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 14), // CHANGED: tighter
-            // Stripe info
+            const SizedBox(height: 14),
+
             if (stripeConnected == true)
               Center(
                 child: Text(
@@ -149,16 +157,13 @@ class BusinessProfileScreen extends StatelessWidget {
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.account_balance_wallet),
                   label: Text(tr.registerOnStripe),
-                  onPressed: () {
-                    // TODO: implement stripe connect flow
-                  },
+                  onPressed: () {},
                 ),
               ),
 
-            const SizedBox(height: 18), // CHANGED: tighter
-            // ==========================
-            // Menu Actions
-            // ==========================
+            const SizedBox(height: 18),
+
+            // ===== Menu =====
             _menuTile(
               context,
               icon: Icons.edit,
@@ -172,7 +177,7 @@ class BusinessProfileScreen extends StatelessWidget {
                     businessId: businessId,
                   ),
                 );
-                if (updated == true) {
+                if (updated == true && context.mounted) {
                   context.read<BusinessProfileBloc>().add(
                     LoadBusinessProfile(token, businessId),
                   );
@@ -180,8 +185,6 @@ class BusinessProfileScreen extends StatelessWidget {
               },
             ),
 
-            // REMOVED: My Activities
-            // REMOVED: Analytics
             _menuTile(
               context,
               icon: Icons.notifications,
@@ -202,7 +205,14 @@ class BusinessProfileScreen extends StatelessWidget {
               context,
               icon: Icons.person_add,
               title: tr.inviteManager,
-              onTap: () {},
+              onTap: () => Navigator.pushNamed(
+                context,
+                Routes.inviteManager,
+                arguments: InviteManagerRouteArgs(
+                  token: token,
+                  businessId: businessId,
+                ),
+              ),
             ),
 
             _menuTile(
@@ -227,8 +237,8 @@ class BusinessProfileScreen extends StatelessWidget {
               onTap: () => _confirmLogout(context, tr),
             ),
 
-            // Manage Account section
             const SizedBox(height: 8),
+
             ExpansionTile(
               leading: const Icon(Icons.settings),
               title: Text(tr.manageAccount),
@@ -253,10 +263,30 @@ class BusinessProfileScreen extends StatelessWidget {
                   context,
                   icon: Icons.power_settings_new,
                   title: tr.setInactive,
-                  onTap: () {
-                    context.read<BusinessProfileBloc>().add(
-                      ChangeStatus(token, businessId, "INACTIVE"),
+                  onTap: () async {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (ctx) {
+                        // Wire cubit to OLD business stack
+                        final repo = BusinessRepositoryImpl(BusinessService());
+                        final usecase = UpdateBusinessStatus(repo);
+                        return BlocProvider(
+                          create: (_) => DeactivateAccountCubit(usecase),
+                          child: DeactivateAccountDialog(
+                            token: token,
+                            businessId: businessId,
+                          ),
+                        );
+                      },
                     );
+                    if (ok == true && context.mounted) {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.clear();
+                      Navigator.of(
+                        context,
+                      ).pushNamedAndRemoveUntil(Routes.login, (_) => false);
+                    }
                   },
                 ),
               ],
@@ -267,7 +297,8 @@ class BusinessProfileScreen extends StatelessWidget {
     );
   }
 
-  // Helper for consistent menu tile design
+  // ===== helpers =====
+
   Widget _menuTile(
     BuildContext context, {
     required IconData icon,
@@ -324,6 +355,7 @@ class BusinessProfileScreen extends StatelessWidget {
   }
 }
 
+// ===== logout helper (unchanged) =====
 Future<void> _confirmLogout(BuildContext context, AppLocalizations tr) async {
   final theme = Theme.of(context);
   final confirmed = await showDialog<bool>(
@@ -352,6 +384,8 @@ Future<void> _confirmLogout(BuildContext context, AppLocalizations tr) async {
   if (confirmed == true) {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
-    Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (_) => false);
+    if (context.mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (_) => false);
+    }
   }
 }

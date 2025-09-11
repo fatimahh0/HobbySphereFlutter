@@ -49,7 +49,8 @@ import '../../features/activities/Business/businessBooking/domain/usecases/get_b
 import '../../features/activities/Business/businessBooking/domain/usecases/update_booking_status.dart';
 import '../../features/activities/Business/businessBooking/presentation/bloc/business_booking_bloc.dart';
 import '../../features/activities/Business/businessBooking/presentation/bloc/business_booking_event.dart';
-import '../../features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart' hide BusinessBookingBloc;
+import '../../features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart'
+    hide BusinessBookingBloc;
 
 // ---------- Business Analytics ----------
 import '../../features/activities/Business/BusinessAnalytics/data/repositories/business_analytics_repository_impl.dart';
@@ -58,6 +59,9 @@ import '../../features/activities/Business/BusinessAnalytics/domain/usecases/get
 import '../../features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_bloc.dart';
 import '../../features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
 import '../../features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
+
+// ---------- Invite Manager (NEW) ----------
+import 'package:hobby_sphere/features/activities/Business/BusinessUserInvite/presentation/screens/invite_manager_screen.dart';
 
 // ---------- Core ----------
 import 'package:hobby_sphere/navigation/nav_bootstrap.dart';
@@ -98,6 +102,8 @@ abstract class Routes {
   static const businessActivityDetails = '/business/activity/details';
   static const businessInsights = '/business/insights';
   static const businessUsers = '/business/businessUser';
+  // NEW: keep consistent with other routes (leading slash)
+  static const inviteManager = '/business/invite-manager';
 }
 
 // ===== Route Args =====
@@ -155,10 +161,14 @@ class BusinessUsersRouteArgs {
   final String token;
   final int businessId;
   final int itemId;
+  // FIX: make this optional instead of a dangling 'required' param
+  final List<int>? enrolledUserIds;
+
   const BusinessUsersRouteArgs({
     required this.token,
     required this.businessId,
-    required this.itemId, required enrolledUserIds,
+    required this.itemId,
+    this.enrolledUserIds,
   });
 }
 
@@ -340,7 +350,7 @@ class AppRouter {
           builder: (_) => BusinessInsightsScreen(
             token: data.token,
             businessId: data.businessId,
-            itemId: data.itemId, // 👈 add this
+            itemId: data.itemId,
           ),
         );
 
@@ -534,6 +544,17 @@ class AppRouter {
           },
         );
 
+      // ===== Invite Manager (NEW) =====
+      case Routes.inviteManager:
+        final data = args is InviteManagerRouteArgs ? args : null;
+        if (data == null) {
+          return _error('Missing InviteManagerRouteArgs (token + businessId).');
+        }
+        return _page(
+          InviteManagerScreen(token: data.token, businessId: data.businessId),
+          settings,
+        );
+
       // ===== Role-aware shell =====
       case Routes.shell:
         final data = args is ShellRouteArgs ? args : null;
@@ -545,11 +566,12 @@ class AppRouter {
             role: data.role,
             token: data.token,
             businessId: data.businessId,
-            onChangeLocale: onChangeLocale, // 👈 forward callback
-            onToggleTheme: onToggleTheme, // 👈 forward callback
+            onChangeLocale: onChangeLocale,
+            onToggleTheme: onToggleTheme,
           ),
           settings,
         );
+
       // ===== Fallback =====
       default:
         return _page(const SplashPage(), settings);

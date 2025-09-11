@@ -1,3 +1,4 @@
+// domain/repositories/business_repository.dart
 import '../entities/business.dart';
 
 abstract class BusinessRepository {
