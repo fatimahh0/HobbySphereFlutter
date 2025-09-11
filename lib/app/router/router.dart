@@ -49,7 +49,7 @@ import '../../features/activities/Business/businessBooking/domain/usecases/get_b
 import '../../features/activities/Business/businessBooking/domain/usecases/update_booking_status.dart';
 import '../../features/activities/Business/businessBooking/presentation/bloc/business_booking_bloc.dart';
 import '../../features/activities/Business/businessBooking/presentation/bloc/business_booking_event.dart';
-import '../../features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart';
+import '../../features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart' hide BusinessBookingBloc;
 
 // ---------- Business Analytics ----------
 import '../../features/activities/Business/BusinessAnalytics/data/repositories/business_analytics_repository_impl.dart';

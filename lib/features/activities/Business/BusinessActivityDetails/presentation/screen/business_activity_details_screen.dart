@@ -51,9 +51,7 @@ class BusinessActivityDetailsScreen extends StatelessWidget {
         deleteActivity: deleteActivity,
       )..add(BusinessActivityDetailsRequested(token: token, id: activityId)),
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(AppLocalizations.of(context)!.activityDetailsDescription),
-        ),
+        appBar: AppBar(),
         body:
             BlocConsumer<
               BusinessActivityDetailsBloc,

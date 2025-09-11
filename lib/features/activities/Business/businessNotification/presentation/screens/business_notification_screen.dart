@@ -51,14 +51,7 @@ class BusinessNotificationScreen extends StatelessWidget {
         token: token,
       )..add(LoadBusinessNotifications()),
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            tr.notifications,
-            style: AppTypography.textTheme.headlineSmall?.copyWith(
-              color: AppColors.text,
-            ),
-          ),
-        ),
+        appBar: AppBar(),
         body: BlocConsumer<BusinessNotificationBloc, BusinessNotificationState>(
           listener: (context, state) {
             if (state.error != null) {

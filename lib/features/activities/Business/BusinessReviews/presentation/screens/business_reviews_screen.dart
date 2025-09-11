@@ -32,12 +32,7 @@ class BusinessReviewsScreen extends StatelessWidget {
       )..add(LoadBusinessReviews(token, businessId)),
       child: Scaffold(
         backgroundColor: theme.colorScheme.background,
-        appBar: AppBar(
-          title: Text(tr.reviewsTitle), // i18n key
-          backgroundColor: theme.colorScheme.surface,
-          centerTitle: true,
-          elevation: 0,
-        ),
+        appBar: AppBar(),
         body: BlocBuilder<BusinessReviewsBloc, BusinessReviewsState>(
           builder: (context, state) {
             if (state is BusinessReviewsLoading) {

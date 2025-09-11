@@ -61,7 +61,6 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
       )..add(LoadInsights(widget.token, itemId: widget.itemId)),
       child: Scaffold(
         appBar: AppBar(
-          title: Text(tr.activityInsightsTitle, style: tt.headlineSmall),
           centerTitle: true,
           actions: [
             BlocBuilder<InsightsBloc, InsightsState>(

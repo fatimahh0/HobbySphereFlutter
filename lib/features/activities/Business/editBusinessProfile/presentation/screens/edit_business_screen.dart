@@ -251,7 +251,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
           _phoneE164 = b.phoneNumber;
 
           return Scaffold(
-            appBar: AppBar(title: Text(tr.editBusinessInfo)),
+            appBar: AppBar(),
             body: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(

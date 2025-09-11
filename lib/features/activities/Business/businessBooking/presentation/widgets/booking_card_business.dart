@@ -1,5 +1,5 @@
 // ===== Flutter 3.35.x =====
-// BookingCardBusiness — reject/unreject + approve/reject cancel
+// BookingCardBusiness — show full user name, hide booking ID, keep actions/busy state.
 
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -16,6 +16,32 @@ class BookingCardBusiness extends StatelessWidget {
   final BusinessBooking booking;
   const BookingCardBusiness({super.key, required this.booking});
 
+  Future<bool> _confirmDialog({
+    required BuildContext context,
+    required String title,
+    required String message,
+    required String confirmLabel,
+  }) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(AppLocalizations.of(context)!.bookingCancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(confirmLabel),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
   Widget _buildImage(String? url) {
     if (url == null || url.isEmpty) {
       return Container(
@@ -23,10 +49,18 @@ class BookingCardBusiness extends StatelessWidget {
         child: const Icon(Icons.image_not_supported, size: 40),
       );
     }
-    if (url.startsWith("http")) {
-      return Image.network(url, fit: BoxFit.cover);
-    } else if (url.startsWith("file://")) {
-      return Image.file(File(Uri.parse(url).path), fit: BoxFit.cover);
+    if (url.startsWith('http')) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 40),
+      );
+    } else if (url.startsWith('file://')) {
+      return Image.file(
+        File(Uri.parse(url).path),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 40),
+      );
     } else {
       return const Icon(Icons.broken_image, size: 40);
     }
@@ -49,12 +83,68 @@ class BookingCardBusiness extends StatelessWidget {
     }
   }
 
+  Widget _infoRow({
+    required BuildContext context,
+    required IconData icon,
+    String? label,
+    required String value,
+  }) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
+        const SizedBox(width: 6),
+        if ((label ?? '').isNotEmpty)
+          Text(
+            "$label: ",
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        Expanded(
+          child: Text(
+            value,
+            style: theme.textTheme.bodySmall,
+            softWrap: true,
+            maxLines: 3, // ← allow wrapping instead of ellipsis
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _methodChip(BuildContext context, String method) {
+    final theme = Theme.of(context);
+    final isCash = method.toLowerCase() == 'cash';
+    final bg = isCash
+        ? theme.colorScheme.tertiaryContainer
+        : theme.colorScheme.secondaryContainer;
+    final fg = isCash
+        ? theme.colorScheme.onTertiaryContainer
+        : theme.colorScheme.onSecondaryContainer;
+    return Chip(
+      backgroundColor: bg,
+      label: Text(
+        method,
+        style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w600),
+      ),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final status = booking.status.toLowerCase();
 
-    final status = booking.status.trim().toLowerCase();
+    final isBusy = context.select<BusinessBookingBloc, bool>(
+      (b) => b.state.busyIds.contains(booking.id),
+    );
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -65,15 +155,15 @@ class BookingCardBusiness extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ==== HEADER ====
+            // === Header ===
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   child: SizedBox(
-                    width: 80,
-                    height: 80,
+                    width: 84,
+                    height: 84,
                     child: _buildImage(booking.imageUrl),
                   ),
                 ),
@@ -82,67 +172,101 @@ class BookingCardBusiness extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              booking.itemName ?? l10n.activitiesNoActivities,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.primary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Chip(
-                            label: Text(
-                              booking.status,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
-                            backgroundColor: _statusColor(booking.status),
-                          ),
-                        ],
+                      // Item name
+                      Text(
+                        booking.itemName ?? l10n.activitiesNoActivities,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
+
+                      // Booked-by block (FULL NAME, no ID)
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           CircleAvatar(
-                            radius: 14,
+                            radius: 16,
                             backgroundImage: booking.bookedByAvatar != null
                                 ? NetworkImage(booking.bookedByAvatar!)
                                 : null,
                             child: booking.bookedByAvatar == null
-                                ? const Icon(Icons.person, size: 16)
+                                ? const Icon(Icons.person, size: 18)
                                 : null,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
+                          // Show the full name (wrap up to 2–3 lines)
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // Optional small label
                                 Text(
-                                  booking.bookedBy ?? "-",
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  booking.dateFormatted,
+                                  l10n.bookingsByUser,
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  booking.bookedBy ?? '-',
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  softWrap: true,
                                   maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
                           ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Status + Paid + Method
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          Chip(
+                            backgroundColor: _statusColor(booking.status),
+                            label: Text(
+                              booking.status,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                          ),
+                          if (booking.wasPaid)
+                            Chip(
+                              backgroundColor:
+                                  theme.colorScheme.primaryContainer,
+                              label: Text(
+                                l10n.bookingsPaid,
+                                style: TextStyle(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                              ),
+                            ),
+                          _methodChip(context, booking.paymentMethod),
                         ],
                       ),
                     ],
@@ -153,57 +277,174 @@ class BookingCardBusiness extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // ==== ACTION BUTTONS ====
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (status == 'pending')
-                  AppButton(
-                    label: l10n.bookingReject,
-                    onPressed: () => context.read<BusinessBookingBloc>().add(
-                      RejectBooking(booking.id),
+            // === Details block (kept as-is; safe if values exist) ===
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Column(
+                children: [
+                  if ((booking.eventDateFormatted ?? '').isNotEmpty)
+                    _infoRow(
+                      context: context,
+                      icon: Icons.event,
+                      value: booking.eventDateFormatted!,
                     ),
-                    type: AppButtonType.outline,
-                    size: AppButtonSize.sm,
+                  if ((booking.itemLocation ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _infoRow(
+                      context: context,
+                      icon: Icons.place_rounded,
+                      label: l10n.bookingLocation,
+                      value: booking.itemLocation!,
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  _infoRow(
+                    context: context,
+                    icon: Icons.group_rounded,
+                    label: l10n.bookingParticipants,
+                    value: booking.participants.toString(),
                   ),
-                if (status == 'rejected')
-                  AppButton(
-                    label: l10n.bookingUnreject,
-                    onPressed: () => context.read<BusinessBookingBloc>().add(
-                      UnrejectBooking(booking.id),
-                    ),
-                    type: AppButtonType.text,
-                    size: AppButtonSize.sm,
+                  const SizedBox(height: 8),
+                  _infoRow(
+                    context: context,
+                    icon: Icons.payments_rounded,
+                    label: l10n.bookingPaymentMethod,
+                    value: booking.paymentMethod,
                   ),
-                if (status == 'cancel_requested') ...[
-                  AppButton(
-                    label: l10n.bookingConfirm_approveCancel,
-                    onPressed: () => context.read<BusinessBookingBloc>().add(
-                      ApproveCancelBooking(booking.id),
-                    ),
-                    type: AppButtonType.secondary,
-                    size: AppButtonSize.sm,
-                  ),
-                  const SizedBox(width: 6),
-                  AppButton(
-                    label: l10n.bookingRejectCancel,
-                    onPressed: () => context.read<BusinessBookingBloc>().add(
-                      RejectCancelBooking(booking.id),
-                    ),
-                    type: AppButtonType.outline,
-                    size: AppButtonSize.sm,
+                  const SizedBox(height: 8),
+                  _infoRow(
+                    context: context,
+                    icon: Icons.attach_money_rounded,
+                    label: l10n.bookingTotalPrice,
+                    value: booking.totalFormatted,
                   ),
                 ],
-                if (!booking.wasPaid)
-                  AppButton(
-                    label: l10n.markAsPaid,
-                    onPressed: () => context.read<BusinessBookingBloc>().add(
-                      MarkPaidBooking(booking.id),
-                    ),
-                    type: AppButtonType.secondary,
-                    size: AppButtonSize.sm,
-                  ),
-              ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // === Actions (disabled when busy) ===
+            AbsorbPointer(
+              absorbing: isBusy,
+              child: Opacity(
+                opacity: isBusy ? 0.6 : 1.0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (status == 'pending')
+                      AppButton(
+                        label: l10n.bookingReject,
+                        onPressed: () async {
+                          final ok = await _confirmDialog(
+                            context: context,
+                            title: l10n.bookingConfirmRejectTitle,
+                            message: l10n.bookingConfirmRejectMessage,
+                            confirmLabel: l10n.bookingConfirm_reject,
+                          );
+                          if (ok) {
+                            context.read<BusinessBookingBloc>().add(
+                              RejectBooking(booking.id),
+                            );
+                          }
+                        },
+                        type: AppButtonType.outline,
+                        size: AppButtonSize.sm,
+                      ),
+                    if (status == 'rejected')
+                      AppButton(
+                        label: l10n.bookingUnreject,
+                        onPressed: () async {
+                          final ok = await _confirmDialog(
+                            context: context,
+                            title: l10n.bookingConfirmUnrejectTitle,
+                            message: l10n.bookingConfirmUnrejectMessage,
+                            confirmLabel: l10n.bookingConfirm_unreject,
+                          );
+                          if (ok) {
+                            context.read<BusinessBookingBloc>().add(
+                              UnrejectBooking(booking.id),
+                            );
+                          }
+                        },
+                        type: AppButtonType.text,
+                        size: AppButtonSize.sm,
+                      ),
+                    if (status == 'cancel_requested') ...[
+                      AppButton(
+                        label: l10n.bookingConfirm_approveCancel,
+                        onPressed: () async {
+                          final ok = await _confirmDialog(
+                            context: context,
+                            title: l10n.bookingConfirm_approveCancel,
+                            message: l10n.bookingMessage_approveCancel,
+                            confirmLabel: l10n.bookingApprove,
+                          );
+                          if (ok) {
+                            context.read<BusinessBookingBloc>().add(
+                              ApproveCancelBooking(booking.id),
+                            );
+                          }
+                        },
+                        type: AppButtonType.secondary,
+                        size: AppButtonSize.sm,
+                      ),
+                      const SizedBox(width: 6),
+                      AppButton(
+                        label: l10n.bookingRejectCancel,
+                        onPressed: () async {
+                          final ok = await _confirmDialog(
+                            context: context,
+                            title: l10n.bookingConfirm_rejectCancel,
+                            message: l10n.bookingMessage_rejectCancel,
+                            confirmLabel: l10n.bookingConfirm_reject,
+                          );
+                          if (ok) {
+                            context.read<BusinessBookingBloc>().add(
+                              RejectCancelBooking(booking.id),
+                            );
+                          }
+                        },
+                        type: AppButtonType.outline,
+                        size: AppButtonSize.sm,
+                      ),
+                    ],
+                    if (!booking.wasPaid) ...[
+                      const SizedBox(width: 6),
+                      AppButton(
+                        label: l10n.bookingsMarkPaid,
+                        onPressed: () async {
+                          final ok = await _confirmDialog(
+                            context: context,
+                            title: l10n.bookingsPaid,
+                            message: l10n.bookingProcessing,
+                            confirmLabel: l10n.bookingApprove,
+                          );
+                          if (ok) {
+                            context.read<BusinessBookingBloc>().add(
+                              MarkPaidBooking(booking.id),
+                            );
+                          }
+                        },
+                        type: AppButtonType.secondary,
+                        size: AppButtonSize.sm,
+                      ),
+                    ],
+                    if (isBusy) ...[
+                      const SizedBox(width: 10),
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ],
         ),

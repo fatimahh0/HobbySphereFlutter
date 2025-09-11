@@ -205,7 +205,7 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
             !state.end!.isAfter(state.start!);
 
         return Scaffold(
-          appBar: AppBar(title: Text(loc.createActivityTitle)),
+          appBar: AppBar(),
           body: SafeArea(
             child: AbsorbPointer(
               absorbing: state.loading,

@@ -40,7 +40,6 @@ class BusinessUsersScreen extends StatefulWidget {
 class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
   String _query = "";
 
-
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
@@ -49,7 +48,6 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr.businessUsersTitle),
         centerTitle: true,
         actions: [
           IconButton(
@@ -127,7 +125,6 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
                         "User: ${u.id}, enrolled: ${widget.enrolledUserIds}",
                       );
 
-
                       return Card(
                         margin: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -161,7 +158,6 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                
                             ],
                           ),
                           // If already booked, show badge only

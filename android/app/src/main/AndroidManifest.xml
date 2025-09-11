@@ -14,7 +14,8 @@
     <application
         android:name="${applicationName}"
         android:label="hobby_sphere"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
 
         <!-- ✅ MAPS API KEY: inside <application>, NOT inside <activity> -->
         <meta-data

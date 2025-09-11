@@ -193,9 +193,7 @@ class _EditItemViewState extends State<_EditItemView> {
             : null;
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text(loc.editActivityTitle),
-          ), // use your l10n key
+          appBar: AppBar(), // use your l10n key
           body: SafeArea(
             child: AbsorbPointer(
               absorbing: state.loading,
