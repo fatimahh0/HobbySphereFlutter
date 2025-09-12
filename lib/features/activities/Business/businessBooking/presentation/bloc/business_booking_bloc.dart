@@ -1,30 +1,47 @@
+// Flutter 3.35.x
+// Auto-refresh bookings when any booking event arrives.
+
+import 'dart:async'; // StreamSubscription
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../../../services/token_store.dart';
+import 'package:hobby_sphere/services/token_store.dart';
 import '../../domain/usecases/get_business_bookings.dart';
 import '../../domain/usecases/update_booking_status.dart';
 import 'business_booking_event.dart';
 import 'business_booking_state.dart';
 import '../../domain/entities/business_booking.dart';
 
+// ⬇️ realtime imports
+import 'package:hobby_sphere/core/realtime/realtime_bus.dart';
+import 'package:hobby_sphere/core/realtime/event_models.dart';
+
 class BusinessBookingBloc
     extends Bloc<BusinessBookingEvent, BusinessBookingState> {
-  final GetBusinessBookings getBookings;
-  final UpdateBookingStatus updateStatus;
+  final GetBusinessBookings getBookings; // use case
+  final UpdateBookingStatus updateStatus; // use case
+
+  // ⬇️ subscription to realtime
+  StreamSubscription<RealtimeEvent>? _rtSub;
 
   BusinessBookingBloc({required this.getBookings, required this.updateStatus})
     : super(const BusinessBookingState()) {
-    on<BusinessBookingBootstrap>(_onBootstrap);
-    on<BusinessBookingFilterChanged>(_onFilterChanged);
+    on<BusinessBookingBootstrap>(_onBootstrap); // initial load
+    on<BusinessBookingFilterChanged>(_onFilterChanged); // change tab
     on<RejectBooking>(_onRejectBooking);
     on<UnrejectBooking>(_onUnrejectBooking);
     on<MarkPaidBooking>(_onMarkPaidBooking);
     on<ApproveCancelBooking>(_onApproveCancelBooking);
     on<RejectCancelBooking>(_onRejectCancelBooking);
     on<BusinessBookingClearFlash>(_onClearFlash);
+
+    // ⬇️ whenever a booking event arrives → refresh list
+    _rtSub = RealtimeBus.I.stream.listen((e) {
+      if (e.domain == Domain.booking) {
+        add(BusinessBookingBootstrap()); // reload from server
+      }
+    });
   }
 
   // ---------------- helpers ----------------
-
   Future<String> _token() async => (await TokenStore.read()).token ?? '';
 
   void _setBusy(Emitter<BusinessBookingState> emit, int id, bool value) {
@@ -42,7 +59,6 @@ class BusinessBookingBloc
     required int id,
     required String newStatus,
   }) {
-    // update status locally so the item jumps right away
     final list = state.bookings.map((b) {
       if (b.id == id) {
         return BusinessBooking(
@@ -70,7 +86,6 @@ class BusinessBookingBloc
     emit(state.copyWith(bookings: bookings));
   }
 
-  // If API failed with 500, check server truth: if the booking now has target status, treat as success.
   Future<bool> _serverReflects(
     int id,
     bool Function(BusinessBooking b) predicate,
@@ -81,50 +96,7 @@ class BusinessBookingBloc
     return predicate(found.first);
   }
 
-  // generic action with optimistic UI, single call, verify & rollback if needed
-  Future<void> _doAction({
-    required Emitter<BusinessBookingState> emit,
-    required int id,
-    required String
-    action, // 'Rejected' | 'Pending' | 'Paid' | 'cancel_approved' | 'cancel_rejected'
-    required String
-    newStatus, // status we want to see in UI (same mapping as action)
-    required String targetTab, // auto switch tab
-  }) async {
-    // 1) mark busy + optimistic move + switch tab instantly
-    _setBusy(emit, id, true);
-    final before = state.bookings; // for potential rollback
-    final optimistic = _optimisticMove(id: id, newStatus: newStatus);
-    emit(state.copyWith(bookings: optimistic, filter: targetTab));
-
-    try {
-      await updateStatus(await _token(), id, action); // single PUT
-
-      // 2) refresh from server and finalize
-      await _refresh(emit);
-      emit(state.copyWith(success: 'ok', error: null));
-    } catch (e) {
-      // 3) server error → check if server actually applied it
-      final ok = await _serverReflects(
-        id,
-        (b) => b.status.trim().toLowerCase() == newStatus.toLowerCase(),
-      );
-
-      if (ok) {
-        // treat as success anyway
-        await _refresh(emit);
-        emit(state.copyWith(success: 'ok', error: null));
-      } else {
-        // rollback + show error
-        emit(state.copyWith(bookings: before, error: e.toString()));
-      }
-    } finally {
-      _setBusy(emit, id, false);
-    }
-  }
-
   // ---------------- handlers ----------------
-
   Future<void> _onBootstrap(
     BusinessBookingBootstrap event,
     Emitter<BusinessBookingState> emit,
@@ -150,6 +122,38 @@ class BusinessBookingBloc
     Emitter<BusinessBookingState> emit,
   ) {
     emit(state.copyWith(clearError: true, clearSuccess: true));
+  }
+
+  Future<void> _doAction({
+    required Emitter<BusinessBookingState> emit,
+    required int id,
+    required String action,
+    required String newStatus,
+    required String targetTab,
+  }) async {
+    _setBusy(emit, id, true);
+    final before = state.bookings;
+    final optimistic = _optimisticMove(id: id, newStatus: newStatus);
+    emit(state.copyWith(bookings: optimistic, filter: targetTab));
+
+    try {
+      await updateStatus(await _token(), id, action);
+      await _refresh(emit);
+      emit(state.copyWith(success: 'ok', error: null));
+    } catch (e) {
+      final ok = await _serverReflects(
+        id,
+        (b) => b.status.trim().toLowerCase() == newStatus.toLowerCase(),
+      );
+      if (ok) {
+        await _refresh(emit);
+        emit(state.copyWith(success: 'ok', error: null));
+      } else {
+        emit(state.copyWith(bookings: before, error: e.toString()));
+      }
+    } finally {
+      _setBusy(emit, id, false);
+    }
   }
 
   Future<void> _onRejectBooking(
@@ -181,7 +185,7 @@ class BusinessBookingBloc
     emit: emit,
     id: event.bookingId,
     action: 'Paid',
-    newStatus: state.filter, // not used by predicate; we keep same tab
+    newStatus: state.filter,
     targetTab: state.filter,
   );
 
@@ -206,4 +210,10 @@ class BusinessBookingBloc
     newStatus: 'Rejected',
     targetTab: 'rejected',
   );
+
+  @override
+  Future<void> close() async {
+    await _rtSub?.cancel(); // cleanup
+    return super.close();
+  }
 }

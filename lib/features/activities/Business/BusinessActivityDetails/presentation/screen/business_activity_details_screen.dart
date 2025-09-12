@@ -1,8 +1,13 @@
-// lib/features/activities/Business/businessActivity/presentation/screen/business_activity_details_screen.dart
+// ===== lib/features/activities/Business/BusinessActivityDetails/presentation/screen/business_activity_details_screen.dart
+// Flutter 3.35.x — Fix: extract businessId safely and use it for Reopen.
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/ReopenItemPage.dart';
 import 'package:intl/intl.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
+import 'package:hobby_sphere/core/network/globals.dart'
+    as g; // + add: to resolve absolute image URLs
 
 // Bloc details
 import 'package:hobby_sphere/features/activities/Business/BusinessActivityDetails/presentation/bloc/business_activity_details_bloc.dart';
@@ -18,9 +23,8 @@ import 'package:hobby_sphere/features/activities/Business/common/domain/entities
 // Widgets
 import 'package:hobby_sphere/shared/widgets/app_button.dart';
 import 'package:hobby_sphere/app/router/router.dart';
-import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/ReopenItemPage.dart';
 
-// For reopen
+// For reopen deps
 import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
@@ -28,11 +32,11 @@ import 'package:hobby_sphere/features/activities/common/data/services/item_types
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
 
 class BusinessActivityDetailsScreen extends StatelessWidget {
-  final int activityId;
-  final String token;
-  final GetBusinessActivityById getById;
-  final GetCurrentCurrency getCurrency;
-  final DeleteBusinessActivity deleteActivity;
+  final int activityId; // activity id (given)
+  final String token; // auth token (given)
+  final GetBusinessActivityById getById; // use case to load details
+  final GetCurrentCurrency getCurrency; // use case to load currency
+  final DeleteBusinessActivity deleteActivity; // use case to delete
 
   const BusinessActivityDetailsScreen({
     super.key,
@@ -46,12 +50,15 @@ class BusinessActivityDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => BusinessActivityDetailsBloc(
-        getById: getById,
-        deleteActivity: deleteActivity,
-      )..add(BusinessActivityDetailsRequested(token: token, id: activityId)),
+      create: (_) =>
+          BusinessActivityDetailsBloc(
+            getById: getById, // inject loader
+            deleteActivity: deleteActivity, // inject delete
+          )..add(
+            BusinessActivityDetailsRequested(token: token, id: activityId),
+          ), // fetch details
       child: Scaffold(
-        appBar: AppBar(),
+        appBar: AppBar(), // simple app bar
         body:
             BlocConsumer<
               BusinessActivityDetailsBloc,
@@ -68,32 +75,35 @@ class BusinessActivityDetailsScreen extends StatelessWidget {
                       ),
                     ),
                   );
-                  Navigator.pop(context, true);
+                  Navigator.pop(context, true); // go back with success
                 } else if (state is BusinessActivityDetailsError) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(state.message)));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.message)),
+                  ); // show error
                 }
               },
               builder: (context, state) {
                 if (state is BusinessActivityDetailsLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  ); // loading
                 } else if (state is BusinessActivityDetailsLoaded) {
                   return FutureBuilder(
-                    future: getCurrency(token),
+                    future: getCurrency(token), // load currency
                     builder: (context, snapshot) {
-                      final currency = snapshot.data?.code ?? '';
+                      final currency =
+                          snapshot.data?.code ?? ''; // currency code
                       return _DetailsView(
-                        activity: state.activity,
-                        currency: currency,
-                        token: token,
+                        activity: state.activity, // pass item
+                        currency: currency, // pass currency code
+                        token: token, // pass token
                       );
                     },
                   );
                 } else if (state is BusinessActivityDetailsError) {
-                  return Center(child: Text(state.message));
+                  return Center(child: Text(state.message)); // error view
                 }
-                return const SizedBox();
+                return const SizedBox(); // empty
               },
             ),
       ),
@@ -101,10 +111,26 @@ class BusinessActivityDetailsScreen extends StatelessWidget {
   }
 }
 
+// helper: make image URL absolute for display (handles "/uploads/..")
+String _absolute(String? raw) {
+  if (raw == null || raw.isEmpty) return '';
+  if (raw.startsWith('http://') || raw.startsWith('https://'))
+    return raw; // already absolute
+  final base = g.serverRootNoApi(); // e.g. http://host:port
+  final sep = raw.startsWith('/') ? '' : '/'; // single slash join
+  return '$base$sep$raw'; // build absolute
+}
+
+// helper: extract a valid businessId from the entity (nested business or field), else 0
+// helper: return a valid businessId from the entity (repo now fills it)
+int _businessIdOf(BusinessActivity a) {
+  return (a.businessId ?? 0); // simple & safe
+}
+
 class _DetailsView extends StatelessWidget {
-  final BusinessActivity activity;
-  final String currency;
-  final String token;
+  final BusinessActivity activity; // item data
+  final String currency; // currency code
+  final String token; // auth token
 
   const _DetailsView({
     required this.activity,
@@ -114,18 +140,28 @@ class _DetailsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-    final df = DateFormat.yMMMd().add_jm();
+    final t = AppLocalizations.of(context)!; // i18n
+    final cs = Theme.of(context).colorScheme; // colors
+    final tt = Theme.of(context).textTheme; // texts
+    final df = DateFormat.yMMMd().add_jm(); // date format
+
+    final headerImage = _absolute(
+      activity.imageUrl,
+    ); // absolute header image url
+
+    final bid = _businessIdOf(activity); // ✅ resolve businessId safely
+    // small guard: if still 0, show a toast and disable Reopen
+    final canReopen =
+        activity.status.toLowerCase() == "terminated" &&
+        bid > 0; // allow only when valid
 
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (activity.imageUrl != null)
+          if (headerImage.isNotEmpty) // show cover image if exists
             Image.network(
-              activity.imageUrl!,
+              headerImage, // absolute url
               width: double.infinity,
               height: 220,
               fit: BoxFit.cover,
@@ -140,14 +176,14 @@ class _DetailsView extends StatelessWidget {
               ),
             ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16), // page padding
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   activity.name,
                   style: tt.headlineSmall?.copyWith(color: cs.primary),
-                ),
+                ), // title
                 const SizedBox(height: 8),
 
                 // Location
@@ -220,19 +256,19 @@ class _DetailsView extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // === Actions ===
+                // === Actions (Edit / Insights) ===
                 Row(
                   children: [
                     Expanded(
                       child: AppButton(
-                        label: t.activityDetailsEdit,
+                        label: t.activityDetailsEdit, // edit
                         onPressed: () {
                           Navigator.pushNamed(
                             context,
                             Routes.editBusinessActivity,
                             arguments: EditActivityRouteArgs(
-                              itemId: activity.id,
-                              businessId: activity.businessId ?? 0,
+                              itemId: activity.id, // pass id
+                              businessId: bid, // ✅ use resolved business id
                             ),
                           );
                         },
@@ -243,15 +279,15 @@ class _DetailsView extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: AppButton(
-                        label: t.activityDetailsViewInsights,
+                        label: t.activityDetailsViewInsights, // insights
                         onPressed: () {
                           Navigator.pushNamed(
                             context,
                             Routes.businessInsights,
                             arguments: BusinessInsightsRouteArgs(
-                              token: token,
-                              businessId: activity.businessId ?? 0,
-                              itemId: activity.id,
+                              token: token, // token
+                              businessId: bid, // ✅ resolved id
+                              itemId: activity.id, // item id
                             ),
                           );
                         },
@@ -265,20 +301,22 @@ class _DetailsView extends StatelessWidget {
 
                 // Delete
                 AppButton(
-                  label: t.activityDetailsDelete,
+                  label: t.activityDetailsDelete, // delete
                   onPressed: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: Text(t.activityDetailsDelete),
-                        content: Text(t.activityDetailsDeletePrompt),
+                        title: Text(t.activityDetailsDelete), // title
+                        content: Text(t.activityDetailsDeletePrompt), // prompt
                         actions: [
                           TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
+                            onPressed: () =>
+                                Navigator.pop(ctx, false), // cancel
                             child: Text(t.activityDetailsCancel),
                           ),
                           TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
+                            onPressed: () =>
+                                Navigator.pop(ctx, true), // confirm
                             child: Text(t.activityDetailsConfirmDelete),
                           ),
                         ],
@@ -287,8 +325,8 @@ class _DetailsView extends StatelessWidget {
                     if (confirm == true) {
                       context.read<BusinessActivityDetailsBloc>().add(
                         BusinessActivityDetailsDeleteRequested(
-                          token: token,
-                          activityId: activity.id,
+                          token: token, // token
+                          activityId: activity.id, // id
                         ),
                       );
                     }
@@ -298,29 +336,48 @@ class _DetailsView extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // Reopen only if terminated
+                // Reopen (only when terminated AND we have a valid businessId)
                 if (activity.status.toLowerCase() == "terminated")
                   AppButton(
-                    label: "Reopen", // TODO add l10n
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ReopenItemPage(
-                            businessId: activity.businessId ?? 0,
-                            oldItem: activity,
-                            getItemTypes: GetItemTypes(
-                              ItemTypeRepositoryImpl(ItemTypesService()),
-                            ),
-                            getCurrentCurrency: GetCurrentCurrency(
-                              CurrencyRepositoryImpl(CurrencyService()),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
+                    label: "Reopen", // TODO: add l10n key
+                    onPressed: canReopen
+                        ? () {
+                            // debug print to verify the id used
+                            // ignore: avoid_print
+                            print(
+                              'Reopen with businessId = $bid, itemId = ${activity.id}',
+                            );
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ReopenItemPage(
+                                  businessId:
+                                      bid, // ✅ FIX: pass real businessId
+                                  oldItem:
+                                      activity, // pass the existing activity
+                                  getItemTypes: GetItemTypes(
+                                    // inject types use case
+                                    ItemTypeRepositoryImpl(ItemTypesService()),
+                                  ),
+                                  getCurrentCurrency: GetCurrentCurrency(
+                                    // inject currency use case
+                                    CurrencyRepositoryImpl(CurrencyService()),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                        : null, // disabled if id invalid
                     type: AppButtonType.secondary,
                     expand: true,
+                  ),
+                if (!canReopen && activity.status.toLowerCase() == "terminated")
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      "Cannot reopen: missing business id.", // small hint if disabled
+                      style: tt.bodySmall?.copyWith(color: cs.error),
+                    ),
                   ),
               ],
             ),

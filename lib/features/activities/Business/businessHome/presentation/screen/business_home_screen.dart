@@ -6,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/widgets/welcome_section.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_event.dart';
 
 // Domain
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
@@ -112,8 +114,8 @@ class _BusinessHomeView extends StatelessWidget {
       children: [
         WelcomeSection(
           token: context.read<BusinessHomeBloc>().token,
-          onOpenNotifications: () {
-            Navigator.pushNamed(
+         onOpenNotifications: () async {
+            await Navigator.pushNamed(
               context,
               Routes.businessNotifications,
               arguments: BusinessNotificationsRouteArgs(
@@ -121,7 +123,13 @@ class _BusinessHomeView extends StatelessWidget {
                 businessId: businessId,
               ),
             );
+            // 🔁 refresh badge + (optionally) list after returning
+            final notifBloc = context.read<BusinessNotificationBloc>();
+            notifBloc
+              ..add(LoadBusinessNotifications())
+              ..add(LoadUnreadCount(token));
           },
+
           onOpenCreateActivity: () => onCreate(context, businessId),
         ),
         const HeaderWithBadge(),

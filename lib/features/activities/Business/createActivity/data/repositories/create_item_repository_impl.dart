@@ -1,43 +1,58 @@
-import 'package:dio/dio.dart';
-import '../../domain/entities/create_item_request.dart';
-import '../../domain/repositories/create_item_repository.dart';
-import '../services/create_item_service.dart';
+// ===== lib/features/activities/Business/createActivity/data/repositories/create_item_repository_impl.dart =====
+// Flutter 3.35.x
+import 'package:dio/dio.dart'; // Dio for HTTP errors and response types
+import '../../domain/entities/create_item_request.dart'; // Request entity (data to send)
+import '../../domain/repositories/create_item_repository.dart'; // Repository interface
+import '../services/create_item_service.dart'; // Service that performs the network call
 
 class CreateItemRepositoryImpl implements CreateItemRepository {
-  final CreateItemService service;
-  CreateItemRepositoryImpl(this.service);
+  final CreateItemService service; // Service dependency
+  CreateItemRepositoryImpl(this.service); // Inject service
 
   @override
   Future<String> createItem(String token, CreateItemRequest req) async {
+    // Build payload map for multipart (File stays as File, strings as fields)
     final payload = {
-      'itemName': req.itemName,
-      'itemTypeId': req.itemTypeId,
-      'description': req.description,
-      'location': req.location,
-      'latitude': req.latitude,
-      'longitude': req.longitude,
-      'maxParticipants': req.maxParticipants,
-      'price': req.price,
-      'startDatetime': req.startDatetime.toIso8601String(),
-      'endDatetime': req.endDatetime.toIso8601String(),
-      'status': req.status,
-      'businessId': req.businessId,
-      if (req.image != null) 'image': req.image, // multipart
+      'itemName': req.itemName, // Name
+      'itemTypeId': req.itemTypeId, // Type id
+      'description': req.description, // Description
+      'location': req.location, // Address text
+      'latitude': req.latitude, // Lat
+      'longitude': req.longitude, // Lng
+      'maxParticipants': req.maxParticipants, // Capacity
+      'price': req.price, // Price
+      'startDatetime':
+          req.startDatetime, // Can be DateTime or String (service normalizes)
+      'endDatetime':
+          req.endDatetime, // Can be DateTime or String (service normalizes)
+      'status': req.status, // Status string
+      'businessId': req.businessId, // Business owner id
+      if (req.image != null) 'image': req.image, // Optional file (picked image)
       if (req.imageUrl != null && req.imageUrl!.isNotEmpty)
-        'imageUrl': req.imageUrl, // fallback url
+        'imageUrl': req.imageUrl, // Optional retained URL (when no file)
     };
 
-    final res = await service.createMultipart(token, payload);
+    // Call multipart creator endpoint
+    final res = await service.createMultipart(
+      token,
+      payload,
+    ); // POST /items/create
 
+    // Return server message on 200/201
     if (res.statusCode == 201 || res.statusCode == 200) {
-      final data = res.data;
-      if (data is Map && data['message'] is String) return data['message'];
-      return 'Item created';
+      // Success codes
+      final data = res.data; // Parse body
+      if (data is Map && data['message'] is String)
+        return data['message']; // Prefer message
+      return 'Item created'; // Fallback text
     }
+
+    // Throw a detailed DioException on error status
     throw DioException(
-      requestOptions: res.requestOptions,
-      response: res,
-      error: 'Create failed (${res.statusCode})',
+      // Bubble up error
+      requestOptions: res.requestOptions, // Request info
+      response: res, // Response info
+      error: 'Create failed (${res.statusCode})', // Simple message
     );
   }
 }

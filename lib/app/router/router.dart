@@ -10,6 +10,14 @@ import 'package:hobby_sphere/features/activities/Business/BusinessUser/presentat
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_event.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/data/repositories/business_notification_repository_impl.dart'
+    show BusinessNotificationRepositoryImpl;
+import 'package:hobby_sphere/features/activities/Business/businessNotification/data/services/business_notification_service.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/usecases/get_business_notifications.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/screens/business_notification_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
@@ -459,15 +467,51 @@ class AppRouter {
         }
         return MaterialPageRoute(
           settings: settings,
-          builder: (context) => BusinessHomeScreen(
-            token: data.token,
-            businessId: data.businessId,
-            onCreate: (ctx, bid) {
-              navigatorKey.currentState?.pushNamed(
-                Routes.createBusinessActivity,
-                arguments: CreateActivityRouteArgs(businessId: bid),
-              );
-            },
+          builder: (context) => MultiBlocProvider(
+            providers: [
+              // Home list (you already had)
+              BlocProvider(
+                create: (_) => BusinessHomeBloc(
+                  getList: GetBusinessActivities(
+                    BusinessActivityRepositoryImpl(BusinessActivityService()),
+                  ),
+                  getOne: GetBusinessActivityById(
+                    BusinessActivityRepositoryImpl(BusinessActivityService()),
+                  ),
+                  deleteOne: DeleteBusinessActivity(
+                    BusinessActivityRepositoryImpl(BusinessActivityService()),
+                  ),
+                  token: data.token,
+                  businessId: data.businessId,
+                  optimisticDelete: false,
+                )..add(const BusinessHomeStarted()),
+              ),
+              // 👇 add notifications bloc so WelcomeSection can read it
+              BlocProvider(
+                create: (_) {
+                  final repo = BusinessNotificationRepositoryImpl(
+                    BusinessNotificationService(),
+                  );
+                  return BusinessNotificationBloc(
+                      getBusinessNotifications: GetBusinessNotifications(repo),
+                      repository: repo,
+                      token: data.token,
+                    )
+                    ..add(LoadBusinessNotifications())
+                    ..add(LoadUnreadCount(data.token));
+                },
+              ),
+            ],
+            child: BusinessHomeScreen(
+              token: data.token,
+              businessId: data.businessId,
+              onCreate: (ctx, bid) {
+                navigatorKey.currentState?.pushNamed(
+                  Routes.createBusinessActivity,
+                  arguments: CreateActivityRouteArgs(businessId: bid),
+                );
+              },
+            ),
           ),
         );
 

@@ -1,3 +1,7 @@
+// Flutter 3.35.x
+// Auto-reload business profile when profile changes arrive.
+
+import 'dart:async'; // StreamSubscription
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart';
 import '../../domain/usecases/delete_business.dart';
@@ -7,6 +11,10 @@ import '../../domain/usecases/update_business_visibility.dart';
 import 'business_profile_event.dart';
 import 'business_profile_state.dart';
 
+// ⬇️ realtime imports
+import 'package:hobby_sphere/core/realtime/realtime_bus.dart';
+import 'package:hobby_sphere/core/realtime/event_models.dart';
+
 class BusinessProfileBloc
     extends Bloc<BusinessProfileEvent, BusinessProfileState> {
   final GetBusinessById getBusinessById;
@@ -14,6 +22,13 @@ class BusinessProfileBloc
   final UpdateBusinessStatus updateBusinessStatus;
   final DeleteBusiness deleteBusiness;
   final CheckStripeStatus checkStripeStatus;
+
+  // ⬇️ remember last params to reload on realtime
+  String? _token;
+  int? _businessId;
+
+  // ⬇️ subscription
+  StreamSubscription<RealtimeEvent>? _rtSub;
 
   BusinessProfileBloc({
     required this.getBusinessById,
@@ -27,16 +42,24 @@ class BusinessProfileBloc
     on<ChangeStatus>(_onChangeStatus);
     on<DeleteBusinessEvent>(_onDeleteBusiness);
     on<CheckStripeStatusEvent>(_onCheckStripe);
+
+    // ⬇️ realtime: reload when same business profile changes
+    _rtSub = RealtimeBus.I.stream.listen((e) {
+      if (e.domain != Domain.profile) return; // only profile domain
+      if (_token == null || _businessId == null) return; // need scope
+      if (e.resourceId == _businessId) {
+        add(LoadBusinessProfile(_token!, _businessId!)); // reload
+      }
+    });
   }
 
   Future<void> _onLoad(LoadBusinessProfile e, Emitter emit) async {
     emit(BusinessProfileLoading());
     try {
+      _token = e.token; // remember token
+      _businessId = e.businessId; // remember id
       final business = await getBusinessById(e.token, e.businessId);
-
-      // also check Stripe
       final connected = await checkStripeStatus(e.token, e.businessId);
-
       emit(BusinessProfileLoaded(business, stripeConnected: connected));
     } catch (err) {
       emit(BusinessProfileError(err.toString()));
@@ -69,7 +92,7 @@ class BusinessProfileBloc
   Future<void> _onDeleteBusiness(DeleteBusinessEvent e, Emitter emit) async {
     try {
       await deleteBusiness(e.token, e.businessId, e.password);
-      // After deletion maybe log out / navigate
+      emit(BusinessProfileInitial());
     } catch (err) {
       emit(BusinessProfileError(err.toString()));
     }
@@ -87,5 +110,11 @@ class BusinessProfileBloc
     } catch (err) {
       emit(BusinessProfileError("Stripe check failed: ${err.toString()}"));
     }
+  }
+
+  @override
+  Future<void> close() async {
+    await _rtSub?.cancel(); // cleanup
+    return super.close();
   }
 }

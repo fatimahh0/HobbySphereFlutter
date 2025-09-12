@@ -1,130 +1,152 @@
-import 'dart:io';
-import 'package:dio/dio.dart';
-import 'package:http_parser/http_parser.dart';
-import 'package:intl/intl.dart';
-import 'package:path/path.dart' as p;
+// ===== lib/features/activities/Business/createActivity/data/services/create_item_service.dart =====
+// Flutter 3.35.x
+import 'dart:io'; // File type
+import 'package:dio/dio.dart'; // FormData + Multipart
+import 'package:http_parser/http_parser.dart'; // MediaType for file mime
+import 'package:intl/intl.dart'; // Date formatting
+import 'package:path/path.dart' as p; // Filename helpers
 
-import 'package:hobby_sphere/core/network/api_fetch.dart';
-import 'package:hobby_sphere/core/network/api_methods.dart';
+import 'package:hobby_sphere/core/network/api_fetch.dart'; // Your fetch wrapper
+import 'package:hobby_sphere/core/network/api_methods.dart'; // HttpMethod enum
 
 class CreateItemService {
-  final _fetch = ApiFetch();
-  static const _base = '/items'; // matches @RequestMapping("/api/items")
+  final _fetch = ApiFetch(); // Shared fetch instance
+  static const _base = '/items'; // Base mapping from backend
 
   Future<Response> createMultipart(
-    String token,
-    Map<String, dynamic> body,
+    String token, // JWT token
+    Map<String, dynamic> body, // Key-values (and optional File)
   ) async {
-    final form = FormData();
+    final form = FormData(); // Multipart form
 
-    // ensure ISO-8601 for Spring LocalDateTime (no 'Z', no millis)
-    String _isoNoMillis(DateTime dt) =>
+    String _isoNoMillis(
+      DateTime dt,
+    ) => // Helper to format dt as yyyy-MM-dd'T'HH:mm:ss
         DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(dt.toLocal());
 
-    final fields = Map<String, dynamic>.from(body);
+    final fields = Map<String, dynamic>.from(body); // Clone to safely edit
+
+    // Normalize DateTimes if present (safe if already string)
     if (fields['startDatetime'] is DateTime) {
       fields['startDatetime'] = _isoNoMillis(
         fields['startDatetime'] as DateTime,
-      );
+      ); // Format start
     }
     if (fields['endDatetime'] is DateTime) {
-      fields['endDatetime'] = _isoNoMillis(fields['endDatetime'] as DateTime);
+      fields['endDatetime'] = _isoNoMillis(
+        fields['endDatetime'] as DateTime,
+      ); // Format end
     }
 
-    // ✅ Add non-file fields
+    // Add simple fields exactly once (includes imageUrl if provided)
     fields.forEach((k, v) {
-      if (v == null) return;
-      if (v is File) return;
-      form.fields.add(MapEntry(k, v.toString()));
+      // Iterate all entries
+      if (v == null) return; // Skip nulls
+      if (v is File) return; // Skip files (added below)
+      form.fields.add(MapEntry(k, v.toString())); // Add string field
     });
 
-    // ✅ Explicitly handle old imageUrl
-    if (fields['imageUrl'] != null &&
-        fields['imageUrl'].toString().isNotEmpty) {
-      form.fields.add(MapEntry('imageUrl', fields['imageUrl'].toString()));
-    }
-
-    // add optional image
+    // Add optional image file only once
     if (fields['image'] is File) {
-      final file = fields['image'] as File;
+      // If a File was provided
+      final file = fields['image'] as File; // Cast
       form.files.add(
+        // Append file part
         MapEntry(
-          'image',
+          'image', // Field name expected by backend
           await MultipartFile.fromFile(
-            file.path,
-            filename: p.basename(file.path),
-            contentType: MediaType('image', _guess(p.extension(file.path))),
+            file.path, // Disk path
+            filename: p.basename(file.path), // Original filename
+            contentType: MediaType(
+              'image',
+              _guess(p.extension(file.path)),
+            ), // Mime subtype
           ),
         ),
       );
     }
 
-    print("=== DEBUG FORM FIELDS ===");
+    // Debug fields (useful when validating server params)
+    print("=== DEBUG FORM FIELDS ==="); // Start marker
     for (final f in form.fields) {
-      print("${f.key}: ${f.value}");
+      // All text fields
+      print("${f.key}: ${f.value}"); // Key: value
     }
-    print("=========================");
+    print("========================="); // End marker
 
+    // Send multipart request with explicit header
     return _fetch.fetch(
-      HttpMethod.post,
-      '$_base/create',
-      data: form,
-      headers: {'Authorization': 'Bearer $token'},
+      HttpMethod.post, // HTTP POST
+      '$_base/create', // /items/create
+      data: form, // Multipart payload
+      headers: {
+        'Authorization': 'Bearer $token', // Bearer token
+        'Content-Type': 'multipart/form-data', // Explicit multipart header
+      },
     );
   }
 
   Future<Response> updateMultipart(
-    String token,
-    int id,
-    Map<String, dynamic> body,
+    String token, // JWT token
+    int id, // Item id to update
+    Map<String, dynamic> body, // Update fields
   ) async {
-    final form = await _toForm(body);
+    final form = await _toForm(body); // Convert to FormData
     return _fetch.fetch(
-      HttpMethod.put,
-      '$_base/$id/update-with-image',
-      data: form,
+      HttpMethod.put, // HTTP PUT
+      '$_base/$id/update-with-image', // Update endpoint
+      data: form, // Multipart
       headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'multipart/form-data',
+        'Authorization': 'Bearer $token', // Bearer token
+        'Content-Type': 'multipart/form-data', // Multipart header
       },
     );
   }
 
   Future<FormData> _toForm(Map<String, dynamic> body) async {
-    final form = FormData();
+    final form = FormData(); // New form
     for (final e in body.entries) {
-      final k = e.key;
-      final v = e.value;
-      if (v == null) continue;
+      // Loop all entries
+      final k = e.key; // Key
+      final v = e.value; // Value
+      if (v == null) continue; // Skip null
       if (k == 'imageRemoved') {
-        // booleans must be strings for some servers
-        form.fields.add(MapEntry(k, (v == true) ? 'true' : 'false'));
-        continue;
+        // Special boolean as string
+        form.fields.add(
+          MapEntry(k, (v == true) ? 'true' : 'false'),
+        ); // "true"/"false"
+        continue; // Next entry
       }
-      if (v is File) continue; // handled below
-      form.fields.add(MapEntry(k, v.toString()));
+      if (v is File) continue; // Defer files
+      form.fields.add(MapEntry(k, v.toString())); // Add text
     }
 
     if (body['image'] is File) {
-      final file = body['image'] as File;
+      // If file included
+      final file = body['image'] as File; // Cast
       form.files.add(
+        // Append file part
         MapEntry(
-          'image',
+          'image', // Field name expected by backend
           await MultipartFile.fromFile(
-            file.path,
-            filename: p.basename(file.path),
-            contentType: MediaType('image', _guess(p.extension(file.path))),
+            file.path, // Path
+            filename: p.basename(file.path), // File name
+            contentType: MediaType(
+              'image',
+              _guess(p.extension(file.path)),
+            ), // Mime
           ),
         ),
       );
     }
-    return form;
+    return form; // Return built form
   }
 
   String _guess(String ext) {
-    final e = ext.toLowerCase();
-    if (e.endsWith('png')) return 'png';
-    if (e.endsWith('webp')) return 'webp';
-    return 'jpeg';
+    // Guess image subtype
+    final e = ext.toLowerCase(); // Normalize ext
+    if (e.endsWith('png')) return 'png'; // .png
+    if (e.endsWith('webp')) return 'webp'; // .webp
+    return 'jpeg'; // Default jpeg
   }
 }

@@ -1,95 +1,111 @@
-// ===== Flutter 3.35.x =====
-// Bloc for Business Notifications
-// - Load notifications
-// - Load unread count
-// - Mark as read
-// - Delete
+// Flutter 3.35.x
+// BusinessNotificationBloc — load list + unread, mark read, delete, realtime refresh.
 
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/entities/business_notification.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/usecases/get_business_notifications.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_event.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_state.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/data/repositories/business_notification_repository_impl.dart';
+import 'dart:async'; // StreamSubscription for realtime
+import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc base
+
+// domain + repo + event/state
+import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/entities/business_notification.dart'; // entity
+import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/usecases/get_business_notifications.dart'; // use case
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_event.dart'; // events
+import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_state.dart'; // state
+import 'package:hobby_sphere/features/activities/Business/businessNotification/data/repositories/business_notification_repository_impl.dart'; // repo
+
+// realtime bus
+import 'package:hobby_sphere/core/realtime/realtime_bus.dart'; // global bus
+import 'package:hobby_sphere/core/realtime/event_models.dart'; // RealtimeEvent + Domain
 
 class BusinessNotificationBloc
     extends Bloc<BusinessNotificationEvent, BusinessNotificationState> {
-  final GetBusinessNotifications getBusinessNotifications;
-  final BusinessNotificationRepositoryImpl repository;
-  final String token;
+  final GetBusinessNotifications getBusinessNotifications; // load list
+  final BusinessNotificationRepositoryImpl repository; // mark/delete/count
+  final String token; // backend token
+
+  StreamSubscription<RealtimeEvent>? _rtSub; // subscription holder
 
   BusinessNotificationBloc({
-    required this.getBusinessNotifications,
-    required this.repository,
-    required this.token,
+    required this.getBusinessNotifications, // inject loader
+    required this.repository, // inject repo
+    required this.token, // inject token
   }) : super(const BusinessNotificationState()) {
-    // Load all notifications
+    // initial state
+    // load all notifications
     on<LoadBusinessNotifications>((event, emit) async {
-      emit(state.copyWith(isLoading: true, error: null));
+      emit(state.copyWith(isLoading: true, error: null)); // show loader
       try {
-        final data = await getBusinessNotifications(token);
+        final data = await getBusinessNotifications(token); // backend fetch
         final list = data
-            .map((e) => e as BusinessNotification)
-            .toList(growable: false);
-
-        // compute unread count
-        final unreadCount = list.where((n) => !n.read).length;
-
+            .map((e) => e as BusinessNotification) // cast items
+            .toList(growable: false); // make list
+        final unread = list.where((n) => !n.read).length; // count unread
         emit(
           state.copyWith(
-            notifications: list,
-            isLoading: false,
-            unreadCount: unreadCount,
+            notifications: list, // set list
+            isLoading: false, // stop loader
+            unreadCount: unread, // set unread
           ),
         );
       } catch (e) {
-        emit(state.copyWith(isLoading: false, error: e.toString()));
+        emit(state.copyWith(isLoading: false, error: e.toString())); // error
       }
     });
 
-    // Load unread count only
+    // load unread count only
     on<LoadUnreadCount>((event, emit) async {
       try {
-        final count = await repository.getUnreadCount(event.token);
-        emit(state.copyWith(unreadCount: count));
+        final count = await repository.getUnreadCount(event.token); // backend
+        emit(state.copyWith(unreadCount: count)); // set count
       } catch (e) {
-        emit(state.copyWith(error: e.toString()));
+        emit(state.copyWith(error: e.toString())); // error
       }
     });
 
-    // Mark notification as read
+    // mark one as read
     on<MarkBusinessNotificationRead>((event, emit) async {
       try {
-        await repository.markAsRead(token, event.id);
+        await repository.markAsRead(token, event.id); // backend
         final updated = state.notifications.map((n) {
-          if (n.id == event.id) {
-            return n.copyWith(read: true);
-          }
-          return n;
+          if (n.id == event.id) return n.copyWith(read: true); // update one
+          return n; // keep others
         }).toList();
-
-        final unreadCount = updated.where((n) => !n.read).length;
-
-        emit(state.copyWith(notifications: updated, unreadCount: unreadCount));
+        final unread = updated.where((n) => !n.read).length; // recount
+        emit(
+          state.copyWith(notifications: updated, unreadCount: unread),
+        ); // push
       } catch (e) {
-        emit(state.copyWith(error: e.toString()));
+        emit(state.copyWith(error: e.toString())); // error
       }
     });
 
-    // Delete notification
+    // delete one
     on<DeleteBusinessNotification>((event, emit) async {
       try {
-        await repository.deleteNotification(token, event.id);
+        await repository.deleteNotification(token, event.id); // backend
         final updated = state.notifications
-            .where((n) => n.id != event.id)
+            .where((n) => n.id != event.id) // remove one
             .toList();
-
-        final unreadCount = updated.where((n) => !n.read).length;
-
-        emit(state.copyWith(notifications: updated, unreadCount: unreadCount));
+        final unread = updated.where((n) => !n.read).length; // recount
+        emit(
+          state.copyWith(notifications: updated, unreadCount: unread),
+        ); // push
       } catch (e) {
-        emit(state.copyWith(error: e.toString()));
+        emit(state.copyWith(error: e.toString())); // error
       }
     });
+
+    // realtime: on notification domain → reload list + unread
+    _rtSub = RealtimeBus.I.stream.listen((e) {
+      if (e.domain == Domain.notification) {
+        // only notifications
+        add(LoadBusinessNotifications()); // reload list
+        add(LoadUnreadCount(token)); // ✅ positional (fix)
+      }
+    });
+  }
+
+  @override
+  Future<void> close() async {
+    await _rtSub?.cancel(); // stop realtime
+    return super.close(); // finish close
   }
 }

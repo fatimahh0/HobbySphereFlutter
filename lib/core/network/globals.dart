@@ -1,32 +1,38 @@
 // lib/core/network/globals.dart
+
 library globals;
 
 import 'package:dio/dio.dart';
+import 'package:hobby_sphere/core/realtime/realtime_service.dart';
 
-/// Shared HTTP client (set it once in main()).
+// Shared HTTP client (set once in main()).
 Dio? appDio;
 
-/// Base API root, e.g. http://host:port/api
-String? appServerRoot;
+//  Base API root is required after main() sets it, so make it non-nullable.
+late String appServerRoot; // e.g. "http://host:8080/api"
 
-/// Multiple token aliases so old/new code both work.
+// Multiple token aliases so old/new code both work.
 String? authToken;
 String? token;
 String? userToken;
-String? Token; // if you already set this one in main()
+String? Token;
 
-/// Read a token safely (picks the first non-empty).
+// Realtime singleton instance (nullable until connected).
+RealtimeService? realtime;
+
+// Read a token safely (picks the first non-empty).
 String readAuthToken() {
   return (authToken ?? token ?? userToken ?? Token ?? '').toString();
 }
 
-/// Root without trailing `/api` (handy for building absolute image URLs).
+// Root without trailing `/api` (now appServerRoot is guaranteed set after main()).
 String serverRootNoApi() {
-  final base = (appServerRoot ?? '').toString();
+  // no '??' needed because appServerRoot is late non-null
+  final base = appServerRoot; // already a String
   return base.replaceFirst(RegExp(r'/api/?$'), '');
 }
 
-/// Ensure a Dio instance exists.
+// Ensure a Dio instance exists.
 Dio dio() {
   return appDio ??= Dio(
     BaseOptions(

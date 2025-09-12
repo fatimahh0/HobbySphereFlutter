@@ -1,4 +1,7 @@
-import 'dart:async';
+// Flutter 3.35.x
+// Also listen to RealtimeBus (in addition to your BusinessFeed) to keep list fresh.
+
+import 'dart:async'; // StreamSubscription
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
@@ -13,18 +16,23 @@ import 'package:hobby_sphere/features/activities/common/data/services/currency_s
 import 'business_home_event.dart';
 import 'business_home_state.dart';
 
+// ⬇️ realtime imports
+import 'package:hobby_sphere/core/realtime/realtime_bus.dart';
+import 'package:hobby_sphere/core/realtime/event_models.dart';
+
 class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
   final GetBusinessActivities _getList;
   final GetBusinessActivityById _getOne;
   final DeleteBusinessActivity _deleteOne;
 
-  final GetCurrentCurrency _getCurrency; // ✅ added
+  final GetCurrentCurrency _getCurrency;
 
   final String token;
   final int businessId;
   final bool optimisticDelete;
 
-  StreamSubscription<BusinessEvent>? _feedSub;
+  StreamSubscription<BusinessEvent>? _feedSub; // legacy feed
+  StreamSubscription<RealtimeEvent>? _rtSub; // realtime bus sub
 
   BusinessHomeBloc({
     required GetBusinessActivities getList,
@@ -38,9 +46,8 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
        _deleteOne = deleteOne,
        _getCurrency = GetCurrentCurrency(
          CurrencyRepositoryImpl(CurrencyService()),
-       ), // ✅ init currency usecase
+       ),
        super(const BusinessHomeState()) {
-    // Event handlers
     on<BusinessHomeStarted>(_onStarted);
     on<BusinessHomeRefreshed>(_onRefreshed);
     on<BusinessHomeViewRequested>(_onView);
@@ -48,12 +55,11 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
     on<BusinessHomeDeleteRequested>(_onDelete);
     on<BusinessHomeFeedbackCleared>(_onClearFeedback);
 
-    // External feed → local list updates
     on<BusinessHomeExternalCreated>(_onExternalCreated);
     on<BusinessHomeExternalUpdated>(_onExternalUpdated);
     on<BusinessHomeExternalDeleted>(_onExternalDeleted);
 
-    // Subscribe to global bus
+    // legacy feed subscription
     _feedSub = BusinessFeed().stream.listen((e) {
       if (e is BusinessActivityCreated) {
         add(BusinessHomeExternalCreated(e.activity));
@@ -63,9 +69,16 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
         add(BusinessHomeExternalDeleted(e.id));
       }
     });
+
+    // ⬇️ realtime bus subscription: just trigger a refresh for same business
+    _rtSub = RealtimeBus.I.stream.listen((e) {
+      if (e.domain == Domain.activity && e.businessId == businessId) {
+        add(BusinessHomeRefreshed()); // reload list + currency
+      }
+    });
   }
 
-  // ===== handlers =====
+  // ===== handlers (unchanged) =====
 
   Future<void> _onStarted(
     BusinessHomeStarted event,
@@ -74,10 +87,7 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
     emit(state.copyWith(loading: true, message: null, error: null));
     try {
       final list = await _getList(businessId: businessId, token: token);
-
-      // ✅ fetch currency
       final cur = await _getCurrency(token);
-
       emit(state.copyWith(loading: false, items: list, currency: cur.code));
     } catch (e) {
       emit(state.copyWith(loading: false, error: _err(e)));
@@ -91,10 +101,7 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
     emit(state.copyWith(refreshing: true, message: null, error: null));
     try {
       final list = await _getList(businessId: businessId, token: token);
-
-      // ✅ fetch currency again on refresh
       final cur = await _getCurrency(token);
-
       emit(state.copyWith(refreshing: false, items: list, currency: cur.code));
       event.ack?.complete();
     } catch (e) {
@@ -197,7 +204,8 @@ class BusinessHomeBloc extends Bloc<BusinessHomeEvent, BusinessHomeState> {
 
   @override
   Future<void> close() async {
-    await _feedSub?.cancel();
+    await _feedSub?.cancel(); // stop legacy feed
+    await _rtSub?.cancel(); // stop realtime bus
     return super.close();
   }
 }

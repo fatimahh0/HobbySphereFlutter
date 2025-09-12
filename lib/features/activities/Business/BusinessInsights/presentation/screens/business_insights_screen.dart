@@ -58,7 +58,7 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
           InsightRepositoryImpl(InsightService()),
         ),
         markPaid: MarkBookingPaid(InsightRepositoryImpl(InsightService())),
-      )..add(LoadInsights(widget.token, itemId: widget.itemId)),
+      )..add(LoadInsights(itemId: widget.itemId, token: widget.token)),
       child: Scaffold(
         appBar: AppBar(
           centerTitle: true,
@@ -101,7 +101,10 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
 
                       if (refresh == true) {
                         context.read<InsightsBloc>().add(
-                          LoadInsights(widget.token, itemId: widget.itemId),
+                          LoadInsights(
+                            itemId: widget.itemId,
+                            token: widget.token,
+                          ),
                         );
                       }
                     },
@@ -275,9 +278,9 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
                                             onPressed: () {
                                               context.read<InsightsBloc>().add(
                                                 MarkAsPaid(
-                                                  widget.token,
-                                                  b.id,
                                                   itemId: widget.itemId,
+                                                  token: widget.token,
+                                                  bookingId: b.id,
                                                 ),
                                               );
                                             },
