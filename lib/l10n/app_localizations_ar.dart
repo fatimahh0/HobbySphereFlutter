@@ -523,6 +523,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get createActivityTitle => 'Create Activity';
 
   @override
+  String get reopenedSuccessfully => 'reopen successfully';
+
+  @override
+  String get updatedSuccessfully => 'updated successfully';
+
+  @override
   String get createPostCancel => 'Cancel';
 
   @override

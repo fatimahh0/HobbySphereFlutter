@@ -1,5 +1,6 @@
-// ===== lib/features/activities/Business/common/presentation/screen/reopen_item_page.dart =====
-// Flutter 3.35.x
+// ===== Flutter 3.35.x =====
+// ReopenItemPage — uses Top Toast (showTopToast) for success/error/info messages.
+
 import 'dart:io'; // File
 import 'package:flutter/material.dart'; // UI
 import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
@@ -17,6 +18,9 @@ import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
 
 import 'package:hobby_sphere/shared/widgets/app_button.dart'; // App button
 import 'package:hobby_sphere/shared/widgets/app_text_field.dart'; // App text field
+
+// ✅ Top Toast import (your widget)
+import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // showTopToast / ToastType
 
 import '../../../createActivity/data/services/create_item_service.dart'; // Service
 
@@ -47,15 +51,15 @@ class ReopenItemPage extends StatelessWidget {
     final repo = CreateItemRepositoryImpl(CreateItemService()); // Build repo
     final createUsecase = CreateItem(repo); // Build use case
 
+    // Provide Bloc and bootstrap lists
     return BlocProvider(
       create: (_) => CreateItemBloc(
-        // Create Bloc
-        createItem: createUsecase, // Inject use case
+        createItem: createUsecase, // Inject create use case
         getItemTypes: getItemTypes, // Inject types
         getCurrentCurrency: getCurrentCurrency, // Inject currency
-        businessId: businessId, // Set business id
-      )..add(CreateItemBootstrap()), // Bootstrap (load lists)
-      child: _ReopenItemView(oldItem: oldItem), // Child view
+        businessId: businessId, // Business scope
+      )..add(CreateItemBootstrap()), // Load types/currency
+      child: _ReopenItemView(oldItem: oldItem), // UI
     );
   }
 }
@@ -65,7 +69,7 @@ class _ReopenItemView extends StatefulWidget {
   const _ReopenItemView({required this.oldItem}); // Ctor
 
   @override
-  State<_ReopenItemView> createState() => _ReopenItemViewState(); // Create state
+  State<_ReopenItemView> createState() => _ReopenItemViewState(); // State
 }
 
 class _ReopenItemViewState extends State<_ReopenItemView> {
@@ -73,85 +77,84 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
   final _desc = TextEditingController(); // Description controller
   final _price = TextEditingController(); // Price controller
   final _max = TextEditingController(); // Capacity controller
-
   File? _pickedImage; // Picked image (if any)
 
   @override
   void initState() {
-    super.initState(); // Call parent
-    _name.text = widget.oldItem.name; // Prefill name
-    _desc.text = widget.oldItem.description; // Prefill description
-    _price.text = widget.oldItem.price.toStringAsFixed(0); // Prefill price
-    _max.text = widget.oldItem.maxParticipants.toString(); // Prefill capacity
+    super.initState(); // Parent init
 
+    // Prefill text fields from old item
+    _name.text = widget.oldItem.name; // Name
+    _desc.text = widget.oldItem.description; // Description
+    _price.text = widget.oldItem.price.toStringAsFixed(0); // Price
+    _max.text = widget.oldItem.maxParticipants.toString(); // Capacity
+
+    // After first build, sync bloc fields
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Dispatch after build
-      final bloc = context.read<CreateItemBloc>(); // Read bloc
+      final bloc = context.read<CreateItemBloc>(); // Bloc
       bloc.add(CreateItemNameChanged(widget.oldItem.name)); // Set name
       bloc.add(
         CreateItemDescriptionChanged(widget.oldItem.description),
       ); // Set desc
       bloc.add(CreateItemPriceChanged(widget.oldItem.price)); // Set price
-      bloc.add(
-        CreateItemMaxChanged(widget.oldItem.maxParticipants),
-      ); // Set capacity
+      bloc.add(CreateItemMaxChanged(widget.oldItem.maxParticipants)); // Set max
+
+      // Restore type if available
       if (widget.oldItem.itemTypeId != null) {
-        // If type exists
-        bloc.add(CreateItemTypeChanged(widget.oldItem.itemTypeId!)); // Set type
+        bloc.add(CreateItemTypeChanged(widget.oldItem.itemTypeId!)); // Type id
       }
+
+      // Restore location
       bloc.add(
         CreateItemLocationPicked(
-          // Set location
-          widget.oldItem.location,
-          widget.oldItem.latitude,
-          widget.oldItem.longitude,
+          widget.oldItem.location, // address
+          widget.oldItem.latitude, // lat
+          widget.oldItem.longitude, // lng
         ),
       );
-      if (widget.oldItem.imageUrl != null &&
-          widget.oldItem.imageUrl!.isNotEmpty) {
+
+      // Keep old image URL if exists
+      if ((widget.oldItem.imageUrl ?? '').isNotEmpty) {
         bloc.add(
           CreateItemImageUrlRetained(widget.oldItem.imageUrl!),
-        ); // Keep old URL
+        ); // keep url
       }
     });
   }
 
   @override
   void dispose() {
-    _name.dispose(); // Dispose name
-    _desc.dispose(); // Dispose desc
-    _price.dispose(); // Dispose price
-    _max.dispose(); // Dispose capacity
-    super.dispose(); // Parent dispose
+    _name.dispose(); // Name
+    _desc.dispose(); // Desc
+    _price.dispose(); // Price
+    _max.dispose(); // Max
+    super.dispose(); // Parent
   }
 
   Future<void> _pickImage(BuildContext context) async {
-    final picker = ImagePicker(); // Image picker
+    final picker = ImagePicker(); // Picker
+
+    // Choose source sheet
     final src = await showModalBottomSheet<ImageSource>(
-      // Choose source
       context: context, // Context
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Theme bg
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Themed bg
       shape: const RoundedRectangleBorder(
-        // Rounded top
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)), // Round
       ),
       builder: (_) => SafeArea(
-        // Safe area
         child: Column(
           mainAxisSize: MainAxisSize.min, // Wrap content
           children: [
             const SizedBox(height: 8), // Spacing
             Container(
-              // Grabber
               width: 40,
-              height: 4, // Size
+              height: 4, // Grabber size
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.outlineVariant, // Color
                 borderRadius: BorderRadius.circular(4), // Round
               ),
             ),
             ListTile(
-              // Gallery option
               leading: const Icon(Icons.photo_library), // Icon
               title: Text(
                 AppLocalizations.of(context)!.createActivityChooseLibrary,
@@ -160,7 +163,6 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                   Navigator.pop(context, ImageSource.gallery), // Pick gallery
             ),
             ListTile(
-              // Camera option
               leading: const Icon(Icons.photo_camera), // Icon
               title: Text(
                 AppLocalizations.of(context)!.createActivityTakePhoto,
@@ -174,98 +176,102 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
       ),
     );
 
-    if (src == null) return; // User cancelled
-    final x = await picker.pickImage(
-      source: src,
-      imageQuality: 85,
-    ); // Pick file
-    if (!mounted) return; // Guard after await
+    if (src == null) return; // Cancelled
 
-    final file = x != null ? File(x.path) : null; // Build File or null
-    setState(() => _pickedImage = file); // Update local preview
-    context.read<CreateItemBloc>().add(
-      CreateItemImagePicked(file),
-    ); // Update bloc
+    // Pick file
+    final x = await picker.pickImage(source: src, imageQuality: 85); // Quality
+    if (!mounted) return; // Guard
+
+    final file = x != null ? File(x.path) : null; // To File?
+    setState(() => _pickedImage = file); // Update preview
+    context.read<CreateItemBloc>().add(CreateItemImagePicked(file)); // Bloc
   }
 
+  // Format date/time or dash
   String _fmtDate(DateTime? dt) {
-    // Format date
-    if (dt == null) return '—'; // Dash if null
+    if (dt == null) return '—'; // Empty
     return DateFormat(
       'EEE, MMM d, yyyy • HH:mm',
-    ).format(dt.toLocal()); // Pretty text
+    ).format(dt.toLocal()); // Pretty
   }
 
+  // Make absolute URL (for old relative image paths)
   String _displayUrl(String? url) {
-    // Make absolute URL to show
-    if (url == null || url.isEmpty) return ''; // Empty string if none
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      // Already absolute
-      return url; // Return as is
-    }
+    if (url == null || url.isEmpty) return ''; // None
+    if (url.startsWith('http://') || url.startsWith('https://'))
+      return url; // Already absolute
     final base = g.serverRootNoApi(); // http://host:port
-    final sep = url.startsWith('/') ? '' : '/'; // Ensure single slash
-    return '$base$sep$url'; // Join base + relative
+    final sep = url.startsWith('/') ? '' : '/'; // Single slash
+    return '$base$sep$url'; // Join
   }
 
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!; // i18n
     final cs = Theme.of(context).colorScheme; // Colors
-    final tt = Theme.of(context).textTheme; // Text styles
+    final tt = Theme.of(context).textTheme; // Typography
 
+    // Listen to success/error and build UI
     return BlocConsumer<CreateItemBloc, CreateItemState>(
       listenWhen: (p, c) =>
-          p.error != c.error ||
-          p.success != c.success, // Only when messages change
+          p.error != c.error || p.success != c.success, // Only message changes
       listener: (context, state) {
-        if (state.error != null && state.error!.isNotEmpty) {
-          // If error
-          ScaffoldMessenger.of(
+        // ❌ Error -> Top Toast (red)
+        if ((state.error ?? '').isNotEmpty) {
+          showTopToast(
             context,
-          ).showSnackBar(SnackBar(content: Text(state.error!))); // Show error
-        } else if (state.success != null && state.success!.isNotEmpty) {
-          // If success
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.success!)),
-          ); // Show success
-          Navigator.pop(context, true); // Close screen with success flag
+            state.error!, // Message
+            type: ToastType.error, // Error style
+            haptics: true, // Stronger feedback
+          );
+        }
+        // ✅ Success -> Top Toast (green) then pop
+        else if ((state.success ?? '').isNotEmpty) {
+          showTopToast(
+            context,
+            state.success!, // Message
+            type: ToastType.success, // Success style
+            haptics: true, // Feedback
+          );
+          Navigator.pop(context, true); // Close with success flag
         }
       },
       builder: (context, state) {
-        final bloc = context.read<CreateItemBloc>(); // Bloc ref
-        final hasDateConflict = // Date validation
+        final bloc = context.read<CreateItemBloc>(); // Bloc shortcut
+
+        // Start/End must be valid
+        final hasDateConflict =
             state.start != null &&
             state.end != null &&
-            !state.end!.isAfter(state.start!);
+            !state.end!.isAfter(state.start!); // end <= start
 
+        // Screen
         return Scaffold(
           appBar: AppBar(), // Simple AppBar
           body: SafeArea(
             child: AbsorbPointer(
-              absorbing: state.loading, // Disable UI while loading
+              absorbing: state.loading, // Lock UI while loading
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16), // Page padding
+                padding: const EdgeInsets.all(16), // Screen padding
                 child: Column(
                   children: [
+                    // Name
                     AppTextField(
-                      // Name field
-                      controller: _name, // Controller
+                      controller: _name, // Bind
                       label: loc.createActivityActivityName, // Label
-                      filled: true, // Filled style
-                      margin: const EdgeInsets.only(bottom: 12), // Spacing
+                      filled: true, // Filled bg
+                      margin: const EdgeInsets.only(bottom: 12), // Gap
                       onChanged: (v) =>
-                          bloc.add(CreateItemNameChanged(v)), // Update bloc
+                          bloc.add(CreateItemNameChanged(v)), // Event
                     ),
 
+                    // Type dropdown
                     InputDecorator(
-                      // Type dropdown container
                       decoration: InputDecoration(
                         labelText: loc.createActivitySelectType, // Label
                         filled: true, // Filled
                         fillColor: cs.surfaceContainerHighest, // Bg
                         border: OutlineInputBorder(
-                          // Border
                           borderRadius: BorderRadius.circular(14), // Round
                           borderSide: BorderSide(
                             color: cs.outlineVariant,
@@ -273,14 +279,12 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                         ),
                       ),
                       child: DropdownButtonHideUnderline(
-                        // Hide underline
                         child: DropdownButton<int>(
-                          // Dropdown
                           isExpanded: true, // Full width
-                          value: state.itemTypeId, // Current value
+                          value: state.itemTypeId, // Selected type
                           hint: Text(loc.createActivitySelectType), // Hint
                           items: state
-                              .types // Build options
+                              .types // Options
                               .map(
                                 (t) => DropdownMenuItem<int>(
                                   value: t.id, // Value
@@ -290,65 +294,56 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                               .toList(),
                           onChanged: (v) {
                             if (v != null)
-                              bloc.add(CreateItemTypeChanged(v)); // Update
+                              bloc.add(CreateItemTypeChanged(v)); // Event
                           },
                         ),
                       ),
                     ),
 
+                    // Description
                     AppTextField(
-                      // Description field
-                      controller: _desc, // Controller
+                      controller: _desc, // Bind
                       label: loc.createActivityDescription, // Label
                       filled: true, // Filled
-                      maxLines: 5, // Multi-line
-                      margin: const EdgeInsets.only(
-                        top: 12,
-                        bottom: 12,
-                      ), // Spacing
-                      onChanged: (v) => bloc.add(
-                        CreateItemDescriptionChanged(v),
-                      ), // Update bloc
+                      maxLines: 5, // Multiline
+                      margin: const EdgeInsets.only(top: 12, bottom: 12), // Gap
+                      onChanged: (v) =>
+                          bloc.add(CreateItemDescriptionChanged(v)), // Event
                     ),
 
+                    // Map picker (prefilled from old item)
                     MapLocationPicker(
-                      // Map picker
-                      hintText: loc.createActivityLocation, // Label/Hint
-                      initialAddress:
-                          widget.oldItem.location, // Prefill address
+                      hintText: loc.createActivityLocation, // Hint
+                      initialAddress: widget.oldItem.location, // Address
                       initialLatLng: LatLng(
-                        // Prefill position
                         widget.oldItem.latitude,
                         widget.oldItem.longitude,
-                      ),
-                      onPicked:
-                          (addr, lat, lng) => // Callback
-                          bloc.add(
-                            CreateItemLocationPicked(addr, lat, lng),
-                          ),
+                      ), // Coords
+                      onPicked: (addr, lat, lng) => bloc.add(
+                        CreateItemLocationPicked(addr, lat, lng),
+                      ), // Event
                     ),
 
-                    const SizedBox(height: 12), // Spacing
-
+                    const SizedBox(height: 12), // Space
+                    // Max participants
                     AppTextField(
-                      // Capacity field
-                      controller: _max, // Controller
+                      controller: _max, // Bind
                       label: loc.createActivityMaxParticipants, // Label
-                      keyboardType: TextInputType.number, // Number keyboard
+                      keyboardType: TextInputType.number, // Numbers
                       filled: true, // Filled
-                      margin: const EdgeInsets.only(bottom: 12), // Spacing
+                      margin: const EdgeInsets.only(bottom: 12), // Gap
                       onChanged: (v) => bloc.add(
                         CreateItemMaxChanged(int.tryParse(v)),
-                      ), // Parse int
+                      ), // Parse + Event
                     ),
 
+                    // Price + currency
                     Row(
-                      // Price + currency row
                       children: [
+                        // Price
                         Expanded(
                           child: AppTextField(
-                            // Price field
-                            controller: _price, // Controller
+                            controller: _price, // Bind
                             label: loc.createActivityPrice, // Label
                             hint: '0', // Hint
                             filled: true, // Filled
@@ -357,17 +352,17 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                             ), // Decimal
                             onChanged: (v) => bloc.add(
                               CreateItemPriceChanged(double.tryParse(v)),
-                            ), // Parse double
+                            ), // Parse + Event
                           ),
                         ),
-                        const SizedBox(width: 10), // Spacing
+                        const SizedBox(width: 10), // Space
+                        // Currency badge
                         Container(
-                          // Currency badge
                           height: 48, // Height
                           padding: const EdgeInsets.symmetric(
                             horizontal: 14,
                           ), // Pad
-                          alignment: Alignment.center, // Center text
+                          alignment: Alignment.center, // Center
                           decoration: BoxDecoration(
                             color: cs.secondaryContainer, // Bg
                             border: Border.all(
@@ -376,84 +371,80 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                             borderRadius: BorderRadius.circular(14), // Round
                           ),
                           child: Text(
-                            state.currency?.code ?? '---', // Show code
+                            state.currency?.code ?? '---', // Code
                             style: tt.titleMedium, // Style
                           ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 12), // Spacing
-
+                    const SizedBox(height: 12), // Space
+                    // Start date/time
                     _DateField(
-                      // Start datetime
                       label: loc.createActivityStartDate, // Label
                       value: state.start, // Value
                       fmt: _fmtDate, // Formatter
                       onPick: (dt) {
-                        // On pick
                         bloc.add(CreateItemStartChanged(dt)); // Set start
                         final end = bloc.state.end; // Current end
                         if (end == null || !end.isAfter(dt)) {
-                          // Ensure end after start
+                          // Auto fix end = start + 1h
                           bloc.add(
                             CreateItemEndChanged(
                               dt.add(const Duration(hours: 1)),
                             ),
-                          ); // Auto +1h
+                          );
                         }
                       },
                       onClear: () =>
-                          bloc.add(CreateItemStartChanged(null)), // Clear start
+                          bloc.add(CreateItemStartChanged(null)), // Clear
                     ),
 
-                    const SizedBox(height: 10), // Spacing
-
+                    const SizedBox(height: 10), // Space
+                    // End date/time
                     _DateField(
-                      // End datetime
                       label: loc.createActivityEndDate, // Label
                       value: state.end, // Value
                       fmt: _fmtDate, // Formatter
                       onPick: (dt) {
-                        // On pick
-                        final start = bloc.state.start; // Current start
+                        final start = bloc.state.start; // Start
                         if (start != null && !dt.isAfter(start)) {
-                          // Validate
+                          // If invalid, fix and inform
                           final fixed = start.add(
                             const Duration(hours: 1),
-                          ); // Fix
-                          bloc.add(CreateItemEndChanged(fixed)); // Set fixed
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            // Warn
-                            SnackBar(
-                              content: Text(loc.createActivityErrorRequired),
-                            ),
+                          ); // +1h
+                          bloc.add(CreateItemEndChanged(fixed)); // Apply
+                          // ℹ️ Info top toast (instead of SnackBar)
+                          showTopToast(
+                            context,
+                            'End must be after start. Adjusted by +1h.', // Message
+                            type: ToastType.info, // Neutral style
+                            haptics: true, // Light haptic
                           );
                         } else {
-                          bloc.add(CreateItemEndChanged(dt)); // Set end
+                          bloc.add(CreateItemEndChanged(dt)); // Accept end
                         }
                       },
                       onClear: () =>
-                          bloc.add(CreateItemEndChanged(null)), // Clear end
+                          bloc.add(CreateItemEndChanged(null)), // Clear
                     ),
 
+                    // Inline error hint if conflict still visible
                     if (hasDateConflict) ...[
-                      // Show date error
-                      const SizedBox(height: 8), // Spacing
+                      const SizedBox(height: 8), // Space
                       Align(
-                        alignment: Alignment.centerLeft, // Left align
+                        alignment: Alignment.centerLeft, // Left aligned
                         child: Text(
-                          loc.createActivityErrorRequired, // Error text
-                          style: TextStyle(color: cs.error), // Error color
+                          'End must be after Start.', // Inline hint
+                          style: TextStyle(color: cs.error), // Red
                         ),
                       ),
                     ],
 
-                    const SizedBox(height: 12), // Spacing
-
+                    const SizedBox(height: 12), // Space
+                    // Image picker / preview
                     GestureDetector(
-                      // Image picker tap
-                      onTap: () => _pickImage(context), // Pick image
+                      onTap: () => _pickImage(context), // Open picker
                       child: Container(
                         height: 160, // Preview height
                         width: double.infinity, // Full width
@@ -464,29 +455,21 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                             color: cs.outlineVariant,
                           ), // Border
                         ),
-                        clipBehavior: Clip.antiAlias, // Clip radius
-                        child:
-                            _pickedImage !=
-                                null // If picked new file
-                            ? Image.file(
-                                _pickedImage!,
-                                fit: BoxFit.cover,
-                              ) // Show file
-                            : (widget.oldItem.imageUrl != null &&
-                                      widget
-                                          .oldItem
-                                          .imageUrl!
-                                          .isNotEmpty // Else old URL
+                        clipBehavior: Clip.antiAlias, // Clip corners
+                        child: _pickedImage != null
+                            // Show picked file
+                            ? Image.file(_pickedImage!, fit: BoxFit.cover)
+                            // Else show old network image (if any) or placeholder
+                            : ((widget.oldItem.imageUrl ?? '').isNotEmpty
                                   ? Image.network(
                                       _displayUrl(
                                         widget.oldItem.imageUrl!,
-                                      ), // Make absolute for display
+                                      ), // Absolute URL
                                       fit: BoxFit.cover, // Cover
                                     )
                                   : Center(
                                       child: Text(
-                                        // Placeholder
-                                        loc.createActivityTapToPick, // Tap to pick
+                                        loc.createActivityTapToPick, // Placeholder text
                                         style: tt.bodyMedium?.copyWith(
                                           color: cs.onSurfaceVariant,
                                         ), // Style
@@ -495,13 +478,12 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                       ),
                     ),
 
-                    const SizedBox(height: 16), // Spacing
-
+                    const SizedBox(height: 16), // Space
+                    // Submit (Create new item)
                     AppButton(
-                      // Submit button
-                      label: loc.createActivitySubmit, // Label
+                      label: loc.createActivitySubmit, // Text
                       expand: true, // Full width
-                      isBusy: state.loading, // Busy spinner
+                      isBusy: state.loading, // Spinner
                       onPressed:
                           state.ready && !hasDateConflict && !state.loading
                           ? () => context
@@ -510,14 +492,14 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                           : null, // Disabled
                     ),
 
-                    if (state.error != null &&
-                        state.error!.isNotEmpty) // If error text
+                    // Optional inline error text (kept)
+                    if ((state.error ?? '').isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 12), // Spacing
+                        padding: const EdgeInsets.only(top: 12), // Space
                         child: Text(
-                          state.error!, // Error message
-                          style: TextStyle(color: cs.error), // Color
-                        ),
+                          state.error!,
+                          style: TextStyle(color: cs.error),
+                        ), // Red text
                       ),
                   ],
                 ),
@@ -570,41 +552,41 @@ class _DateField extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start, // Left align
               children: [
                 Text(
-                  label,
-                  style: tt.labelLarge?.copyWith(color: cs.onSurfaceVariant),
-                ), // Label
+                  label, // Label
+                  style: tt.labelLarge?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ), // Style
+                ),
                 const SizedBox(height: 2), // Spacing
-                Text(fmt(value), style: tt.bodyMedium), // Formatted value
+                Text(fmt(value), style: tt.bodyMedium), // Value
               ],
             ),
           ),
-          if (value != null &&
-              onClear != null) // Show clear only when value exists
+          if (value != null && onClear != null) // Show clear if needed
             IconButton(
               tooltip: 'Clear', // Hint
               icon: const Icon(Icons.clear), // Clear icon
-              onPressed: onClear, // Clear action
+              onPressed: onClear, // Action
             ),
           TextButton.icon(
-            // Pick button
             onPressed: () async {
-              // Async picker
               final now = DateTime.now(); // Now
-              final init = value ?? now; // Initial value
+              final init = value ?? now; // Init value
+              // Date picker (future dates for reopen)
               final date = await showDatePicker(
-                // Show date picker
                 context: context, // Context
                 firstDate: now, // Not in the past
                 lastDate: DateTime(now.year + 2), // +2 years
-                initialDate: init.isBefore(now) ? now : init, // Clamp initial
+                initialDate: init.isBefore(now) ? now : init, // Clamp
               );
               if (date == null) return; // Cancelled
+              // Time picker
               final time = await showTimePicker(
-                // Show time picker
                 context: context, // Context
-                initialTime: TimeOfDay.fromDateTime(init), // Initial time
+                initialTime: TimeOfDay.fromDateTime(init), // Init time
               );
               if (time == null) return; // Cancelled
+              // Return combined DateTime
               onPick(
                 DateTime(
                   date.year,
@@ -613,7 +595,7 @@ class _DateField extends StatelessWidget {
                   time.hour,
                   time.minute,
                 ),
-              ); // Emit result
+              ); // Emit
             },
             icon: const Icon(Icons.edit_calendar), // Icon
             label: Text(

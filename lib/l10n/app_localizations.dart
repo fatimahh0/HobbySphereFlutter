@@ -1117,6 +1117,18 @@ abstract class AppLocalizations {
   /// **'Create Activity'**
   String get createActivityTitle;
 
+  /// No description provided for @reopenedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'reopen successfully'**
+  String get reopenedSuccessfully;
+
+  /// No description provided for @updatedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'updated successfully'**
+  String get updatedSuccessfully;
+
   /// No description provided for @createPostCancel.
   ///
   /// In en, this message translates to:

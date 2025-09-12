@@ -175,6 +175,8 @@
   "createActivityTakePhoto": "Take photo",
   "createActivityTapToPick": "Tap to pick",
   "createActivityTitle": "Create Activity",
+  "reopenedSuccessfully": "reopen successfully",
+  "updatedSuccessfully": "updated successfully",
   "createPostCancel": "Cancel",
   "createPostClose": "Close",
   "createPostEmojiTitle": "Choose your feeling",

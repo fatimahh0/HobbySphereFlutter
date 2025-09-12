@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
@@ -79,6 +80,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
   }
 
   Future<void> _pickImage(BuildContext context) async {
+    final t = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final picker = ImagePicker();
 
@@ -103,12 +105,12 @@ class _CreateItemViewState extends State<_CreateItemView> {
             ),
             ListTile(
               leading: const Icon(Icons.photo_library),
-              title: const Text('Pick from gallery'),
+              title: Text(t.createActivityChooseLibrary), // l10n
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             ListTile(
               leading: const Icon(Icons.photo_camera),
-              title: const Text('Take a photo'),
+              title: Text(t.createActivityTakePhoto), // l10n
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             const SizedBox(height: 6),
@@ -125,6 +127,10 @@ class _CreateItemViewState extends State<_CreateItemView> {
     final file = x != null ? File(x.path) : null;
     setState(() => _pickedImage = file);
     context.read<CreateItemBloc>().add(CreateItemImagePicked(file));
+
+    if (file != null) {
+      showTopToast(context, t.createActivityPickImage, type: ToastType.success);
+    }
   }
 
   String _fmtDate(DateTime? dt) {
@@ -135,22 +141,33 @@ class _CreateItemViewState extends State<_CreateItemView> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
+    final t = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
     return BlocConsumer<CreateItemBloc, CreateItemState>(
       listenWhen: (p, c) => p.error != c.error || p.success != c.success,
       listener: (context, state) {
-        if (state.error != null && state.error!.isNotEmpty) {
-          ScaffoldMessenger.of(
+        if (state.error?.isNotEmpty == true) {
+          showTopToast(
             context,
-          ).showSnackBar(SnackBar(content: Text(state.error!)));
-        } else if (state.success != null && state.success!.isNotEmpty) {
-          ScaffoldMessenger.of(
+            state.error ?? t.createActivityFail,
+            type: ToastType.error,
+            haptics: true,
+          );
+        } else if (state.success?.isNotEmpty == true) {
+          showTopToast(
             context,
-          ).showSnackBar(SnackBar(content: Text(state.success!)));
-          Navigator.pop(context, true);
+            t.createActivitySuccess, // l10n success
+            type: ToastType.success,
+            haptics: true,
+          );
+          // Let the toast animate in, then pop back
+          if (mounted) {
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (mounted) Navigator.pop(context, true);
+            });
+          }
         }
       },
       builder: (context, state) {
@@ -161,7 +178,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
             !state.end!.isAfter(state.start!);
 
         return Scaffold(
-          appBar: AppBar(),
+          appBar: AppBar(title: Text(t.createActivityTitle)), // l10n
           body: SafeArea(
             child: AbsorbPointer(
               absorbing: state.loading,
@@ -172,8 +189,8 @@ class _CreateItemViewState extends State<_CreateItemView> {
                     // Title
                     AppTextField(
                       controller: _name,
-                      label: loc.fieldTitle,
-                      hint: loc.hintTitle,
+                      label: t.createActivityActivityName, // l10n
+                      hint: t.createActivityActivityName, // l10n
                       filled: true,
                       margin: const EdgeInsets.only(bottom: 12),
                       onChanged: (v) => bloc.add(CreateItemNameChanged(v)),
@@ -182,7 +199,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
                     // Activity Type dropdown
                     InputDecorator(
                       decoration: InputDecoration(
-                        labelText: loc.selectActivityType,
+                        labelText: t.createActivityActivityType, // l10n
                         filled: true,
                         fillColor: cs.surfaceContainerHighest,
                         border: OutlineInputBorder(
@@ -202,17 +219,13 @@ class _CreateItemViewState extends State<_CreateItemView> {
                         child: DropdownButton<int>(
                           isExpanded: true,
                           value: state.itemTypeId,
-                          hint: Text(
-                            state.types.isEmpty
-                                ? loc.generalLoading
-                                : loc.selectActivityType,
-                          ),
+                          hint: Text(t.createActivitySelectType), // l10n
                           items: state.types
                               .map(
-                                (t) => DropdownMenuItem<int>(
-                                  value: t.id,
+                                (tpe) => DropdownMenuItem<int>(
+                                  value: tpe.id,
                                   child: Text(
-                                    (t.name).isNotEmpty ? t.name : '—',
+                                    (tpe.name).isNotEmpty ? tpe.name : '—',
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -230,8 +243,8 @@ class _CreateItemViewState extends State<_CreateItemView> {
                     // Description
                     AppTextField(
                       controller: _desc,
-                      label: loc.fieldDescription,
-                      hint: loc.hintDescription,
+                      label: t.createActivityDescription, // l10n
+                      hint: t.createActivityDescription, // l10n
                       filled: true,
                       maxLines: 5,
                       margin: const EdgeInsets.only(top: 12, bottom: 12),
@@ -241,21 +254,20 @@ class _CreateItemViewState extends State<_CreateItemView> {
 
                     // Map picker
                     MapLocationPicker(
-                      hintText: loc.searchLocation,
+                      hintText: t.createActivitySearchPlaceholder, // l10n
                       initialAddress: state.address.isEmpty
                           ? null
                           : state.address,
                       onPicked: (addr, lat, lng) =>
                           bloc.add(CreateItemLocationPicked(addr, lat, lng)),
-                      // NOTE: if you kept onLocateMe inside the widget, it already updates on pick
                     ),
                     const SizedBox(height: 12),
 
                     // Max participants
                     AppTextField(
                       controller: _max,
-                      label: loc.fieldMaxParticipants,
-                      hint: loc.hintMaxParticipants,
+                      label: t.createActivityMaxParticipants, // l10n
+                      hint: t.createActivityMaxParticipants, // l10n
                       keyboardType: TextInputType.number,
                       filled: true,
                       margin: const EdgeInsets.only(bottom: 12),
@@ -269,7 +281,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
                         Expanded(
                           child: AppTextField(
                             controller: _price,
-                            label: loc.fieldPrice,
+                            label: t.createActivityPrice, // l10n
                             hint: '0',
                             filled: true,
                             keyboardType: const TextInputType.numberWithOptions(
@@ -302,7 +314,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
 
                     // Start / End times
                     _DateField(
-                      label: loc.fieldStartDateTime,
+                      label: t.createActivityStartDate, // l10n
                       value: state.start,
                       fmt: _fmtDate,
                       onPick: (dt) {
@@ -320,7 +332,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
                     ),
                     const SizedBox(height: 10),
                     _DateField(
-                      label: loc.fieldEndDateTime,
+                      label: t.createActivityEndDate, // l10n
                       value: state.end,
                       fmt: _fmtDate,
                       onPick: (dt) {
@@ -331,12 +343,11 @@ class _CreateItemViewState extends State<_CreateItemView> {
                         if (start != null && !dt.isAfter(start)) {
                           final fixed = start.add(const Duration(hours: 1));
                           bloc.add(CreateItemEndChanged(fixed));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'End must be after start. Adjusted by +1h.',
-                              ),
-                            ),
+                          // Consider adding a key: createActivityEndAfterStart
+                          showTopToast(
+                            context,
+                            'End must be after start. Adjusted by +1h.',
+                            type: ToastType.info,
                           );
                         } else {
                           bloc.add(CreateItemEndChanged(dt));
@@ -349,6 +360,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
+                          // Consider adding a key: createActivityEndAfterStart
                           'End must be after Start.',
                           style: TextStyle(color: cs.error),
                         ),
@@ -372,7 +384,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
                         child: _pickedImage == null
                             ? Center(
                                 child: Text(
-                                  'Tap to add image',
+                                  t.createActivityTapToPick, // l10n
                                   style: tt.bodyMedium?.copyWith(
                                     color: cs.onSurfaceVariant,
                                   ),
@@ -386,7 +398,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
 
                     // Submit
                     AppButton(
-                      label: loc.submit,
+                      label: t.createActivitySubmit, // l10n
                       expand: true,
                       isBusy: state.loading,
                       onPressed:
@@ -429,6 +441,7 @@ class _DateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
@@ -462,7 +475,7 @@ class _DateField extends StatelessWidget {
           ),
           if (value != null && onClear != null)
             IconButton(
-              tooltip: 'Clear',
+              // tooltip optional; no dedicated l10n provided
               icon: const Icon(Icons.clear),
               color: cs.onSurfaceVariant,
               onPressed: onClear,
@@ -496,7 +509,7 @@ class _DateField extends StatelessWidget {
               );
             },
             icon: const Icon(Icons.edit_calendar),
-            label: const Text('Pick'),
+            label: Text(t.createActivityChange), // l10n
           ),
         ],
       ),

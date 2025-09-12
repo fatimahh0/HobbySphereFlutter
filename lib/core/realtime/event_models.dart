@@ -1,5 +1,4 @@
-// lib/core/realtime/event_models.dart
-// Flutter 3.35.x
+// ===== Flutter 3.35.x =====
 // One event model for all realtime updates across the app.
 
 /// domain of the event (which area changed)
@@ -7,9 +6,10 @@ enum Domain {
   activity, // activities CRUD / reopen / status
   booking, // bookings create / status
   profile, // business profile updates
-  notification, // ✅ business notifications
-  user, // ✅ business users
-  review, // ✅ business reviews
+  notification, // business notifications
+  user, // business users
+  review, // business reviews
+  analytics, // ✅ analytics snapshot/pulse from backend (NEW)
 }
 
 /// type of change
@@ -25,19 +25,21 @@ enum ActionType {
 Domain _domainFrom(String s) {
   switch (s.toLowerCase()) {
     case 'activity':
-      return Domain.activity; // "activity"  → enum
+      return Domain.activity; // "activity"
     case 'booking':
-      return Domain.booking; // "booking"   → enum
+      return Domain.booking; // "booking"
     case 'profile':
-      return Domain.profile; // "profile"   → enum
+      return Domain.profile; // "profile"
     case 'notification':
-      return Domain.notification; // "notification" → enum
+      return Domain.notification; // "notification"
     case 'user':
-      return Domain.user; // "user"      → enum
+      return Domain.user; // "user"
     case 'review':
-      return Domain.review; // "review"    → enum
+      return Domain.review; // "review"
+    case 'analytics':
+      return Domain.analytics; // ✅ "analytics" (NEW)
   }
-  return Domain.activity; // default fallback if unknown
+  return Domain.activity; // fallback
 }
 
 /// small helper to parse action from string
@@ -54,7 +56,7 @@ ActionType _actionFrom(String s) {
     case 'statuschanged':
       return ActionType.statusChanged; // "statusChanged"
   }
-  return ActionType.updated; // default fallback if unknown
+  return ActionType.updated; // fallback
 }
 
 /// the realtime event object we use across the app
@@ -66,7 +68,7 @@ class RealtimeEvent {
   final int resourceId; // which entity id changed
   final int? version; // optional: ordering
   final DateTime? ts; // optional: server timestamp
-  final Map<String, dynamic>? data; // optional: extra payload (e.g., itemId)
+  final Map<String, dynamic>? data; // optional: extra payload
 
   RealtimeEvent({
     required this.eventId, // set id
@@ -85,16 +87,12 @@ class RealtimeEvent {
       eventId: (m['eventId'] ?? '').toString(), // read id
       domain: _domainFrom((m['domain'] ?? '').toString()), // read domain
       action: _actionFrom((m['action'] ?? '').toString()), // read action
-      businessId: (m['businessId'] ?? 0) as int, // read biz id
-      resourceId: (m['resourceId'] ?? 0) as int, // read entity id
-      version: (m['version'] is int)
-          ? m['version'] as int
-          : null, // read version
-      ts: (m['ts'] is String)
-          ? DateTime.tryParse(m['ts'])
-          : null, // read timestamp
+      businessId: (m['businessId'] ?? 0) as int, // biz id
+      resourceId: (m['resourceId'] ?? 0) as int, // entity id
+      version: (m['version'] is int) ? m['version'] as int : null, // version
+      ts: (m['ts'] is String) ? DateTime.tryParse(m['ts']) : null, // timestamp
       data: (m['data'] is Map<String, dynamic>)
-          ? (m['data'] as Map<String, dynamic>) // read payload
+          ? (m['data'] as Map<String, dynamic>) // payload
           : null,
     );
   }

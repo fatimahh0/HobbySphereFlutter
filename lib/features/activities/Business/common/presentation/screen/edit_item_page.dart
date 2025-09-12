@@ -1,36 +1,45 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/common/data/services/edit_activity_service.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
+// ===== Flutter 3.35.x =====
+// EditItemPage — now using the shared Top Toast widget for success/error/info messages.
 
-import 'package:hobby_sphere/features/activities/Business/createActivity/data/services/create_item_service.dart';
+import 'dart:io'; // File handling for images
+import 'package:flutter/material.dart'; // Flutter UI
+import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
+import 'package:hobby_sphere/features/activities/Business/common/data/services/edit_activity_service.dart'; // Edit service
+import 'package:image_picker/image_picker.dart'; // Image picker
+import 'package:intl/intl.dart'; // Date formatting
+import 'package:google_maps_flutter/google_maps_flutter.dart'
+    show LatLng; // LatLng type
 
-import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
-import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
+import 'package:hobby_sphere/features/activities/Business/createActivity/data/services/create_item_service.dart'; // Not used directly, but kept if other parts rely on it
 
-import 'package:hobby_sphere/l10n/app_localizations.dart';
-import 'package:hobby_sphere/shared/widgets/app_button.dart';
-import 'package:hobby_sphere/shared/widgets/app_text_field.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart'; // Currency use case
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart'; // Types use case
+import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart'; // Get item by id
 
-import '../../data/repositories/edit_item_repository_impl.dart';
-import '../../domain/usecases/edit_item.dart';
-import '../../presentation/bloc/edit_item_bloc.dart';
-import '../../presentation/bloc/edit_item_event.dart';
-import '../../presentation/bloc/edit_item_state.dart';
+import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
+import 'package:hobby_sphere/shared/widgets/app_button.dart'; // Button
+import 'package:hobby_sphere/shared/widgets/app_text_field.dart'; // Inputs
 
-import 'package:hobby_sphere/core/network/globals.dart' as g;
-import '../../../createActivity/presentation/widgets/map_location_picker.dart';
+// ✅ Import the Top Toast (your widget)
+import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // showTopToast / ToastType
 
+import '../../data/repositories/edit_item_repository_impl.dart'; // Repo impl
+import '../../domain/usecases/edit_item.dart'; // Use case
+import '../../presentation/bloc/edit_item_bloc.dart'; // Bloc
+import '../../presentation/bloc/edit_item_event.dart'; // Events
+import '../../presentation/bloc/edit_item_state.dart'; // State
+
+import 'package:hobby_sphere/core/network/globals.dart'
+    as g; // Build absolute URL for images
+import '../../../createActivity/presentation/widgets/map_location_picker.dart'; // Map picker
+
+// Screen shell: receives ids + injected use cases
 class EditItemPage extends StatelessWidget {
-  final int itemId;
-  final int businessId;
-  final GetItemTypes getItemTypes;
-  final GetCurrentCurrency getCurrentCurrency;
-  final GetBusinessActivityById getItemById;
+  final int itemId; // current item id
+  final int businessId; // business id for auth/ownership
+  final GetItemTypes getItemTypes; // use case to load types
+  final GetCurrentCurrency getCurrentCurrency; // use case to load currency
+  final GetBusinessActivityById getItemById; // use case to load item
 
   const EditItemPage({
     super.key,
@@ -43,9 +52,13 @@ class EditItemPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final repo = EditItemRepositoryImpl(UpdatedItemService());
-    final updateUsecase = UpdateItem(repo);
+    // create repo + use case
+    final repo = EditItemRepositoryImpl(
+      UpdatedItemService(),
+    ); // repository impl
+    final updateUsecase = UpdateItem(repo); // update item use case
 
+    // Provide the bloc + bootstrap with itemId
     return BlocProvider(
       create: (_) => EditItemBloc(
         updateItem: updateUsecase,
@@ -53,12 +66,13 @@ class EditItemPage extends StatelessWidget {
         getCurrentCurrency: getCurrentCurrency,
         getItemById: getItemById,
         businessId: businessId,
-      )..add(EditItemBootstrap(itemId)),
-      child: const _EditItemView(),
+      )..add(EditItemBootstrap(itemId)), // start loading
+      child: const _EditItemView(), // body
     );
   }
 }
 
+// Internal stateful view so we can manage controllers
 class _EditItemView extends StatefulWidget {
   const _EditItemView();
 
@@ -67,18 +81,22 @@ class _EditItemView extends StatefulWidget {
 }
 
 class _EditItemViewState extends State<_EditItemView> {
+  // Controllers for fields
   final _name = TextEditingController();
   final _desc = TextEditingController();
   final _price = TextEditingController();
   final _max = TextEditingController();
-  File? _pickedImage;
-  bool _initControllers = false;
 
+  File? _pickedImage; // picked image file
+  bool _initControllers = false; // one-time prefill flag
+
+  // format a DateTime nicely or return dash
   String _fmtDate(DateTime? dt) {
     if (dt == null) return '—';
     return DateFormat('EEE, MMM d, yyyy • HH:mm').format(dt.toLocal());
   }
 
+  // make network image URL absolute using server root
   String _fullImageUrl(String? url) {
     if (url == null || url.isEmpty) return '';
     if (url.startsWith('http')) return url;
@@ -87,10 +105,12 @@ class _EditItemViewState extends State<_EditItemView> {
     return '$base/$url';
   }
 
+  // Pick image from gallery or camera
   Future<void> _pickImage(BuildContext context) async {
     final cs = Theme.of(context).colorScheme;
     final picker = ImagePicker();
 
+    // source chooser sheet
     final src = await showModalBottomSheet<ImageSource>(
       context: context,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -102,6 +122,7 @@ class _EditItemViewState extends State<_EditItemView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
+            // small grabber
             Container(
               width: 40,
               height: 4,
@@ -110,11 +131,13 @@ class _EditItemViewState extends State<_EditItemView> {
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
+            // gallery
             ListTile(
               leading: const Icon(Icons.photo_library),
               title: const Text('Pick from gallery'),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
+            // camera
             ListTile(
               leading: const Icon(Icons.photo_camera),
               title: const Text('Take a photo'),
@@ -126,18 +149,21 @@ class _EditItemViewState extends State<_EditItemView> {
       ),
     );
 
-    if (src == null) return;
+    if (src == null) return; // user canceled
 
+    // pick the image
     final x = await picker.pickImage(source: src, imageQuality: 85);
     if (!mounted) return;
 
+    // set file + notify bloc
     final file = x != null ? File(x.path) : null;
     setState(() => _pickedImage = file);
-    context.read<EditItemBloc>().add(EditItemImagePicked(file));
+    context.read<EditItemBloc>().add(EditItemImagePicked(file)); // update state
   }
 
   @override
   void dispose() {
+    // free controllers
     _name.dispose();
     _desc.dispose();
     _price.dispose();
@@ -147,28 +173,39 @@ class _EditItemViewState extends State<_EditItemView> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+    final loc = AppLocalizations.of(context)!; // i18n
+    final cs = Theme.of(context).colorScheme; // colors
+    final tt = Theme.of(context).textTheme; // texts
 
+    // Listen to success/error + build UI
     return BlocConsumer<EditItemBloc, EditItemState>(
+      // re-listen only when error/success changes or first time prefill
       listenWhen: (p, c) =>
           p.error != c.error ||
           p.success != c.success ||
           (!_initControllers && c.id != null),
       listener: (context, state) {
+        // ❌ error -> show Top Toast error
         if (state.error != null && state.error!.isNotEmpty) {
-          ScaffoldMessenger.of(
+          showTopToast(
             context,
-          ).showSnackBar(SnackBar(content: Text(state.error!)));
-        } else if (state.success != null && state.success!.isNotEmpty) {
-          ScaffoldMessenger.of(
+            state.error!, // message
+            type: ToastType.error, // red style
+            haptics: true, // vibration
+          );
+        }
+        // ✅ success -> show Top Toast success then pop
+        else if (state.success != null && state.success!.isNotEmpty) {
+          showTopToast(
             context,
-          ).showSnackBar(SnackBar(content: Text(state.success!)));
-          Navigator.pop(context, true);
+            state.success!, // message
+            type: ToastType.success, // primary style
+            haptics: true, // vibration
+          );
+          Navigator.pop(context, true); // return to previous with success=true
         }
 
-        // one-time prefill after bootstrap
+        // one-time controllers prefill after item loads
         if (!_initControllers && state.id != null) {
           _initControllers = true;
           _name.text = state.name;
@@ -180,43 +217,47 @@ class _EditItemViewState extends State<_EditItemView> {
         }
       },
       builder: (context, state) {
-        final bloc = context.read<EditItemBloc>();
+        final bloc = context.read<EditItemBloc>(); // shortcut
 
+        // check start/end conflict
         final hasDateConflict =
             state.start != null &&
             state.end != null &&
             !state.end!.isAfter(state.start!);
 
+        // ensure selected type id is valid
         final typeIds = state.types.map((t) => t.id).toSet();
         final selectedTypeId = typeIds.contains(state.itemTypeId)
             ? state.itemTypeId
             : null;
 
+        // Screen scaffold
         return Scaffold(
-          appBar: AppBar(), // use your l10n key
+          appBar: AppBar(), // keep default; set your title with l10n later
           body: SafeArea(
             child: AbsorbPointer(
-              absorbing: state.loading,
+              absorbing: state.loading, // disable inputs while loading
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16), // outer padding
                 child: Column(
                   children: [
                     // Title
                     AppTextField(
-                      controller: _name,
-                      label: loc.fieldTitle,
-                      hint: loc.hintTitle,
-                      filled: true,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      onChanged: (v) => bloc.add(EditItemNameChanged(v)),
+                      controller: _name, // bind controller
+                      label: loc.fieldTitle, // label from i18n
+                      hint: loc.hintTitle, // hint
+                      filled: true, // filled bg
+                      margin: const EdgeInsets.only(bottom: 12), // spacing
+                      onChanged: (v) =>
+                          bloc.add(EditItemNameChanged(v)), // event
                     ),
 
-                    // Activity Type dropdown
+                    // Type dropdown
                     InputDecorator(
                       decoration: InputDecoration(
-                        labelText: loc.selectActivityType,
-                        filled: true,
-                        fillColor: cs.surfaceContainerHighest,
+                        labelText: loc.selectActivityType, // label
+                        filled: true, // filled bg
+                        fillColor: cs.surfaceContainerHighest, // bg color
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide(color: cs.outlineVariant),
@@ -232,8 +273,8 @@ class _EditItemViewState extends State<_EditItemView> {
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<int>(
-                          isExpanded: true,
-                          value: selectedTypeId,
+                          isExpanded: true, // full width
+                          value: selectedTypeId, // selected id
                           hint: Text(
                             state.types.isEmpty
                                 ? loc.generalLoading
@@ -242,16 +283,17 @@ class _EditItemViewState extends State<_EditItemView> {
                           items: state.types
                               .map(
                                 (t) => DropdownMenuItem<int>(
-                                  value: t.id,
+                                  value: t.id, // option id
                                   child: Text(
-                                    (t.name).isNotEmpty ? t.name : '—',
+                                    (t.name).isNotEmpty ? t.name : '—', // label
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               )
                               .toList(),
                           onChanged: (v) {
-                            if (v != null) bloc.add(EditItemTypeChanged(v));
+                            if (v != null)
+                              bloc.add(EditItemTypeChanged(v)); // event
                           },
                         ),
                       ),
@@ -259,61 +301,67 @@ class _EditItemViewState extends State<_EditItemView> {
 
                     // Description
                     AppTextField(
-                      controller: _desc,
-                      label: loc.fieldDescription,
-                      hint: loc.hintDescription,
-                      filled: true,
-                      maxLines: 5,
-                      margin: const EdgeInsets.only(top: 12, bottom: 12),
-                      onChanged: (v) => bloc.add(EditItemDescriptionChanged(v)),
+                      controller: _desc, // bind controller
+                      label: loc.fieldDescription, // label
+                      hint: loc.hintDescription, // hint
+                      filled: true, // filled bg
+                      maxLines: 5, // multiline
+                      margin: const EdgeInsets.only(top: 12, bottom: 12), // gap
+                      onChanged: (v) =>
+                          bloc.add(EditItemDescriptionChanged(v)), // event
                     ),
 
-                    // Map picker (prefill with existing coords)
+                    // Map picker (prefilled from state)
                     MapLocationPicker(
-                      key: ValueKey("${state.lat}-${state.lng}"),
-                      hintText: loc.searchLocation,
+                      key: ValueKey(
+                        "${state.lat}-${state.lng}",
+                      ), // rebuild if coords change
+                      hintText: loc.searchLocation, // search hint
                       initialAddress: state.address.isEmpty
                           ? null
-                          : state.address,
+                          : state.address, // prefill address
                       initialLatLng: (state.lat != null && state.lng != null)
-                          ? LatLng(state.lat!, state.lng!)
+                          ? LatLng(state.lat!, state.lng!) // prefill coords
                           : null,
-                      onPicked: (addr, lat, lng) =>
-                          bloc.add(EditItemLocationPicked(addr, lat, lng)),
+                      onPicked: (addr, lat, lng) => bloc.add(
+                        EditItemLocationPicked(addr, lat, lng),
+                      ), // event
                     ),
 
-                    const SizedBox(height: 12),
-
+                    const SizedBox(height: 12), // space
                     // Max participants
                     AppTextField(
-                      controller: _max,
-                      label: loc.fieldMaxParticipants,
-                      hint: loc.hintMaxParticipants,
-                      keyboardType: TextInputType.number,
-                      filled: true,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      onChanged: (v) =>
-                          bloc.add(EditItemMaxChanged(int.tryParse(v))),
+                      controller: _max, // bind
+                      label: loc.fieldMaxParticipants, // label
+                      hint: loc.hintMaxParticipants, // hint
+                      keyboardType: TextInputType.number, // numeric
+                      filled: true, // bg
+                      margin: const EdgeInsets.only(bottom: 12), // gap
+                      onChanged: (v) => bloc.add(
+                        EditItemMaxChanged(int.tryParse(v)),
+                      ), // event
                     ),
 
-                    // Price + currency
+                    // Price + currency row
                     Row(
                       children: [
+                        // Price input
                         Expanded(
                           child: AppTextField(
-                            controller: _price,
-                            label: loc.fieldPrice,
-                            hint: '0',
-                            filled: true,
+                            controller: _price, // bind
+                            label: loc.fieldPrice, // label
+                            hint: '0', // hint
+                            filled: true, // bg
                             keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
+                              decimal: true, // allow decimals
                             ),
                             onChanged: (v) => bloc.add(
-                              EditItemPriceChanged(double.tryParse(v)),
+                              EditItemPriceChanged(double.tryParse(v)), // event
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 10), // gap
+                        // Currency badge
                         Container(
                           height: 48,
                           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -324,23 +372,24 @@ class _EditItemViewState extends State<_EditItemView> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Text(
-                            state.currency?.code ?? '---',
+                            state.currency?.code ?? '---', // show currency code
                             style: tt.titleMedium,
                           ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 12),
-
-                    // Start / End times
+                    const SizedBox(height: 12), // gap
+                    // Start date/time field
                     _DateField(
-                      label: loc.fieldStartDateTime,
-                      value: state.start,
-                      fmt: _fmtDate,
+                      label: loc.fieldStartDateTime, // label
+                      value: state.start, // current value
+                      fmt: _fmtDate, // formatter
                       onPick: (dt) {
+                        // set start
                         bloc.add(EditItemStartChanged(dt));
                         final end = bloc.state.end;
+                        // if end is null or before start -> push end +1h
                         if (end == null || !end.isAfter(dt)) {
                           bloc.add(
                             EditItemEndChanged(
@@ -349,48 +398,54 @@ class _EditItemViewState extends State<_EditItemView> {
                           );
                         }
                       },
-                      onClear: () => bloc.add(EditItemStartChanged(null)),
+                      onClear: () =>
+                          bloc.add(EditItemStartChanged(null)), // clear
                     ),
-                    const SizedBox(height: 10),
+
+                    const SizedBox(height: 10), // gap
+                    // End date/time field
                     _DateField(
-                      label: loc.fieldEndDateTime,
-                      value: state.end,
-                      fmt: _fmtDate,
-                      allowPast: true, // 👈 allow editing past end dates
+                      label: loc.fieldEndDateTime, // label
+                      value: state.end, // current end
+                      fmt: _fmtDate, // formatter
+                      allowPast: true, // allow past end to edit old items
                       onPick: (dt) {
                         final start = bloc.state.start;
                         if (start != null && !dt.isAfter(start)) {
+                          // if end <= start -> fix to start +1h
                           final fixed = start.add(const Duration(hours: 1));
-                          bloc.add(EditItemEndChanged(fixed));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'End must be after start. Adjusted by +1h.',
-                              ),
-                            ),
+                          bloc.add(EditItemEndChanged(fixed)); // set fixed end
+                          // ℹ️ show info toast instead of SnackBar
+                          showTopToast(
+                            context,
+                            'End must be after start. Adjusted by +1h.', // info text
+                            type: ToastType.info, // neutral style
+                            haptics: true, // small vibration
                           );
                         } else {
-                          bloc.add(EditItemEndChanged(dt));
+                          bloc.add(EditItemEndChanged(dt)); // accept end
                         }
                       },
-                      onClear: () => bloc.add(EditItemEndChanged(null)),
+                      onClear: () =>
+                          bloc.add(EditItemEndChanged(null)), // clear
                     ),
+
+                    // inline conflict warning text
                     if (hasDateConflict) ...[
                       const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'End must be after Start.',
+                          'End must be after Start.', // error text
                           style: TextStyle(color: cs.error),
                         ),
                       ),
                     ],
 
-                    const SizedBox(height: 12),
-
-                    // Image picker (shows existing or picked)
+                    const SizedBox(height: 12), // gap
+                    // Image picker (existing or picked)
                     GestureDetector(
-                      onTap: () => _pickImage(context),
+                      onTap: () => _pickImage(context), // open picker
                       child: Container(
                         height: 160,
                         width: double.infinity,
@@ -401,9 +456,11 @@ class _EditItemViewState extends State<_EditItemView> {
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: () {
+                          // show picked image
                           if (_pickedImage != null) {
                             return Image.file(_pickedImage!, fit: BoxFit.cover);
                           }
+                          // show network image if exists and not removed
                           if ((state.imageUrl ?? '').isNotEmpty &&
                               !state.imageRemoved) {
                             final url = _fullImageUrl(state.imageUrl);
@@ -412,19 +469,20 @@ class _EditItemViewState extends State<_EditItemView> {
                               fit: BoxFit.cover,
                               loadingBuilder: (ctx, child, prog) => prog == null
                                   ? child
-                                  : Center(
+                                  : const Center(
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
                                       ),
                                     ),
                               errorBuilder: (_, __, ___) => Center(
                                 child: Icon(
-                                  Icons.broken_image,
+                                  Icons.broken_image, // fallback icon
                                   color: cs.onSurfaceVariant,
                                 ),
                               ),
                             );
                           }
+                          // empty placeholder
                           return Center(
                             child: Text(
                               'Tap to add image',
@@ -437,21 +495,22 @@ class _EditItemViewState extends State<_EditItemView> {
                       ),
                     ),
 
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 8), // space
 
-                    const SizedBox(height: 16),
-
-                    // Save
+                    const SizedBox(height: 16), // more space
+                    // Save button
                     AppButton(
-                      label: loc.confirm,
-                      expand: true,
-                      isBusy: state.loading,
+                      label: loc.confirm, // button text
+                      expand: true, // full width
+                      isBusy: state.loading, // spinner when loading
                       onPressed:
                           state.ready && !hasDateConflict && !state.loading
-                          ? () => bloc.add(EditItemSubmitPressed())
-                          : null,
+                          ? () =>
+                                bloc.add(EditItemSubmitPressed()) // submit
+                          : null, // disabled when invalid/busy
                     ),
 
+                    // extra inline error text (kept)
                     if (state.error != null && state.error!.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Text(state.error!, style: TextStyle(color: cs.error)),
@@ -467,13 +526,14 @@ class _EditItemViewState extends State<_EditItemView> {
   }
 }
 
+// Reusable date field widget (unchanged except we call back to parent to show toast)
 class _DateField extends StatelessWidget {
-  final String label;
-  final DateTime? value;
-  final String Function(DateTime?) fmt;
-  final ValueChanged<DateTime> onPick;
-  final VoidCallback? onClear;
-  final bool allowPast;
+  final String label; // label text
+  final DateTime? value; // current value
+  final String Function(DateTime?) fmt; // formatter
+  final ValueChanged<DateTime> onPick; // when a date picked
+  final VoidCallback? onClear; // optional clear action
+  final bool allowPast; // whether to allow past date
 
   const _DateField({
     required this.label,
@@ -486,31 +546,31 @@ class _DateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme; // colors
+    final tt = Theme.of(context).textTheme; // text styles
 
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cs.outlineVariant),
+        color: cs.surfaceContainerHighest, // bg
+        borderRadius: BorderRadius.circular(14), // radius
+        border: Border.all(color: cs.outlineVariant), // border
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // pad
       child: Row(
         children: [
-          Icon(Icons.event, color: cs.onSurfaceVariant),
-          const SizedBox(width: 10),
+          Icon(Icons.event, color: cs.onSurfaceVariant), // icon
+          const SizedBox(width: 10), // gap
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  label,
+                  label, // top label
                   style: tt.labelLarge?.copyWith(color: cs.onSurfaceVariant),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 2), // tiny gap
                 Text(
-                  fmt(value),
+                  fmt(value), // formatted value
                   style: tt.bodyMedium,
                   maxLines: 2,
                   overflow: TextOverflow.visible,
@@ -521,29 +581,32 @@ class _DateField extends StatelessWidget {
           ),
           if (value != null && onClear != null)
             IconButton(
-              tooltip: 'Clear',
-              icon: const Icon(Icons.clear),
-              color: cs.onSurfaceVariant,
-              onPressed: onClear,
+              tooltip: 'Clear', // tooltip
+              icon: const Icon(Icons.clear), // clear icon
+              color: cs.onSurfaceVariant, // color
+              onPressed: onClear, // action
             ),
           TextButton.icon(
             onPressed: () async {
-              final now = DateTime.now();
-              final earliest = DateTime(2000, 1, 1);
-              final init = value ?? now;
+              final now = DateTime.now(); // today
+              final earliest = DateTime(2000, 1, 1); // min past date
+              final init = value ?? now; // initial in picker
 
+              // pick date
               final date = await showDatePicker(
                 context: context,
-                firstDate: allowPast ? earliest : now,
-                lastDate: DateTime(now.year + 2),
-                initialDate: init,
+                firstDate: allowPast ? earliest : now, // min date
+                lastDate: DateTime(now.year + 2), // max date
+                initialDate: init, // start date
               );
-              if (date == null) return;
+              if (date == null) return; // canceled
+              // pick time
               final time = await showTimePicker(
                 context: context,
-                initialTime: TimeOfDay.fromDateTime(init),
+                initialTime: TimeOfDay.fromDateTime(init), // start time
               );
-              if (time == null) return;
+              if (time == null) return; // canceled
+              // return combined datetime
               onPick(
                 DateTime(
                   date.year,
@@ -554,8 +617,8 @@ class _DateField extends StatelessWidget {
                 ),
               );
             },
-            icon: const Icon(Icons.edit_calendar),
-            label: const Text('Pick'),
+            icon: const Icon(Icons.edit_calendar), // edit icon
+            label: const Text('Pick'), // button text
           ),
         ],
       ),
