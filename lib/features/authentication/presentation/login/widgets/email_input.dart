@@ -6,12 +6,14 @@ class EmailInput extends StatelessWidget {
   final TextEditingController controller;
   final String? Function(String?) validator;
   final VoidCallback onSwapToPhone;
+  final ValueChanged<String>? onChanged; // <-- added
 
   const EmailInput({
     super.key,
     required this.controller,
     required this.validator,
     required this.onSwapToPhone,
+    this.onChanged, // <-- added
   });
 
   @override
@@ -31,6 +33,7 @@ class EmailInput extends StatelessWidget {
           borderRadius: 22,
           filled: false,
           validator: validator,
+          onChanged: onChanged, // <-- forward
         ),
         Align(
           alignment: Alignment.centerRight,
@@ -39,8 +42,9 @@ class EmailInput extends StatelessWidget {
             child: Text(
               t.loginUsePhoneInstead,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: cs.primary, fontWeight: FontWeight.w600,
-                  ),
+                color: cs.primary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),

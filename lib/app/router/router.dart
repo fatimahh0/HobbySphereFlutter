@@ -1,8 +1,10 @@
 // ===== Flutter 3.35.x =====
 // router.dart — central app router (Navigator 1.0, onGenerateRoute)
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/core/network/globals.dart' as g;
 import 'package:hobby_sphere/features/activities/Business/BusinessActivityDetails/presentation/screen/business_activity_details_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessInsights/presentation/screens/business_insights_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessReviews/presentation/screens/business_reviews_screen.dart';
@@ -49,6 +51,7 @@ import 'package:hobby_sphere/features/activities/user/presentation/user_home_scr
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/edit_item_page.dart';
 import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/screen/create_item_page.dart';
+import 'package:hobby_sphere/features/authentication/presentation/register/screens/register_page.dart';
 
 // ---------- Business Bookings ----------
 import '../../features/activities/Business/businessBooking/data/repositories/business_booking_repository_impl.dart';
@@ -88,12 +91,15 @@ import 'package:hobby_sphere/features/activities/common/data/repositories/curren
 import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
 import 'package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart';
 
+import '../../features/authentication/data/services/registration_service.dart';
+
 /// Named routes
 abstract class Routes {
   static const splash = '/';
   static const onboarding = '/onboarding';
   static const onboardingScreen = '/onboardingScreen';
   static const login = '/login';
+  static const register = '/register';
   static const userHome = '/user/home';
   static const businessHome = '/business/home';
   static const createBusinessActivity = '/business/activity/create';
@@ -261,6 +267,17 @@ class AppRouter {
           ),
           settings,
         );
+
+      case Routes.register:
+        {
+          final dio =
+              g.appDio ??
+              Dio(); // optionally: Dio(BaseOptions(baseUrl: g.baseUrl))
+          return _page(
+            RegisterPage(service: RegistrationService(dio)),
+            settings,
+          );
+        }
 
       case Routes.businessReviews:
         final data = args is BusinessReviewsRouteArgs ? args : null;

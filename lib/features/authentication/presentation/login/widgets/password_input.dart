@@ -6,12 +6,14 @@ class PasswordInput extends StatelessWidget {
   final TextEditingController controller;
   final bool obscure;
   final VoidCallback onToggleObscure;
+  final ValueChanged<String>? onChanged; // <-- added
 
   const PasswordInput({
     super.key,
     required this.controller,
     required this.obscure,
     required this.onToggleObscure,
+    this.onChanged, // <-- added
   });
 
   @override
@@ -21,7 +23,7 @@ class PasswordInput extends StatelessWidget {
     return AppTextField(
       controller: controller,
       label: t.loginPassword,
-      hint: '${t.loginPassword}',
+      hint: t.loginPassword,
       prefix: const Icon(Icons.lock_outline),
       suffix: IconButton(
         icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
@@ -32,6 +34,7 @@ class PasswordInput extends StatelessWidget {
       borderRadius: 22,
       validator: (v) =>
           (v == null || v.length < 6) ? t.registerErrorLength : null,
+      onChanged: onChanged, // <-- forward
     );
   }
 }

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-import 'package:hobby_sphere/app/router/router.dart' show ShellRouteArgs;
+import 'package:hobby_sphere/app/router/router.dart'
+    show ShellRouteArgs, Routes;
 import 'package:hobby_sphere/core/constants/app_role.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 import 'package:hobby_sphere/services/token_store.dart';
@@ -271,11 +272,8 @@ class _LoginViewState extends State<_LoginView> {
                       ],
                       const SizedBox(height: 16),
                       RegisterFooter(
-                        onRegister: () => showTopToast(
-                          context,
-                          'coming soon',
-                          type: ToastType.info,
-                        ),
+                        onRegister: () =>
+                            Navigator.of(context).pushNamed(Routes.register),
                       ),
                     ],
                   ),
