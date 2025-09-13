@@ -1,24 +1,28 @@
-// lib/features/authentication/presentation/login/screen/login_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:hobby_sphere/l10n/app_localizations.dart';
-import 'package:hobby_sphere/shared/widgets/app_button.dart';
-import 'package:hobby_sphere/shared/widgets/app_text_field.dart';
-import 'package:hobby_sphere/shared/utils/validators_auto.dart';
+
 import 'package:hobby_sphere/app/router/router.dart' show ShellRouteArgs;
 import 'package:hobby_sphere/core/constants/app_role.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 import 'package:hobby_sphere/services/token_store.dart';
 import 'package:hobby_sphere/core/business/business_context.dart';
+import 'package:hobby_sphere/l10n/app_localizations.dart';
 
-import 'package:hobby_sphere/features/authentication/domain/entities/auth_result.dart';
+import 'package:hobby_sphere/shared/widgets/top_toast.dart';
+
+import 'package:hobby_sphere/features/authentication/data/services/auth_service.dart';
+import 'package:hobby_sphere/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:hobby_sphere/features/authentication/domain/usecases/login_user_email.dart';
 import 'package:hobby_sphere/features/authentication/domain/usecases/login_user_phone.dart';
 import 'package:hobby_sphere/features/authentication/domain/usecases/login_business_email.dart';
 import 'package:hobby_sphere/features/authentication/domain/usecases/login_business_phone.dart';
 import 'package:hobby_sphere/features/authentication/domain/usecases/login_google.dart';
-import 'package:hobby_sphere/features/authentication/data/repositories/auth_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/common/data/services/auth_service.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/reactivate_account.dart';
+
+import '../bloc/login_bloc.dart';
+import '../bloc/login_event.dart';
+import '../bloc/login_state.dart';
 
 import '../widgets/role_selector.dart';
 import '../widgets/phone_input.dart';
@@ -28,45 +32,44 @@ import '../widgets/primary_actions.dart';
 import '../widgets/google_button.dart';
 import '../widgets/register_footer.dart';
 
-class LoginPage extends StatefulWidget {
+import 'package:hobby_sphere/core/auth/google_oauth.dart';
+
+class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
+
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  Widget build(BuildContext context) {
+    final repo = AuthRepositoryImpl(AuthService());
+    return BlocProvider(
+      create: (_) => LoginBloc(
+        loginUserEmail: LoginUserWithEmail(repo),
+        loginUserPhone: LoginUserWithPhone(repo),
+        loginBizEmail: LoginBusinessWithEmail(repo),
+        loginBizPhone: LoginBusinessWithPhone(repo),
+        loginGoogle: LoginWithGoogle(repo),
+        reactivateAccount: ReactivateAccount(repo),
+      ),
+      child: const _LoginView(),
+    );
+  }
 }
 
-class _LoginPageState extends State<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
+class _LoginView extends StatefulWidget {
+  const _LoginView();
+  @override
+  State<_LoginView> createState() => _LoginViewState();
+}
+
+class _LoginViewState extends State<_LoginView> {
   final _emailCtrl = TextEditingController();
   final _pwdCtrl = TextEditingController();
 
-  int _roleIndex = 0; // 0 user / 1 business
-  bool _usePhone = true;
-  bool _obscure = true;
-  bool _loading = false;
-  bool _submittedOnce = false;
+  final _gsi = GoogleSignIn(
+    scopes: const ['email', 'profile'],
+    serverClientId: kGoogleWebClientId, // <-- use WEB client ID here
+  );
 
-  String _initialIso = 'CA';
-  String? _phoneE164;
-  String? _nationalDisplay;
-
-  late final AuthRepositoryImpl _repo;
-  late final LoginUserWithEmail _loginUserEmail;
-  late final LoginUserWithPhone _loginUserPhone;
-  late final LoginBusinessWithEmail _loginBizEmail;
-  late final LoginBusinessWithPhone _loginBizPhone;
-  late final LoginWithGoogle _loginGoogle;
-  final _gsi = GoogleSignIn(scopes: ['email']);
-
-  @override
-  void initState() {
-    super.initState();
-    _repo = AuthRepositoryImpl(AuthService());
-    _loginUserEmail = LoginUserWithEmail(_repo);
-    _loginUserPhone = LoginUserWithPhone(_repo);
-    _loginBizEmail = LoginBusinessWithEmail(_repo);
-    _loginBizPhone = LoginBusinessWithPhone(_repo);
-    _loginGoogle = LoginWithGoogle(_repo);
-  }
+  bool _reactivateOpen = false;
 
   @override
   void dispose() {
@@ -75,131 +78,43 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _setLoading(bool v) => setState(() => _loading = v);
-
-  String? _validateEmail(String? v) => validateEmailAuto(
-    input: v,
-    allowedDomains: {
-      'gmail.com',
-      'hotmail.com',
-      'outlook.com',
-      'yahoo.com',
-      'icloud.com',
-      'live.com',
-      'msn.com',
-    },
-  );
-
-  Future<void> _handleLoginResult(AuthResult r) async {
-    final t = AppLocalizations.of(context)!;
-    if (!r.ok) {
-      final msg = r.error?.isNotEmpty == true
-          ? r.error!
-          : (r.message ?? t.loginErrorFailed);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-      return;
-    }
-    g.appDio?.options.headers['Authorization'] = 'Bearer ${r.token}';
-    await TokenStore.save(token: r.token, role: r.role);
-    if (r.role == 'business' && r.businessId > 0) {
-      await BusinessContext.set(r.businessId);
-    }
-    if (!mounted) return;
-    final appRole = r.role == 'business' ? AppRole.business : AppRole.user;
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      '/shell',
-      (rte) => false,
-      arguments: ShellRouteArgs(
-        role: appRole,
-        token: r.token,
-        businessId: r.businessId,
-      ),
-    );
-  }
-
-  Future<void> _submit() async {
-    _submittedOnce = true;
-    final t = AppLocalizations.of(context)!;
-    final ok = _formKey.currentState?.validate() ?? false;
-    if (!ok) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
+  Future<void> _handleGoogle(BuildContext context) async {
+    final bloc = context.read<LoginBloc>();
+    if (bloc.state.roleIndex == 1) {
+      showTopToast(
         context,
-      ).showSnackBar(SnackBar(content: Text(t.loginErrorRequired)));
-      return;
-    }
-    final role = _roleIndex == 1 ? 'business' : 'user';
-    if (_usePhone && (_phoneE164 == null || _phoneE164!.trim().isEmpty)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(t.loginPhone)));
-      return;
-    }
-    _setLoading(true);
-    try {
-      late AuthResult res;
-      if (role == 'user') {
-        res = _usePhone
-            ? await _loginUserPhone(_phoneE164!.trim(), _pwdCtrl.text.trim())
-            : await _loginUserEmail(
-                _emailCtrl.text.trim(),
-                _pwdCtrl.text.trim(),
-              );
-      } else {
-        res = _usePhone
-            ? await _loginBizPhone(_phoneE164!.trim(), _pwdCtrl.text.trim())
-            : await _loginBizEmail(
-                _emailCtrl.text.trim(),
-                _pwdCtrl.text.trim(),
-              );
-      }
-      await _handleLoginResult(res);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('${t.loginErrorFailed}: $e')));
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  Future<void> _googleSignInFlow() async {
-    if (_roleIndex == 1) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Google sign-in is for users only')),
+        'Google sign-in is for users only',
+        type: ToastType.info,
       );
       return;
     }
-    _setLoading(true);
     try {
-      final acc = await _gsi.signIn();
-      if (acc == null) return;
-      final auth = await acc.authentication;
+      final acct = await _gsi.signIn();
+      if (acct == null) {
+        showTopToast(context, 'Google sign-in canceled', type: ToastType.info);
+        return;
+      }
+      final auth = await acct.authentication;
       final idToken = auth.idToken;
       if (idToken == null || idToken.isEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google ID token is missing')),
+        showTopToast(
+          context,
+          'Missing Google ID token (check Web client ID & SHA-1/SHA-256).',
+          type: ToastType.error,
+          haptics: true,
         );
         return;
       }
-      final res = await _loginGoogle(idToken);
-      await _handleLoginResult(res);
+      bloc.add(LoginGooglePressed(idToken));
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
+      showTopToast(
         context,
-      ).showSnackBar(SnackBar(content: Text('Google sign-in failed: $e')));
-    } finally {
-      _setLoading(false);
+        'Google sign-in failed: $e',
+        type: ToastType.error,
+        haptics: true,
+      );
     }
   }
-
-  void _toggleMode() => setState(() => _usePhone = !_usePhone);
 
   @override
   Widget build(BuildContext context) {
@@ -212,95 +127,168 @@ class _LoginPageState extends State<LoginPage> {
         elevation: 0,
         backgroundColor: theme.scaffoldBackgroundColor,
       ),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    _Logo(),
-                    const SizedBox(height: 24),
-                    Text(
-                      t.loginTitle,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: .2,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      t.loginInstruction,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.textTheme.bodyMedium?.color?.withOpacity(
-                          .75,
-                        ),
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    RoleSelector(
-                      value: _roleIndex,
-                      onChanged: (i) => setState(() => _roleIndex = i),
-                      
-                    ),
-                    const SizedBox(height: 24),
-
-                    if (_usePhone)
-                      PhoneInput(
-                        initialIso: _initialIso,
-                        onChanged: (e164, national, iso) {
-                          setState(() {
-                            _phoneE164 = e164;
-                            _nationalDisplay = national;
-                            _initialIso = iso;
-                          });
-                          if (_submittedOnce) _formKey.currentState?.validate();
-                        },
-                        onSwapToEmail: _toggleMode,
-                        submittedOnce: _submittedOnce,
-                      )
-                    else
-                      EmailInput(
-                        controller: _emailCtrl,
-                        validator: _validateEmail,
-                        onSwapToPhone: _toggleMode,
-                      ),
-
-                    const SizedBox(height: 8),
-                    PasswordInput(
-                      controller: _pwdCtrl,
-                      obscure: _obscure,
-                      onToggleObscure: () =>
-                          setState(() => _obscure = !_obscure),
-                    ),
-                    const SizedBox(height: 12),
-
-                    PrimaryActions(
-                      onLogin: _submit,
-                      onForgot: () {}, // TODO
-                    ),
-
-                    if (_roleIndex == 0) ...[
-                      const SizedBox(height: 8),
-                      GoogleButton(onPressed: _googleSignInFlow),
-                    ],
-
-                    const SizedBox(height: 16),
-                    RegisterFooter(onRegister: () {}), // TODO
-                  ],
-                ),
+      body: BlocConsumer<LoginBloc, LoginState>(
+        listenWhen: (p, c) => p != c,
+        listener: (context, state) async {
+          if (state.error?.isNotEmpty == true) {
+            showTopToast(
+              context,
+              state.error!,
+              type: ToastType.error,
+              haptics: true,
+            );
+          }
+          if (state.info?.isNotEmpty == true &&
+              !state.showReactivate &&
+              state.token.isEmpty) {
+            showTopToast(context, state.info!, type: ToastType.info);
+          }
+          if (state.showReactivate && !_reactivateOpen) {
+            _reactivateOpen = true;
+            final ok = await showDialog<bool>(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => AlertDialog(
+                title: Text(t.loginInactiveTitle),
+                content: Text(t.loginInactiveMessage),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text(t.cancel),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text(t.loginContinue),
+                  ),
+                ],
               ),
+            );
+            _reactivateOpen = false;
+            if (!mounted) return;
+            context.read<LoginBloc>().add(
+              ok == true
+                  ? LoginReactivateConfirmed()
+                  : LoginReactivateDismissed(),
+            );
+          }
+          if (state.token.isNotEmpty) {
+            g.appDio?.options.headers['Authorization'] =
+                'Bearer ${state.token}';
+            await TokenStore.save(
+              token: state.token,
+              role: state.roleIndex == 1 ? 'business' : 'user',
+            );
+            if (state.roleIndex == 1 && state.businessId > 0) {
+              await BusinessContext.set(state.businessId);
+            }
+            if (!mounted) return;
+            final appRole = state.roleIndex == 1
+                ? AppRole.business
+                : AppRole.user;
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              '/shell',
+              (r) => false,
+              arguments: ShellRouteArgs(
+                role: appRole,
+                token: state.token,
+                businessId: state.businessId,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          final bloc = context.read<LoginBloc>();
+          return SafeArea(
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _Logo(),
+                      const SizedBox(height: 24),
+                      Text(
+                        t.loginTitle,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: cs.onBackground,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        t.loginInstruction,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          height: 1.35,
+                          color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                            .75,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      RoleSelector(
+                        value: state.roleIndex,
+                        onChanged: (i) => bloc.add(LoginRoleChanged(i)),
+                      ),
+                      const SizedBox(height: 24),
+                      if (state.usePhone)
+                        PhoneInput(
+                          initialIso: 'CA',
+                          submittedOnce: false,
+                          onChanged: (e164, _, __) =>
+                              bloc.add(LoginPhoneChanged(e164)),
+                          onSwapToEmail: () => bloc.add(LoginToggleMethod()),
+                        )
+                      else
+                        EmailInput(
+                          controller: _emailCtrl,
+                          validator: (_) => null,
+                          onSwapToPhone: () => bloc.add(LoginToggleMethod()),
+                        ),
+                      const SizedBox(height: 8),
+                      PasswordInput(
+                        controller: _pwdCtrl,
+                        obscure: true,
+                        onToggleObscure: () {},
+                      ),
+                      const SizedBox(height: 12),
+                      PrimaryActions(
+                        onLogin: () {
+                          bloc.add(LoginEmailChanged(_emailCtrl.text.trim()));
+                          bloc.add(LoginPasswordChanged(_pwdCtrl.text.trim()));
+                          bloc.add(LoginSubmitted());
+                        },
+                        onForgot: () => showTopToast(
+                          context,
+                          'coming soon',
+                          type: ToastType.info,
+                        ),
+                      ),
+                      if (state.roleIndex == 0) ...[
+                        const SizedBox(height: 8),
+                        GoogleButton(onPressed: () => _handleGoogle(context)),
+                      ],
+                      const SizedBox(height: 16),
+                      RegisterFooter(
+                        onRegister: () => showTopToast(
+                          context,
+                          'coming soon',
+                          type: ToastType.info,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (state.loading)
+                  Container(
+                    color: Colors.black.withOpacity(.12),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+              ],
             ),
-          ),
-
-          if (_loading) const _LoadingOverlay(),
-        ],
+          );
+        },
       ),
     );
   }
@@ -323,24 +311,14 @@ class _Logo extends StatelessWidget {
           fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => Text(
             'HS',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: cs.primary,
               fontWeight: FontWeight.w800,
+              letterSpacing: .5,
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _LoadingOverlay extends StatelessWidget {
-  const _LoadingOverlay();
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black.withOpacity(0.12),
-      child: const Center(child: CircularProgressIndicator()),
     );
   }
 }
