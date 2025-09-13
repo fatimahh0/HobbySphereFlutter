@@ -1,17 +1,17 @@
-// register_page.dart
+// register_email_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
-// l10n + shared widgets
+// l10n + shared
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/widgets/app_button.dart';
 import 'package:hobby_sphere/shared/widgets/app_text_field.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 
-// DI wiring
+// DI
 import 'package:hobby_sphere/features/authentication/data/services/registration_service.dart';
 import 'package:hobby_sphere/features/authentication/data/repositories/registration_repository_impl.dart';
 import 'package:hobby_sphere/features/authentication/domain/usecases/send_user_verification.dart';
@@ -31,18 +31,22 @@ import 'package:hobby_sphere/features/authentication/presentation/register/bloc/
 import 'package:hobby_sphere/features/authentication/presentation/register/bloc/register_event.dart';
 import 'package:hobby_sphere/features/authentication/presentation/register/bloc/register_state.dart';
 
-// login field widgets you already have
-import 'package:hobby_sphere/features/authentication/presentation/login/widgets/role_selector.dart';
-import 'package:hobby_sphere/features/authentication/presentation/login/widgets/phone_input.dart';
-import 'package:hobby_sphere/features/authentication/presentation/login/widgets/email_input.dart';
-import 'package:hobby_sphere/features/authentication/presentation/login/widgets/password_input.dart';
-
-// to navigate to login page link
+// routes (for "Log in" link)
 import 'package:hobby_sphere/app/router/router.dart' show Routes;
 
-class RegisterPage extends StatelessWidget {
+// Your password widget; if you don't have it, swap with AppTextField
+import 'package:hobby_sphere/features/authentication/presentation/login/widgets/password_input.dart';
+
+class RegisterEmailPage extends StatelessWidget {
   final RegistrationService service;
-  const RegisterPage({super.key, required this.service});
+
+  /// pass the chosen role from the first “select role” screen (0 = user, 1 = business)
+  final int initialRoleIndex;
+  const RegisterEmailPage({
+    super.key,
+    required this.service,
+    this.initialRoleIndex = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -60,20 +64,21 @@ class RegisterPage extends StatelessWidget {
         verifyBizPhone: VerifyBusinessPhoneCode(repo),
         completeBiz: CompleteBusinessProfile(repo),
         resendBiz: ResendBusinessCode(repo),
-      ),
-      child: const _RegisterView(),
+      )..add(RegRoleChanged(initialRoleIndex)),
+      child: const _RegisterEmailView(),
     );
   }
 }
 
-class _RegisterView extends StatefulWidget {
-  const _RegisterView();
+class _RegisterEmailView extends StatefulWidget {
+  const _RegisterEmailView();
+
   @override
-  State<_RegisterView> createState() => _RegisterViewState();
+  State<_RegisterEmailView> createState() => _RegisterEmailViewState();
 }
 
-class _RegisterViewState extends State<_RegisterView> {
-  // contact step
+class _RegisterEmailViewState extends State<_RegisterEmailView> {
+  // contact
   final _email = TextEditingController();
   final _pwd = TextEditingController();
   final _pwd2 = TextEditingController();
@@ -82,27 +87,41 @@ class _RegisterViewState extends State<_RegisterView> {
   final _otpCtrls = List.generate(6, (_) => TextEditingController());
   final _otpNodes = List.generate(6, (_) => FocusNode());
 
-  // user steps
+  // user
   final _first = TextEditingController();
   final _last = TextEditingController();
   final _username = TextEditingController();
 
-  // business steps
+  // business
   final _bizName = TextEditingController();
   final _bizDesc = TextEditingController();
   final _bizWebsite = TextEditingController();
 
   final _picker = ImagePicker();
 
-  // local UI bits
+  // local UI
+  bool _stagePassword = false; // email page -> password page (same route)
   bool _pwdObscure = true;
   bool _pwd2Obscure = true;
-  bool _rememberMe = true;
+  bool _newsletterOptIn = false;
   bool _showAllInterests = true;
-  String _e164Phone = ''; // PhoneInput gives us E.164 via onChanged
 
-  // NEW: phone flow like RN — first show phone only, then reveal password
-  bool _phoneStagePassword = false;
+  @override
+  void initState() {
+    super.initState();
+
+    // Force EMAIL mode on this page (if bloc defaults to phone).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final bloc = context.read<RegisterBloc>();
+      if (bloc.state.usePhone) {
+        bloc.add(RegToggleMethod()); // toggle to email
+      }
+    });
+
+    // Keep buttons' enabled state in sync while typing
+    _pwd.addListener(_update);
+    _pwd2.addListener(_update);
+  }
 
   @override
   void dispose() {
@@ -120,30 +139,22 @@ class _RegisterViewState extends State<_RegisterView> {
     super.dispose();
   }
 
-  // ============ helpers ============
+  void _update() => setState(() {});
+
   bool _isValidEmail(String v) =>
       RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim());
 
-  String _otpValue() => _otpCtrls.map((c) => c.text).join();
-
-  Widget _title(BuildContext context, String t) => Padding(
-    padding: const EdgeInsets.only(top: 8, bottom: 16),
-    child: Text(
-      t,
-      textAlign: TextAlign.center,
-      style: Theme.of(
-        context,
-      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-    ),
-  );
-
-  // ============================================================
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    const bigRadius = 28.0; // pill
+
+    final emailReady = _isValidEmail(_email.text);
+    final signUpReady =
+        _isValidEmail(_email.text) &&
+        _pwd.text.length >= 8 &&
+        _pwd.text == _pwd2.text;
 
     return Scaffold(
       appBar: AppBar(
@@ -167,11 +178,12 @@ class _RegisterViewState extends State<_RegisterView> {
           }
           if (s.step == RegStep.done) {
             final msg = s.roleIndex == 0
-                ? t.registerSuccessUser
-                : t.registerSuccessBusiness;
+                ? (t.registerSuccessUser)
+                : (t.registerSuccessBusiness);
             showTopToast(context, msg, type: ToastType.success);
           }
-          // Autofill OTP if provided by backend (optional)
+
+          // Optional: pre-fill OTP if backend auto-filled it
           if (s.code.length == 6) {
             for (int i = 0; i < 6; i++) {
               _otpCtrls[i].text = s.code[i];
@@ -180,14 +192,6 @@ class _RegisterViewState extends State<_RegisterView> {
         },
         builder: (context, s) {
           final bloc = context.read<RegisterBloc>();
-
-          // buttons enabled state
-          final phoneContinueReady =
-              !_phoneStagePassword && _e164Phone.isNotEmpty;
-          final phoneSignUpReady =
-              _phoneStagePassword &&
-              _pwd.text.length >= 8 &&
-              _pwd.text == _pwd2.text;
 
           return SafeArea(
             child: Stack(
@@ -200,84 +204,69 @@ class _RegisterViewState extends State<_RegisterView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _title(context, 'Sign up'),
-
-                      // SHOW ROLE ONLY ON FIRST SCREEN (contact)
-                      if (s.step == RegStep.contact) ...[
-                        Center(
-                          child: RoleSelector(
-                            value: s.roleIndex,
-                            onChanged: (i) => bloc.add(RegRoleChanged(i)),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 16),
+                        child: Text(
+                          !_stagePassword && s.step == RegStep.contact
+                              ? 'Enter email'
+                              : 'Sign up',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(height: 20),
-                      ],
+                      ),
 
-                      // ================== Step: Contact ==================
+                      // ================== CONTACT (EMAIL PATH) ==================
                       if (s.step == RegStep.contact) ...[
-                        // — Phone first
-                        PhoneInput(
-                          initialIso: 'CA',
-                          submittedOnce: false,
-                          onChanged: (e164, _, __) {
-                            setState(() => _e164Phone = e164 ?? '');
-                            bloc.add(RegPhoneChanged(e164 ?? ''));
-                          },
-                          // Email is a separate page (old RN behavior)
-                          onSwapToEmail: () => Navigator.pushNamed(
-                            context,
-                            Routes.registerEmail,
+                        if (!_stagePassword) ...[
+                          AppTextField(
+                            controller: _email,
+                            label: 'Email address',
+                            hint: 'Email address',
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.done,
+                            borderRadius: 28,
+                            onChanged: (_) => setState(() {}),
                           ),
-                        ),
-
-                        const SizedBox(height: 18),
-
-                        // Stage A: phone only -> Continue
-                        if (!_phoneStagePassword) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            "You'll receive a verification code via email. "
+                            "Your email may be used for account security and discovery depending on your settings.",
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 16),
                           AppButton(
-                            onPressed: phoneContinueReady
-                                ? () =>
-                                      setState(() => _phoneStagePassword = true)
+                            onPressed: emailReady
+                                ? () => setState(() => _stagePassword = true)
                                 : null,
                             label: 'Continue',
                             expand: true,
                           ),
-                          const SizedBox(height: 16),
-                          _DividerWithText(text: 'or'),
                           const SizedBox(height: 12),
-                          _SocialButton(
-                            icon: Icons.mail_outline,
-                            label: 'Continue with Email',
-                            onPressed: () => Navigator.pushNamed(
-                              context,
-                              Routes.registerEmail,
-                            ),
-                          ),
-                          const SizedBox(height: 18),
                           _LoginLink(),
-                        ],
-
-                        // Stage B: reveal password (same page) -> Sign Up
-                        if (_phoneStagePassword) ...[
+                        ] else ...[
                           Text(
-                            t.selectMethodCreatePassword ?? 'Create password',
+                            'Create password',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 8),
+
+                          // If you don't have PasswordInput, replace with AppTextField (obscure:true)
                           PasswordInput(
                             controller: _pwd,
                             obscure: _pwdObscure,
                             onToggleObscure: () =>
                                 setState(() => _pwdObscure = !_pwdObscure),
-                            onChanged: (_) => setState(() {}),
                           ),
                           const SizedBox(height: 10),
+
                           AppTextField(
                             controller: _pwd2,
-                            label: t.registerConfirmPassword,
-                            hint: t.registerConfirmPassword,
+                            label: 'Enter password',
+                            hint: 'Enter password',
                             prefix: const Icon(Icons.lock_outline),
                             suffix: IconButton(
                               icon: Icon(
@@ -290,35 +279,51 @@ class _RegisterViewState extends State<_RegisterView> {
                             ),
                             obscure: _pwd2Obscure,
                             textInputAction: TextInputAction.done,
-                            borderRadius: bigRadius,
+                            borderRadius: 28,
                           ),
                           const SizedBox(height: 10),
-                          _Guidelines(),
+                          const _Guidelines(),
                           const SizedBox(height: 8),
+
                           Row(
                             children: [
                               Checkbox(
-                                value: _rememberMe,
-                                onChanged: (v) =>
-                                    setState(() => _rememberMe = v ?? true),
+                                value: _newsletterOptIn,
+                                onChanged: (v) => setState(
+                                  () => _newsletterOptIn = v ?? false,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                               ),
                               Expanded(
                                 child: Text(
-                                  t.selectMethodSaveInfo ??
-                                      'Save login info on your devices to log in automatically next time.',
+                                  'Get trending content and updates by email',
                                   style: theme.textTheme.bodyMedium,
                                 ),
                               ),
                             ],
                           ),
+
                           const SizedBox(height: 8),
                           AppButton(
-                            onPressed: phoneSignUpReady
+                            onPressed: signUpReady
                                 ? () {
-                                    // phone already stored via RegPhoneChanged
+                                    if (!_isValidEmail(_email.text)) {
+                                      showTopToast(
+                                        context,
+                                        'Please enter a valid email',
+                                        type: ToastType.error,
+                                        haptics: true,
+                                      );
+                                      return;
+                                    }
+                                    // guard: ensure bloc is on EMAIL mode
+                                    if (s.usePhone) bloc.add(RegToggleMethod());
+
+                                    bloc.add(
+                                      RegEmailChanged(_email.text.trim()),
+                                    );
                                     bloc.add(
                                       RegPasswordChanged(_pwd.text.trim()),
                                     );
@@ -328,14 +333,14 @@ class _RegisterViewState extends State<_RegisterView> {
                             label: 'Sign Up',
                             expand: true,
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 12),
                           _LoginLink(),
                         ],
                       ],
 
-                      // ================== Step: Code (OTP) ==================
+                      // ================== OTP ==================
                       if (s.step == RegStep.code) ...[
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         Text(
                           'Enter the 6-digit verification code',
                           textAlign: TextAlign.center,
@@ -368,7 +373,7 @@ class _RegisterViewState extends State<_RegisterView> {
                         ),
                       ],
 
-                      // ==================== USER FLOW ====================
+                      // ================== USER FLOW ==================
                       if (s.step == RegStep.name) ...[
                         const SizedBox(height: 16),
                         _pillLabel(context, "What's your name?"),
@@ -508,7 +513,7 @@ class _RegisterViewState extends State<_RegisterView> {
                           ),
                         ),
 
-                      // ==================== BUSINESS FLOW ====================
+                      // ================== BUSINESS FLOW ==================
                       if (s.step == RegStep.bizName) ...[
                         const SizedBox(height: 16),
                         _pillLabel(context, 'Business Name'),
@@ -604,8 +609,8 @@ class _RegisterViewState extends State<_RegisterView> {
                         Center(
                           child: Text(
                             s.roleIndex == 0
-                                ? t.registerSuccessUser
-                                : t.registerSuccessBusiness,
+                                ? (t.registerSuccessUser)
+                                : (t.registerSuccessBusiness),
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
@@ -680,6 +685,8 @@ class _RegisterViewState extends State<_RegisterView> {
 // ===== components =====
 
 class _Guidelines extends StatelessWidget {
+  const _Guidelines();
+
   @override
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.bodyMedium;
@@ -693,56 +700,6 @@ class _Guidelines extends StatelessWidget {
         ),
         Text('• Strong password', style: style),
       ],
-    );
-  }
-}
-
-class _DividerWithText extends StatelessWidget {
-  final String text;
-  const _DividerWithText({required this.text});
-  @override
-  Widget build(BuildContext context) {
-    final tt = Theme.of(context).textTheme;
-    final cs = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Expanded(child: Divider(color: cs.outlineVariant)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text(text, style: tt.bodyMedium),
-        ),
-        Expanded(child: Divider(color: cs.outlineVariant)),
-      ],
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onPressed;
-  const _SocialButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: 48,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: cs.outlineVariant),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        icon: Icon(icon),
-        label: Align(alignment: Alignment.centerLeft, child: Text(label)),
-      ),
     );
   }
 }
@@ -811,7 +768,11 @@ class _OtpBoxes extends StatelessWidget {
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: cs.primary),
+                borderSide: BorderSide(color: cs.outlineVariant),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: cs.primary, width: 1.6),
               ),
             ),
             onChanged: (v) {
@@ -858,6 +819,7 @@ class _PickBox extends StatelessWidget {
   }
 }
 
+/// Interests with icons (compact chips)
 class _InterestsGrid extends StatelessWidget {
   final bool showAll;
   final VoidCallback onToggleShow;
@@ -874,23 +836,22 @@ class _InterestsGrid extends StatelessWidget {
   });
 
   static const _all = [
-    {'id': 1, 'name': 'FITNESS', 'icon': Icons.fitness_center},
-    {'id': 2, 'name': 'COOKING', 'icon': Icons.restaurant_menu},
-    {'id': 3, 'name': 'TRAVEL', 'icon': Icons.flight_takeoff},
-    {'id': 4, 'name': 'GAMING', 'icon': Icons.sports_esports},
-    {'id': 5, 'name': 'THEATER', 'icon': Icons.theaters},
-    {'id': 6, 'name': 'LANGUAGE', 'icon': Icons.translate},
-    {'id': 7, 'name': 'PHOTOGRAPHY', 'icon': Icons.photo_camera},
+    {'id': 1, 'name': 'Fitness', 'icon': Icons.fitness_center},
+    {'id': 2, 'name': 'Cooking', 'icon': Icons.restaurant_menu},
+    {'id': 3, 'name': 'Travel', 'icon': Icons.flight_takeoff},
+    {'id': 4, 'name': 'Gaming', 'icon': Icons.sports_esports},
+    {'id': 5, 'name': 'Theater', 'icon': Icons.theaters},
+    {'id': 6, 'name': 'Language', 'icon': Icons.translate},
+    {'id': 7, 'name': 'Photography', 'icon': Icons.camera_alt},
     {'id': 8, 'name': 'DIY', 'icon': Icons.handyman},
-    {'id': 9, 'name': 'BEAUTY', 'icon': Icons.brush},
-    {'id': 10, 'name': 'FINANCE', 'icon': Icons.account_balance_wallet},
-    {'id': 11, 'name': 'OTHER', 'icon': Icons.star_border},
+    {'id': 9, 'name': 'Beauty', 'icon': Icons.brush},
+    {'id': 10, 'name': 'Finance', 'icon': Icons.attach_money},
+    {'id': 11, 'name': 'Other', 'icon': Icons.interests},
   ];
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
     final items = showAll ? _all : _all.take(6).toList();
 
     return Column(
@@ -899,7 +860,9 @@ class _InterestsGrid extends StatelessWidget {
         Text(
           'What are you into?',
           textAlign: TextAlign.center,
-          style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         GridView.builder(
@@ -910,14 +873,18 @@ class _InterestsGrid extends StatelessWidget {
             crossAxisCount: 2,
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
-            childAspectRatio: 2.2,
+            childAspectRatio: 2.6,
           ),
           itemBuilder: (_, i) {
             final it = items[i];
-            final active = selected.contains(it['id']);
+            final id = it['id'] as int;
+            final active = selected.contains(id);
+            final iconData = it['icon'] as IconData;
             return InkWell(
-              onTap: () => onToggle(it['id'] as int),
+              onTap: () => onToggle(id),
+              borderRadius: BorderRadius.circular(14),
               child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: active ? cs.primary : cs.surface,
@@ -925,27 +892,19 @@ class _InterestsGrid extends StatelessWidget {
                   border: Border.all(
                     color: active ? cs.primary : cs.outlineVariant,
                   ),
-                  boxShadow: active
-                      ? [
-                          BoxShadow(
-                            color: cs.primary.withOpacity(.18),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      it['icon'] as IconData,
-                      color: active ? cs.onPrimary : cs.onSurface,
+                      iconData,
+                      size: 20,
+                      color: active ? cs.onPrimary : cs.onSurfaceVariant,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       it['name'] as String,
-                      style: tt.titleMedium?.copyWith(
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: active ? cs.onPrimary : cs.onSurface,
                         fontWeight: FontWeight.w700,
                       ),

@@ -51,6 +51,7 @@ import 'package:hobby_sphere/features/activities/user/presentation/user_home_scr
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/edit_item_page.dart';
 import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/screen/create_item_page.dart';
+import 'package:hobby_sphere/features/authentication/presentation/register/screens/register_email_page.dart';
 import 'package:hobby_sphere/features/authentication/presentation/register/screens/register_page.dart';
 
 // ---------- Business Bookings ----------
@@ -100,6 +101,7 @@ abstract class Routes {
   static const onboardingScreen = '/onboardingScreen';
   static const login = '/login';
   static const register = '/register';
+  static const registerEmail = '/register/email';
   static const userHome = '/user/home';
   static const businessHome = '/business/home';
   static const createBusinessActivity = '/business/activity/create';
@@ -157,6 +159,11 @@ class BusinessActivityDetailsRouteArgs {
     required this.token,
     required this.activityId,
   });
+}
+
+class RegisterEmailRouteArgs {
+  final int initialRoleIndex;
+  const RegisterEmailRouteArgs({this.initialRoleIndex = 0});
 }
 
 class BusinessInsightsRouteArgs {
@@ -232,6 +239,12 @@ class BusinessReviewsRouteArgs {
   });
 }
 
+class RegisterRouteArgs {
+  /// 0 = user, 1 = business
+  final int initialRoleIndex;
+  const RegisterRouteArgs({this.initialRoleIndex = 0});
+}
+
 /// Global navigator key (for programmatic navigation)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -270,11 +283,24 @@ class AppRouter {
 
       case Routes.register:
         {
-          final dio =
-              g.appDio ??
-              Dio(); // optionally: Dio(BaseOptions(baseUrl: g.baseUrl))
+          final data = args is RegisterRouteArgs ? args : null;
+          final dio = g.appDio ?? Dio();
+
           return _page(
             RegisterPage(service: RegistrationService(dio)),
+            settings,
+          );
+        }
+
+      case Routes.registerEmail:
+        {
+          final dio = g.appDio ?? Dio();
+          final data = args is RegisterEmailRouteArgs ? args : null;
+          return _page(
+            RegisterEmailPage(
+              service: RegistrationService(dio),
+              initialRoleIndex: data?.initialRoleIndex ?? 0,
+            ),
             settings,
           );
         }
