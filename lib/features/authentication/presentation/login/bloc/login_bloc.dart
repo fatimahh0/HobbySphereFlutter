@@ -1,11 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/features/authentication/domain/entities/auth_result.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/login_business_email.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/login_business_phone.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/login_user_email.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/login_user_phone.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/login_google.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/reactivate_account.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_business_email.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_business_phone.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_user_email.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_user_phone.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_google.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/login/reactivate_account.dart';
 import 'login_event.dart';
 import 'login_state.dart';
 

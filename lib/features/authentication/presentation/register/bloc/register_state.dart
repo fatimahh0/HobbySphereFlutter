@@ -1,5 +1,7 @@
 import 'package:image_picker/image_picker.dart';
 
+import '../../../domain/entities/activity_type.dart' show ActivityType;
+
 enum RegStep {
   contact,
   code,
@@ -21,6 +23,9 @@ class RegisterState {
   final String? error, info;
   final RegStep step;
   final int pendingId;
+  final List<ActivityType> interestOptions; // all options
+  final bool interestsLoading; // loading flag
+  final String? interestsError; // error text
 
   // user
   final String firstName, lastName, username;
@@ -55,6 +60,9 @@ class RegisterState {
     this.bizWebsite = '',
     this.bizLogo,
     this.bizBanner,
+    this.interestOptions = const [], // default empty
+    this.interestsLoading = false, // default false
+    this.interestsError,
   });
 
   RegisterState copyWith({
@@ -80,6 +88,9 @@ class RegisterState {
     String? bizWebsite,
     XFile? bizLogo,
     XFile? bizBanner,
+    List<ActivityType>? interestOptions, // new list
+    bool? interestsLoading, // new flag
+    String? interestsError,
   }) => RegisterState(
     roleIndex: roleIndex ?? this.roleIndex,
     usePhone: usePhone ?? this.usePhone,
@@ -103,5 +114,8 @@ class RegisterState {
     bizWebsite: bizWebsite ?? this.bizWebsite,
     bizLogo: bizLogo ?? this.bizLogo,
     bizBanner: bizBanner ?? this.bizBanner,
+    interestOptions: interestOptions ?? this.interestOptions, // keep/replace
+    interestsLoading: interestsLoading ?? this.interestsLoading,
+    interestsError: interestsError,
   );
 }

@@ -1,18 +1,52 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../domain/usecases/send_user_verification.dart';
-import '../../../domain/usecases/verify_user_email_code.dart';
-import '../../../domain/usecases/verify_user_phone_code.dart';
-import '../../../domain/usecases/complete_user_profile.dart';
-import '../../../domain/usecases/add_user_interests.dart';
-import '../../../domain/usecases/resend_user_code.dart';
-import '../../../domain/usecases/send_business_verification.dart';
-import '../../../domain/usecases/verify_business_email_code.dart';
-import '../../../domain/usecases/verify_business_phone_code.dart';
-import '../../../domain/usecases/complete_business_profile.dart';
-import '../../../domain/usecases/resend_business_code.dart';
+
+import '../../../domain/usecases/register/send_user_verification.dart';
+import '../../../domain/usecases/register/verify_user_email_code.dart';
+import '../../../domain/usecases/register/verify_user_phone_code.dart';
+import '../../../domain/usecases/register/complete_user_profile.dart';
+import '../../../domain/usecases/register/add_user_interests.dart';
+import '../../../domain/usecases/register/resend_user_code.dart';
+import '../../../domain/usecases/register/send_business_verification.dart';
+import '../../../domain/usecases/register/verify_business_email_code.dart';
+import '../../../domain/usecases/register/verify_business_phone_code.dart';
+import '../../../domain/usecases/register/complete_business_profile.dart';
+import '../../../domain/usecases/register/resend_business_code.dart';
+import '../../../domain/usecases/register/get_activity_types.dart';
+
 import 'register_event.dart';
 import 'register_state.dart';
+
+String _friendlyError(Object err) {
+  // Dio 5.x
+  if (err is DioException) {
+    final res = err.response;
+    final data = res?.data;
+
+    // server returned a json body with an error/message
+    if (data is Map) {
+      final msg = (data['error'] ?? data['message'] ?? data['detail']);
+      if (msg is String && msg.trim().isNotEmpty) return msg.trim();
+    }
+    // sometimes backend sends plain string body
+    if (data is String && data.trim().isNotEmpty) return data.trim();
+
+    // fallback by status code
+    final code = res?.statusCode ?? 0;
+    if (code == 409) return 'Username already in use';
+    if (code == 400) return 'Something went wrong';
+    if (code == 401) return 'Unauthorized';
+    if (code == 403) return 'Forbidden';
+    if (code == 404) return 'Not found';
+    if (code >= 500) return 'Server error, please try again';
+
+    return err.message ?? 'Something went wrong';
+  }
+  if (err is HttpException) return err.message;
+  return 'Something went wrong';
+}
 
 class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
   // usecases
@@ -29,6 +63,8 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
   final CompleteBusinessProfile completeBiz;
   final ResendBusinessCode resendBiz;
 
+  final GetActivityTypes getActivityTypes;
+
   RegisterBloc({
     required this.sendUserVerification,
     required this.verifyUserEmail,
@@ -41,6 +77,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
     required this.verifyBizPhone,
     required this.completeBiz,
     required this.resendBiz,
+    required this.getActivityTypes,
   }) : super(const RegisterState()) {
     // reducers
     on<RegRoleChanged>(
@@ -84,6 +121,28 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
       emit(state.copyWith(interests: s));
     });
 
+    // fetch interests (remote)
+    on<RegFetchInterests>((e, emit) async {
+      emit(state.copyWith(interestsLoading: true, interestsError: null));
+      try {
+        final items = await getActivityTypes();
+        emit(
+          state.copyWith(
+            interestOptions: items,
+            interestsLoading: false,
+            interestsError: null,
+          ),
+        );
+      } catch (err) {
+        emit(
+          state.copyWith(
+            interestsLoading: false,
+            interestsError: _friendlyError(err),
+          ),
+        );
+      }
+    });
+
     // actions
     on<RegSendVerification>(_sendVerification);
     on<RegResendCode>(_resend);
@@ -121,7 +180,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
         ),
       );
     } catch (err) {
-      emit(state.copyWith(loading: false, error: '$err'));
+      emit(state.copyWith(loading: false, error: _friendlyError(err)));
     }
   }
 
@@ -136,7 +195,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
       }
       emit(state.copyWith(loading: false, info: 'Code resent'));
     } catch (err) {
-      emit(state.copyWith(loading: false, error: '$err'));
+      emit(state.copyWith(loading: false, error: _friendlyError(err)));
     }
   }
 
@@ -162,7 +221,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
         );
       }
     } catch (err) {
-      emit(state.copyWith(loading: false, error: '$err'));
+      emit(state.copyWith(loading: false, error: _friendlyError(err)));
     }
   }
 
@@ -182,7 +241,16 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
       );
       emit(state.copyWith(loading: false, step: RegStep.interests));
     } catch (err) {
-      emit(state.copyWith(loading: false, error: '$err'));
+      final msg = _friendlyError(err);
+
+      final shouldBackToUsername = msg.toLowerCase().contains('username');
+      emit(
+        state.copyWith(
+          loading: false,
+          error: msg,
+          step: shouldBackToUsername ? RegStep.username : state.step,
+        ),
+      );
     }
   }
 
@@ -201,7 +269,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
         ),
       );
     } catch (err) {
-      emit(state.copyWith(loading: false, error: '$err'));
+      emit(state.copyWith(loading: false, error: _friendlyError(err)));
     }
   }
 
@@ -229,7 +297,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
         ),
       );
     } catch (err) {
-      emit(state.copyWith(loading: false, error: '$err'));
+      emit(state.copyWith(loading: false, error: _friendlyError(err)));
     }
   }
 }

@@ -2,6 +2,7 @@
 // ShellDrawer — drawer navigation for user & business roles.
 // Final: Clean AppBar (menu icon only), full drawer with scrollbar.
 
+import 'dart:convert' show base64Url, jsonDecode, utf8; // << parse JWT
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -63,11 +64,25 @@ import 'package:hobby_sphere/features/activities/Business/common/domain/usecases
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
 
 // ==== User Screens ====
-import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_explore_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_community_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_tickets_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
+import 'package:hobby_sphere/features/activities/user/common/presentation/user_explore_screen.dart';
+import 'package:hobby_sphere/features/activities/user/common/presentation/user_community_screen.dart';
+import 'package:hobby_sphere/features/activities/user/common/presentation/user_tickets_screen.dart';
+import 'package:hobby_sphere/features/activities/user/common/presentation/user_profile_screen.dart';
+
+// ==== User Home feature (services/repos/usecases) ====
+import 'package:hobby_sphere/features/activities/user/userHome/data/services/home_service.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/data/repositories/home_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_upcoming_guest_items.dart';
+
+// ==== Common (types + items-by-type) for Categories section ====
+import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
+import 'package:hobby_sphere/features/activities/common/data/services/items_service.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/items_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_items_by_type.dart';
 
 // ==== Localization ====
 import 'package:hobby_sphere/l10n/app_localizations.dart';
@@ -99,13 +114,66 @@ class ShellDrawer extends StatefulWidget {
 class _ShellDrawerState extends State<ShellDrawer> {
   int _index = 0;
 
+  // ---- helpers to read jwt ----
+  int? _extractUserId(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      final raw = payload['id'] ?? payload['userId'];
+      if (raw is num) return raw.toInt();
+      return int.tryParse('$raw');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _extractDisplayName(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      final n = payload['name'] ?? payload['given_name'] ?? payload['username'];
+      return n?.toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ---- DI for User Home feature ----
+  late final _homeRepo = HomeRepositoryImpl(HomeService());
+  late final _getInterest = GetInterestBasedItems(_homeRepo);
+  late final _getUpcoming = GetUpcomingGuestItems(_homeRepo);
+  late final _getItemTypes = GetItemTypes(
+    ItemTypeRepositoryImpl(ItemTypesService()),
+  );
+  late final _getItemsByType = GetItemsByType(
+    ItemsRepositoryImpl(ItemsService()),
+  );
+
+  late final int _userId = _extractUserId(widget.token) ?? 0;
+  late final String _userName = _extractDisplayName(widget.token) ?? 'User';
+
   // ===== User pages =====
-  late final List<Widget> _userPages = const [
-    UserHomeScreen(),
-    UserExploreScreen(),
-    UserCommunityScreen(),
-    UserTicketsScreen(),
-    UserProfileScreen(),
+  late final List<Widget> _userPages = <Widget>[
+    UserHomeScreen(
+      displayName: _userName,
+      token: widget.token,
+      userId: _userId, // if 0 => interests section hides
+      getInterestBased: _getInterest,
+      getUpcomingGuest: _getUpcoming,
+      getItemTypes: _getItemTypes,
+      getItemsByType: _getItemsByType,
+
+    ),
+    const UserExploreScreen(),
+    const UserCommunityScreen(),
+    const UserTicketsScreen(),
+    const UserProfileScreen(),
   ];
 
   // ===== Business pages =====

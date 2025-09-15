@@ -3,12 +3,15 @@
 // Mirrors ShellDrawer: passes token + businessId, injects Blocs for Bookings + Analytics.
 
 import 'dart:ui' show ImageFilter;
+import 'dart:convert' show base64Url, jsonDecode, utf8; // << parse JWT
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/constants/app_role.dart';
+
+// ===== Business blocs/usecases/data =====
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_bloc.dart';
@@ -32,7 +35,6 @@ import 'package:hobby_sphere/features/activities/Business/common/data/services/b
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
-import 'package:hobby_sphere/l10n/app_localizations.dart';
 
 // ===== Business screens =====
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
@@ -43,23 +45,37 @@ import 'package:hobby_sphere/features/activities/Business/businessBooking/domain
 import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/bloc/business_booking_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/bloc/business_booking_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart';
-
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/data/repositories/business_analytics_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/data/services/business_analytics_service.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/domain/usecases/get_business_analytics.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
-
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
 
 // ===== User screens =====
-import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_explore_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_community_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_tickets_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
+import 'package:hobby_sphere/features/activities/user/common/presentation/user_explore_screen.dart';
+import 'package:hobby_sphere/features/activities/user/common/presentation/user_community_screen.dart';
+import 'package:hobby_sphere/features/activities/user/common/presentation/user_tickets_screen.dart';
+import 'package:hobby_sphere/features/activities/user/common/presentation/user_profile_screen.dart';
+
+// ===== User Home feature (services/repos/usecases) =====
+import 'package:hobby_sphere/features/activities/user/userHome/data/services/home_service.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/data/repositories/home_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_upcoming_guest_items.dart';
+
+// ===== Common types + items-by-type (for Categories section) =====
+import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
+import 'package:hobby_sphere/features/activities/common/data/services/items_service.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/items_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_items_by_type.dart';
+
+import 'package:hobby_sphere/l10n/app_localizations.dart';
 
 class ShellBottom extends StatefulWidget {
   final AppRole role;
@@ -89,13 +105,66 @@ class ShellBottom extends StatefulWidget {
 class _ShellBottomState extends State<ShellBottom> {
   int _index = 0;
 
+  // ---- helpers to read jwt ----
+  int? _extractUserId(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      final raw = payload['id'] ?? payload['userId'];
+      if (raw is num) return raw.toInt();
+      return int.tryParse('$raw');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _extractDisplayName(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      final n = payload['name'] ?? payload['given_name'] ?? payload['username'];
+      return n?.toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ---- DI for User Home feature ----
+  late final _homeRepo = HomeRepositoryImpl(HomeService());
+  late final _getInterest = GetInterestBasedItems(_homeRepo);
+  late final _getUpcoming = GetUpcomingGuestItems(_homeRepo);
+  late final _getItemTypes = GetItemTypes(
+    ItemTypeRepositoryImpl(ItemTypesService()),
+  );
+  late final _getItemsByType = GetItemsByType(
+    ItemsRepositoryImpl(ItemsService()),
+  );
+
+  late final int _userId = _extractUserId(widget.token) ?? 0;
+  late final String _userName = _extractDisplayName(widget.token) ?? 'User';
+
   // ===== User pages =====
-  late final List<Widget> _userPages = const [
-    UserHomeScreen(),
-    UserExploreScreen(),
-    UserCommunityScreen(),
-    UserTicketsScreen(),
-    UserProfileScreen(),
+  late final List<Widget> _userPages = <Widget>[
+    UserHomeScreen(
+      displayName: _userName,
+      token: widget.token,
+      userId: _userId, // if 0 => interests section hides
+      getInterestBased: _getInterest,
+      getUpcomingGuest: _getUpcoming,
+      getItemTypes: _getItemTypes,
+      getItemsByType: _getItemsByType,
+     
+    ),
+    const UserExploreScreen(),
+    const UserCommunityScreen(),
+    const UserTicketsScreen(),
+    const UserProfileScreen(),
   ];
 
   // ===== Business pages =====
@@ -271,9 +340,8 @@ class _ShellBottomState extends State<ShellBottom> {
     return Scaffold(
       extendBody: false,
       body: SafeArea(
-        // 👈 أضفنا SafeArea
         top: true,
-        bottom: false, // خلي الـ bottom مفتوح عشان يضل مع الـ nav bar
+        bottom: false,
         child: IndexedStack(index: _index, children: pages),
       ),
       bottomNavigationBar: SafeArea(

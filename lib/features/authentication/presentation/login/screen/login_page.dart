@@ -14,12 +14,12 @@ import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 
 import 'package:hobby_sphere/features/authentication/data/services/auth_service.dart';
 import 'package:hobby_sphere/features/authentication/data/repositories/auth_repository_impl.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/login_user_email.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/login_user_phone.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/login_business_email.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/login_business_phone.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/login_google.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/reactivate_account.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_user_email.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_user_phone.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_business_email.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_business_phone.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_google.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/login/reactivate_account.dart';
 
 import '../bloc/login_bloc.dart';
 import '../bloc/login_event.dart';

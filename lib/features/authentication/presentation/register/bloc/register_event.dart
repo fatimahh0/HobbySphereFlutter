@@ -96,4 +96,10 @@ class RegPickBusinessBanner extends RegisterEvent {
   RegPickBusinessBanner(this.f);
 }
 
+// load interests from backend
+// load interests from backend
+class RegFetchInterests extends RegisterEvent {
+  RegFetchInterests(); // make it NON-const  ✅
+}
+
 class RegSubmitBusinessProfile extends RegisterEvent {}

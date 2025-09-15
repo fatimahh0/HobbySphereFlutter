@@ -1,6 +1,9 @@
 // ===== Flutter 3.35.x =====
 // ShellTop — top tab navigation (fixed header + smooth tabs)
-// Fixed: includes BusinessNotificationBloc + BusinessHomeBloc for Home tab.
+// Updated: injects UserHome deps, parses JWT for userId/displayName,
+// and shows a badge on Bookings/Tickets tab.
+
+import 'dart:convert' show base64Url, jsonDecode, utf8;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -63,11 +66,25 @@ import 'package:hobby_sphere/features/activities/Business/common/domain/usecases
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
 
 // User Screens
-import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_explore_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_community_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_tickets_screen.dart';
-import 'package:hobby_sphere/features/activities/user/presentation/user_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
+import 'package:hobby_sphere/features/activities/user/common/presentation/user_explore_screen.dart';
+import 'package:hobby_sphere/features/activities/user/common/presentation/user_community_screen.dart';
+import 'package:hobby_sphere/features/activities/user/common/presentation/user_tickets_screen.dart';
+import 'package:hobby_sphere/features/activities/user/common/presentation/user_profile_screen.dart';
+
+// User Home DI (services/repos/usecases)
+import 'package:hobby_sphere/features/activities/user/userHome/data/services/home_service.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/data/repositories/home_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_upcoming_guest_items.dart';
+
+// Categories + Items by Type
+import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
+import 'package:hobby_sphere/features/activities/common/data/services/items_service.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/items_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_items_by_type.dart';
 
 // Localizations
 import 'package:hobby_sphere/l10n/app_localizations.dart';
@@ -93,6 +110,36 @@ class ShellTop extends StatelessWidget {
     this.bookingsBadge = 0,
     this.ticketsBadge = 0,
   });
+
+  // ---- JWT helpers ----
+  int? _extractUserId(String tkn) {
+    try {
+      final parts = tkn.split('.');
+      if (parts.length != 3) return null;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      final raw = payload['id'] ?? payload['userId'];
+      if (raw is num) return raw.toInt();
+      return int.tryParse('$raw');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _extractDisplayName(String tkn) {
+    try {
+      final parts = tkn.split('.');
+      if (parts.length != 3) return null;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      final n = payload['name'] ?? payload['given_name'] ?? payload['username'];
+      return n?.toString();
+    } catch (_) {
+      return null;
+    }
+  }
 
   List<String> _labels(BuildContext ctx) {
     final t = AppLocalizations.of(ctx)!;
@@ -125,122 +172,140 @@ class ShellTop extends StatelessWidget {
           ];
   }
 
-  List<Widget> _views(BuildContext context) {
-    if (role == AppRole.business) {
-      return [
-        // ✅ Home with Notifications + HomeBloc
-        MultiBlocProvider(
-          providers: [
-            BlocProvider(
-              create: (ctx) => BusinessHomeBloc(
-                getList: GetBusinessActivities(
-                  BusinessActivityRepositoryImpl(BusinessActivityService()),
-                ),
-                getOne: GetBusinessActivityById(
-                  BusinessActivityRepositoryImpl(BusinessActivityService()),
-                ),
-                deleteOne: DeleteBusinessActivity(
-                  BusinessActivityRepositoryImpl(BusinessActivityService()),
-                ),
-                token: token,
-                businessId: businessId,
-                optimisticDelete: false,
-              )..add(const BusinessHomeStarted()),
-            ),
-            BlocProvider(
-              create: (ctx) {
-                final repo = BusinessNotificationRepositoryImpl(
-                  BusinessNotificationService(),
-                );
-                return BusinessNotificationBloc(
-                  getBusinessNotifications: GetBusinessNotifications(repo),
-                  repository: repo,
-                  token: token,
-                )..add(LoadUnreadCount(token));
-              },
-            ),
-          ],
-          child: BusinessHomeScreen(
-            token: token,
-            businessId: businessId,
-            onCreate: (ctx, bid) {
-              Navigator.pushNamed(
-                ctx,
-                Routes.createBusinessActivity,
-                arguments: CreateActivityRouteArgs(businessId: bid),
+  List<Widget> _businessViews() {
+    return [
+      // Home (with notifications + home bloc)
+      MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (ctx) => BusinessHomeBloc(
+              getList: GetBusinessActivities(
+                BusinessActivityRepositoryImpl(BusinessActivityService()),
+              ),
+              getOne: GetBusinessActivityById(
+                BusinessActivityRepositoryImpl(BusinessActivityService()),
+              ),
+              deleteOne: DeleteBusinessActivity(
+                BusinessActivityRepositoryImpl(BusinessActivityService()),
+              ),
+              token: token,
+              businessId: businessId,
+              optimisticDelete: false,
+            )..add(const BusinessHomeStarted()),
+          ),
+          BlocProvider(
+            create: (ctx) {
+              final repo = BusinessNotificationRepositoryImpl(
+                BusinessNotificationService(),
               );
+              return BusinessNotificationBloc(
+                getBusinessNotifications: GetBusinessNotifications(repo),
+                repository: repo,
+                token: token,
+              )..add(LoadUnreadCount(token));
             },
           ),
-        ),
-
-        // ✅ Bookings
-        BlocProvider(
-          create: (ctx) => BusinessBookingBloc(
-            getBookings: GetBusinessBookings(
-              BusinessBookingRepositoryImpl(BusinessBookingService()),
-            ),
-            updateStatus: UpdateBookingStatus(
-              BusinessBookingRepositoryImpl(BusinessBookingService()),
-            ),
-          )..add(BusinessBookingBootstrap()),
-          child: const BusinessBookingScreen(),
-        ),
-
-        // ✅ Analytics
-        BlocProvider(
-          create: (ctx) => BusinessAnalyticsBloc(
-            getBusinessAnalytics: GetBusinessAnalytics(
-              BusinessAnalyticsRepositoryImpl(BusinessAnalyticsService()),
-            ),
-          )..add(LoadBusinessAnalytics(token: token, businessId: businessId)),
-          child: BusinessAnalyticsScreen(token: token, businessId: businessId),
-        ),
-
-        // ✅ Activities
-        BlocProvider(
-          create: (ctx) {
-            final repo = BusinessActivityRepositoryImpl(
-              BusinessActivityService(),
-            );
-            return BusinessActivitiesBloc(
-              getActivities: GetBusinessActivities(repo),
-              deleteActivity: DeleteBusinessActivity(repo),
-            )..add(
-              LoadBusinessActivities(token: token, businessId: businessId),
+        ],
+        child: BusinessHomeScreen(
+          token: token,
+          businessId: businessId,
+          onCreate: (ctx, bid) {
+            Navigator.pushNamed(
+              ctx,
+              Routes.createBusinessActivity,
+              arguments: CreateActivityRouteArgs(businessId: bid),
             );
           },
-          child: BusinessActivitiesScreen(token: token, businessId: businessId),
         ),
+      ),
 
-        // ✅ Profile
-        BlocProvider(
-          create: (ctx) {
-            final businessRepo = BusinessRepositoryImpl(BusinessService());
-            return BusinessProfileBloc(
-              getBusinessById: GetBusinessById(businessRepo),
-              updateBusinessVisibility: UpdateBusinessVisibility(businessRepo),
-              updateBusinessStatus: UpdateBusinessStatus(businessRepo),
-              deleteBusiness: DeleteBusiness(businessRepo),
-              checkStripeStatus: CheckStripeStatus(businessRepo),
-            )..add(LoadBusinessProfile(token, businessId));
-          },
-          child: BusinessProfileScreen(
-            token: token,
-            businessId: businessId,
-            onTabChange: (_) {},
-            onChangeLocale: onChangeLocale,
+      // Bookings
+      BlocProvider(
+        create: (ctx) => BusinessBookingBloc(
+          getBookings: GetBusinessBookings(
+            BusinessBookingRepositoryImpl(BusinessBookingService()),
           ),
-        ),
-      ];
-    }
+          updateStatus: UpdateBookingStatus(
+            BusinessBookingRepositoryImpl(BusinessBookingService()),
+          ),
+        )..add(BusinessBookingBootstrap()),
+        child: const BusinessBookingScreen(),
+      ),
 
-    // ✅ User role
-    return const [
-      UserHomeScreen(),
-      UserExploreScreen(),
-      UserCommunityScreen(),
-      UserTicketsScreen(),
-      UserProfileScreen(),
+      // Analytics
+      BlocProvider(
+        create: (ctx) => BusinessAnalyticsBloc(
+          getBusinessAnalytics: GetBusinessAnalytics(
+            BusinessAnalyticsRepositoryImpl(BusinessAnalyticsService()),
+          ),
+        )..add(LoadBusinessAnalytics(token: token, businessId: businessId)),
+        child: BusinessAnalyticsScreen(token: token, businessId: businessId),
+      ),
+
+      // Activities
+      BlocProvider(
+        create: (ctx) {
+          final repo = BusinessActivityRepositoryImpl(
+            BusinessActivityService(),
+          );
+          return BusinessActivitiesBloc(
+            getActivities: GetBusinessActivities(repo),
+            deleteActivity: DeleteBusinessActivity(repo),
+          )..add(LoadBusinessActivities(token: token, businessId: businessId));
+        },
+        child: BusinessActivitiesScreen(token: token, businessId: businessId),
+      ),
+
+      // Profile
+      BlocProvider(
+        create: (ctx) {
+          final businessRepo = BusinessRepositoryImpl(BusinessService());
+          return BusinessProfileBloc(
+            getBusinessById: GetBusinessById(businessRepo),
+            updateBusinessVisibility: UpdateBusinessVisibility(businessRepo),
+            updateBusinessStatus: UpdateBusinessStatus(businessRepo),
+            deleteBusiness: DeleteBusiness(businessRepo),
+            checkStripeStatus: CheckStripeStatus(businessRepo),
+          )..add(LoadBusinessProfile(token, businessId));
+        },
+        child: BusinessProfileScreen(
+          token: token,
+          businessId: businessId,
+          onTabChange: (_) {},
+          onChangeLocale: onChangeLocale,
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _userViews() {
+    final userId = _extractUserId(token) ?? 0;
+    final name = _extractDisplayName(token) ?? 'User';
+
+    // DI for user home features
+    final homeRepo = HomeRepositoryImpl(HomeService());
+    final getInterest = GetInterestBasedItems(homeRepo);
+    final getUpcoming = GetUpcomingGuestItems(homeRepo);
+
+    final getItemTypes = GetItemTypes(
+      ItemTypeRepositoryImpl(ItemTypesService()),
+    );
+    final getItemsByType = GetItemsByType(ItemsRepositoryImpl(ItemsService()));
+
+    return [
+      UserHomeScreen(
+        displayName: name,
+        token: token,
+        userId: userId, // if 0, interests section can be hidden internally
+        getInterestBased: getInterest,
+        getUpcomingGuest: getUpcoming,
+        getItemTypes: getItemTypes,
+        getItemsByType: getItemsByType,
+      ),
+      const UserExploreScreen(),
+      const UserCommunityScreen(),
+      const UserTicketsScreen(),
+      const UserProfileScreen(),
     ];
   }
 
@@ -256,8 +321,8 @@ class ShellTop extends StatelessWidget {
 
     final scheme = Theme.of(context).colorScheme;
     final labels = _labels(context);
-    final icons = _icons();
-    final pages = _views(context);
+    final icons = _icons(); // not used visually (text tabs), kept for parity
+    final pages = role == AppRole.business ? _businessViews() : _userViews();
 
     final badgeIndex = role == AppRole.business ? 1 : 3;
     final badgeCount = role == AppRole.business ? bookingsBadge : ticketsBadge;
@@ -267,12 +332,12 @@ class ShellTop extends StatelessWidget {
       child: Builder(
         builder: (tabCtx) {
           final controller = DefaultTabController.of(tabCtx);
-
           return Scaffold(
             body: SafeArea(
               bottom: false,
               child: Column(
                 children: [
+                  // Top “pill” TabBar
                   Material(
                     elevation: 0,
                     color: Colors.transparent,
@@ -294,12 +359,11 @@ class ShellTop extends StatelessWidget {
                       child: TabBar(
                         isScrollable: false,
                         indicator: BoxDecoration(
-                          // softer highlight for selected tab
                           color: scheme.primary.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: scheme.primary, width: 1.5),
                         ),
-                        labelColor: scheme.primary, // text colored like theme
+                        labelColor: scheme.primary,
                         unselectedLabelColor: scheme.onSurface.withOpacity(0.7),
                         labelStyle: const TextStyle(
                           fontWeight: FontWeight.w600,
@@ -310,24 +374,34 @@ class ShellTop extends StatelessWidget {
                           fontWeight: FontWeight.w500,
                           fontSize: 13,
                         ),
-                        tabs: labels.map((text) {
+                        tabs: List.generate(labels.length, (i) {
+                          final hasBadge = i == badgeIndex && badgeCount > 0;
                           return Tab(
-                            child: Center(
-                              child: Text(
-                                text,
-                                textAlign: TextAlign.center,
-                                overflow: TextOverflow.visible,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(labels[i]),
+                                if (hasBadge) ...[
+                                  const SizedBox(width: 6),
+                                  Badge(
+                                    label: Text(
+                                      badgeCount > 99 ? '99+' : '$badgeCount',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           );
-                        }).toList(),
+                        }),
                       ),
                     ),
                   ),
+
+                  // Pages
                   Expanded(
                     child: TabBarView(controller: controller, children: pages),
                   ),
@@ -341,7 +415,7 @@ class ShellTop extends StatelessWidget {
   }
 }
 
-/// Tiny, tasteful selected animation
+/// Tiny, tasteful selected animation (not used by text tabs, but handy if you switch to icon tabs)
 class _AnimatedNavIcon extends StatelessWidget {
   final IconData unselected;
   final IconData selected;

@@ -1,5 +1,6 @@
-import '../entities/item_type.dart';
+// Contract – fetch types using token
+import '../entities/item_type.dart'; // entity
 
 abstract class ItemTypeRepository {
-  Future<List<ItemType>> getItemTypes(String token);
+  Future<List<ItemType>> getItemTypes(String token); // GET /item-types
 }

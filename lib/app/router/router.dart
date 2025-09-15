@@ -36,16 +36,24 @@ import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/do
 import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/update_status.dart';
 import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/presentation/bloc/edit_business_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/presentation/screens/edit_business_screen.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/items_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/data/services/items_service.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_items_by_type.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/PrivacyPolicyScreen.dart';
 
 // ---------- Common screens ----------
 import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/data/repositories/home_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/data/services/home_service.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart'
+    show GetInterestBasedItems;
+import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_upcoming_guest_items.dart';
 import 'package:hobby_sphere/features/authentication/presentation/login/screen/login_page.dart';
 
 // ---------- User ----------
-import 'package:hobby_sphere/features/activities/user/presentation/user_home_screen.dart';
+import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
 
 // ---------- Business ----------
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
@@ -220,6 +228,17 @@ class EditBusinessRouteArgs {
   final String token;
   final int businessId;
   const EditBusinessRouteArgs({required this.token, required this.businessId});
+}
+
+class UserHomeRouteArgs {
+  final String token; // user jwt
+  final int userId; // numeric user id
+  final String displayName;
+  const UserHomeRouteArgs({
+    required this.token,
+    required this.userId,
+    required this.displayName,
+  });
 }
 
 class ReopenItemRouteArgs {
@@ -500,7 +519,35 @@ class AppRouter {
 
       // ===== User =====
       case Routes.userHome:
-        return _page(const UserHomeScreen(), settings);
+        {
+          final data = args is UserHomeRouteArgs ? args : null;
+
+          // DI — feature services/repos/usecases
+          final homeRepo = HomeRepositoryImpl(HomeService());
+          final getInterest = GetInterestBasedItems(homeRepo);
+          final getUpcoming = GetUpcomingGuestItems(homeRepo);
+
+          final itemTypes = GetItemTypes(
+            ItemTypeRepositoryImpl(ItemTypesService()),
+          );
+          final itemsByType = GetItemsByType(
+            ItemsRepositoryImpl(ItemsService()),
+          );
+
+          return _page(
+            UserHomeScreen(
+              displayName: data?.displayName ?? 'Guest',
+              token: data?.token ?? '',
+              userId: data?.userId ?? 0, // 0 => hides "Interests" section
+              getInterestBased: getInterest,
+              getUpcomingGuest: getUpcoming,
+              getItemTypes: itemTypes,
+              getItemsByType: itemsByType,
+              
+            ),
+            settings,
+          );
+        }
 
       // ===== Business Home =====
       case Routes.businessHome:

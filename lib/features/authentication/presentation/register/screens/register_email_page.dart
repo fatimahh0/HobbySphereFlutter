@@ -1,8 +1,10 @@
-// register_email_page.dart
+// ===== Flutter 3.35.x =====
+// Email registration screen with remote interests (all strings from l10n)
+
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/features/authentication/presentation/register/widgets/interests_grid.dart';
 import 'package:image_picker/image_picker.dart';
 
 // l10n + shared
@@ -11,37 +13,43 @@ import 'package:hobby_sphere/shared/widgets/app_button.dart';
 import 'package:hobby_sphere/shared/widgets/app_text_field.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 
-// DI
+// DI (service + repos + usecases)
 import 'package:hobby_sphere/features/authentication/data/services/registration_service.dart';
 import 'package:hobby_sphere/features/authentication/data/repositories/registration_repository_impl.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/send_user_verification.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/verify_user_email_code.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/verify_user_phone_code.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/complete_user_profile.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/add_user_interests.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/resend_user_code.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/send_business_verification.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/verify_business_email_code.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/verify_business_phone_code.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/complete_business_profile.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/resend_business_code.dart';
+import 'package:hobby_sphere/features/authentication/data/repositories/interests_repository_impl.dart';
 
-// BLoC
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/send_user_verification.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/verify_user_email_code.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/verify_user_phone_code.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/complete_user_profile.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/add_user_interests.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/resend_user_code.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/send_business_verification.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/verify_business_email_code.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/verify_business_phone_code.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/complete_business_profile.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/resend_business_code.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/get_activity_types.dart';
+
+// Bloc
 import 'package:hobby_sphere/features/authentication/presentation/register/bloc/register_bloc.dart';
 import 'package:hobby_sphere/features/authentication/presentation/register/bloc/register_event.dart';
 import 'package:hobby_sphere/features/authentication/presentation/register/bloc/register_state.dart';
 
-// routes (for "Log in" link)
-import 'package:hobby_sphere/app/router/router.dart' show Routes;
+// Small widgets
+import '../widgets/login_link.dart';
+import '../widgets/guidelines.dart';
+import '../widgets/otp_boxes.dart';
+import '../widgets/pill_field.dart';
+import '../widgets/pick_box.dart';
 
-// Your password widget; if you don't have it, swap with AppTextField
+// Password field
 import 'package:hobby_sphere/features/authentication/presentation/login/widgets/password_input.dart';
 
 class RegisterEmailPage extends StatelessWidget {
   final RegistrationService service;
+  final int initialRoleIndex; // 0=user, 1=business
 
-  /// pass the chosen role from the first “select role” screen (0 = user, 1 = business)
-  final int initialRoleIndex;
   const RegisterEmailPage({
     super.key,
     required this.service,
@@ -50,20 +58,23 @@ class RegisterEmailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final repo = RegistrationRepositoryImpl(service);
+    final regRepo = RegistrationRepositoryImpl(service);
+    final interestsRepo = InterestsRepositoryImpl(service);
+
     return BlocProvider(
       create: (_) => RegisterBloc(
-        sendUserVerification: SendUserVerification(repo),
-        verifyUserEmail: VerifyUserEmailCode(repo),
-        verifyUserPhone: VerifyUserPhoneCode(repo),
-        completeUser: CompleteUserProfile(repo),
-        addInterests: AddUserInterests(repo),
-        resendUser: ResendUserCode(repo),
-        sendBizVerification: SendBusinessVerification(repo),
-        verifyBizEmail: VerifyBusinessEmailCode(repo),
-        verifyBizPhone: VerifyBusinessPhoneCode(repo),
-        completeBiz: CompleteBusinessProfile(repo),
-        resendBiz: ResendBusinessCode(repo),
+        sendUserVerification: SendUserVerification(regRepo),
+        verifyUserEmail: VerifyUserEmailCode(regRepo),
+        verifyUserPhone: VerifyUserPhoneCode(regRepo),
+        completeUser: CompleteUserProfile(regRepo),
+        addInterests: AddUserInterests(regRepo),
+        resendUser: ResendUserCode(regRepo),
+        sendBizVerification: SendBusinessVerification(regRepo),
+        verifyBizEmail: VerifyBusinessEmailCode(regRepo),
+        verifyBizPhone: VerifyBusinessPhoneCode(regRepo),
+        completeBiz: CompleteBusinessProfile(regRepo),
+        resendBiz: ResendBusinessCode(regRepo),
+        getActivityTypes: GetActivityTypes(interestsRepo),
       )..add(RegRoleChanged(initialRoleIndex)),
       child: const _RegisterEmailView(),
     );
@@ -78,49 +89,47 @@ class _RegisterEmailView extends StatefulWidget {
 }
 
 class _RegisterEmailViewState extends State<_RegisterEmailView> {
-  // contact
+  // Contact + password controllers
   final _email = TextEditingController();
   final _pwd = TextEditingController();
   final _pwd2 = TextEditingController();
 
-  // otp
+  // OTP controllers/nodes
   final _otpCtrls = List.generate(6, (_) => TextEditingController());
   final _otpNodes = List.generate(6, (_) => FocusNode());
 
-  // user
+  // User profile controllers
   final _first = TextEditingController();
   final _last = TextEditingController();
   final _username = TextEditingController();
 
-  // business
+  // Business profile controllers
   final _bizName = TextEditingController();
   final _bizDesc = TextEditingController();
   final _bizWebsite = TextEditingController();
 
+  // Local UI state
   final _picker = ImagePicker();
-
-  // local UI
-  bool _stagePassword = false; // email page -> password page (same route)
+  bool _stagePassword = false;
   bool _pwdObscure = true;
   bool _pwd2Obscure = true;
   bool _newsletterOptIn = false;
   bool _showAllInterests = true;
 
+  bool _requestedInterests = false; // fire once on interests step
+
   @override
   void initState() {
     super.initState();
-
-    // Force EMAIL mode on this page (if bloc defaults to phone).
+    // ensure EMAIL method
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final bloc = context.read<RegisterBloc>();
       if (bloc.state.usePhone) {
-        bloc.add(RegToggleMethod()); // toggle to email
+        bloc.add(RegToggleMethod());
       }
     });
-
-    // Keep buttons' enabled state in sync while typing
-    _pwd.addListener(_update);
-    _pwd2.addListener(_update);
+    _pwd.addListener(() => setState(() {}));
+    _pwd2.addListener(() => setState(() {}));
   }
 
   @override
@@ -139,8 +148,6 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
     super.dispose();
   }
 
-  void _update() => setState(() {});
-
   bool _isValidEmail(String v) =>
       RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim());
 
@@ -152,9 +159,7 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
 
     final emailReady = _isValidEmail(_email.text);
     final signUpReady =
-        _isValidEmail(_email.text) &&
-        _pwd.text.length >= 8 &&
-        _pwd.text == _pwd2.text;
+        emailReady && _pwd.text.length >= 8 && _pwd.text == _pwd2.text;
 
     return Scaffold(
       appBar: AppBar(
@@ -178,12 +183,10 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
           }
           if (s.step == RegStep.done) {
             final msg = s.roleIndex == 0
-                ? (t.registerSuccessUser)
-                : (t.registerSuccessBusiness);
+                ? t.registerSuccessUser
+                : t.registerSuccessBusiness;
             showTopToast(context, msg, type: ToastType.success);
           }
-
-          // Optional: pre-fill OTP if backend auto-filled it
           if (s.code.length == 6) {
             for (int i = 0; i < 6; i++) {
               _otpCtrls[i].text = s.code[i];
@@ -192,6 +195,17 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
         },
         builder: (context, s) {
           final bloc = context.read<RegisterBloc>();
+
+          // interests auto-fetch
+          if (s.step == RegStep.interests &&
+              !_requestedInterests &&
+              !s.interestsLoading &&
+              s.interestOptions.isEmpty) {
+            _requestedInterests = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              bloc.add(RegFetchInterests());
+            });
+          }
 
           return SafeArea(
             child: Stack(
@@ -204,12 +218,13 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Title switches between “enter email” and “create account”
                       Padding(
                         padding: const EdgeInsets.only(top: 8, bottom: 16),
                         child: Text(
-                          !_stagePassword && s.step == RegStep.contact
-                              ? 'Enter email'
-                              : 'Sign up',
+                          (!_stagePassword && s.step == RegStep.contact)
+                              ? t.emailRegistrationEnterEmail
+                              : t.registerTitle,
                           textAlign: TextAlign.center,
                           style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w700,
@@ -217,13 +232,13 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                         ),
                       ),
 
-                      // ================== CONTACT (EMAIL PATH) ==================
+                      // ===== CONTACT (EMAIL) =====
                       if (s.step == RegStep.contact) ...[
                         if (!_stagePassword) ...[
                           AppTextField(
                             controller: _email,
-                            label: 'Email address',
-                            hint: 'Email address',
+                            label: t.emailRegistrationEmailPlaceholder,
+                            hint: t.emailRegistrationEmailPlaceholder,
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.done,
                             borderRadius: 28,
@@ -231,8 +246,7 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            "You'll receive a verification code via email. "
-                            "Your email may be used for account security and discovery depending on your settings.",
+                            t.emailRegistrationEmailDesc,
                             style: theme.textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 16),
@@ -240,21 +254,20 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                             onPressed: emailReady
                                 ? () => setState(() => _stagePassword = true)
                                 : null,
-                            label: 'Continue',
+                            label: t.emailRegistrationContinue,
                             expand: true,
                           ),
                           const SizedBox(height: 12),
-                          _LoginLink(),
+                          const LoginLink(),
                         ] else ...[
+                          // ===== PASSWORD STAGE =====
                           Text(
-                            'Create password',
+                            t.emailRegistrationCreatePassword,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 8),
-
-                          // If you don't have PasswordInput, replace with AppTextField (obscure:true)
                           PasswordInput(
                             controller: _pwd,
                             obscure: _pwdObscure,
@@ -262,11 +275,10 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                                 setState(() => _pwdObscure = !_pwdObscure),
                           ),
                           const SizedBox(height: 10),
-
                           AppTextField(
                             controller: _pwd2,
-                            label: 'Enter password',
-                            hint: 'Enter password',
+                            label: t.registerConfirmPassword,
+                            hint: t.emailRegistrationPasswordPlaceholder,
                             prefix: const Icon(Icons.lock_outline),
                             suffix: IconButton(
                               icon: Icon(
@@ -282,9 +294,8 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                             borderRadius: 28,
                           ),
                           const SizedBox(height: 10),
-                          const _Guidelines(),
+                          const Guidelines(),
                           const SizedBox(height: 8),
-
                           Row(
                             children: [
                               Checkbox(
@@ -298,13 +309,12 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                               ),
                               Expanded(
                                 child: Text(
-                                  'Get trending content and updates by email',
+                                  t.emailRegistrationSaveInfo,
                                   style: theme.textTheme.bodyMedium,
                                 ),
                               ),
                             ],
                           ),
-
                           const SizedBox(height: 8),
                           AppButton(
                             onPressed: signUpReady
@@ -312,44 +322,44 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                                     if (!_isValidEmail(_email.text)) {
                                       showTopToast(
                                         context,
-                                        'Please enter a valid email',
+                                        t.emailRegistrationErrorGeneric,
                                         type: ToastType.error,
                                         haptics: true,
                                       );
                                       return;
                                     }
-                                    // guard: ensure bloc is on EMAIL mode
-                                    if (s.usePhone) bloc.add(RegToggleMethod());
-
-                                    bloc.add(
-                                      RegEmailChanged(_email.text.trim()),
-                                    );
-                                    bloc.add(
-                                      RegPasswordChanged(_pwd.text.trim()),
-                                    );
-                                    bloc.add(RegSendVerification());
+                                    if (s.usePhone)
+                                      bloc.add(
+                                        RegToggleMethod(),
+                                      ); // ensure email mode
+                                    bloc
+                                      ..add(RegEmailChanged(_email.text.trim()))
+                                      ..add(
+                                        RegPasswordChanged(_pwd.text.trim()),
+                                      )
+                                      ..add(RegSendVerification());
                                   }
                                 : null,
-                            label: 'Sign Up',
+                            label: t.emailRegistrationSignUp,
                             expand: true,
                           ),
                           const SizedBox(height: 12),
-                          _LoginLink(),
+                          const LoginLink(),
                         ],
                       ],
 
-                      // ================== OTP ==================
+                      // ===== OTP =====
                       if (s.step == RegStep.code) ...[
                         const SizedBox(height: 12),
                         Text(
-                          'Enter the 6-digit verification code',
+                          t.emailRegistrationVerificationSent, // "Verification code sent…"
                           textAlign: TextAlign.center,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 18),
-                        _OtpBoxes(
+                        OtpBoxes(
                           ctrls: _otpCtrls,
                           nodes: _otpNodes,
                           onChanged: (code) => context.read<RegisterBloc>().add(
@@ -360,7 +370,7 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                         AppButton(
                           onPressed: () =>
                               context.read<RegisterBloc>().add(RegVerifyCode()),
-                          label: 'Verify',
+                          label: t.verifyVerifyBtn, // "Verify"
                           expand: true,
                         ),
                         const SizedBox(height: 10),
@@ -368,27 +378,33 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                           onPressed: () =>
                               context.read<RegisterBloc>().add(RegResendCode()),
                           type: AppButtonType.outline,
-                          label: 'Resend Code',
+                          label: t.verifyResendBtn, // "Resend Code"
                           expand: true,
                         ),
                       ],
 
-                      // ================== USER FLOW ==================
+                      // ===== USER: NAME =====
                       if (s.step == RegStep.name) ...[
                         const SizedBox(height: 16),
-                        _pillLabel(context, "What's your name?"),
+                        Text(
+                          t.registerCompleteStep1FirstNameQuestion,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         const SizedBox(height: 12),
-                        _pillField(
+                        PillField(
                           controller: _first,
-                          label: 'First Name',
+                          label: t.registerCompleteStep1FirstName,
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegFirstNameChanged(v),
                           ),
                         ),
                         const SizedBox(height: 12),
-                        _pillField(
+                        PillField(
                           controller: _last,
-                          label: 'Last Name',
+                          label: t.registerCompleteStep1LastName,
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegLastNameChanged(v),
                           ),
@@ -398,20 +414,29 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                           onPressed: () => context.read<RegisterBloc>().emit(
                             s.copyWith(step: RegStep.username),
                           ),
-                          label: 'Continue',
+                          label: t.registerCompleteButtonsContinue,
                           expand: true,
                         ),
                       ],
 
+                      // ===== USER: USERNAME =====
                       if (s.step == RegStep.username) ...[
                         const SizedBox(height: 16),
-                        _pillLabel(context, 'Choose a username'),
+                        Text(
+                          t.registerCompleteStep2ChooseUsername,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         const SizedBox(height: 12),
-                        _pillField(
+                        PillField(
                           controller: _username,
-                          label: 'Username',
+                          label: t.registerCompleteStep2Username,
                           helper:
-                              '• Must be unique\n• No spaces or symbols\n• Between 3–15 characters',
+                              '${t.registerCompleteStep2UsernameHint1}\n'
+                              '${t.registerCompleteStep2UsernameHint2}\n'
+                              '${t.registerCompleteStep2UsernameHint3}',
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegUsernameChanged(v),
                           ),
@@ -421,11 +446,12 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                           onPressed: () => context.read<RegisterBloc>().emit(
                             s.copyWith(step: RegStep.profile),
                           ),
-                          label: 'Continue',
+                          label: t.registerCompleteButtonsContinue,
                           expand: true,
                         ),
                       ],
 
+                      // ===== USER: PROFILE =====
                       if (s.step == RegStep.profile) ...[
                         const SizedBox(height: 12),
                         Center(
@@ -436,6 +462,11 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                               );
                               context.read<RegisterBloc>().add(
                                 RegPickUserImage(img),
+                              );
+                              showTopToast(
+                                context,
+                                t.registerAddProfilePhoto,
+                                type: ToastType.info,
                               );
                             },
                             child: Stack(
@@ -486,41 +517,75 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegUserPublicToggled(v),
                           ),
-                          title: const Text('Public Profile'),
+                          title: Text(t.registerCompleteStep3PublicProfile),
                         ),
                         const SizedBox(height: 8),
                         AppButton(
                           onPressed: () => context.read<RegisterBloc>().add(
                             RegSubmitUserProfile(),
                           ),
-                          label: 'Finish',
+                          label: t.registerCompleteButtonsFinish,
                           expand: true,
                         ),
                       ],
 
-                      if (s.step == RegStep.interests)
-                        _InterestsGrid(
-                          showAll: _showAllInterests,
-                          onToggleShow: () => setState(
-                            () => _showAllInterests = !_showAllInterests,
+                      // ===== USER: INTERESTS (remote) =====
+                      if (s.step == RegStep.interests) ...[
+                        if (s.interestsLoading) ...[
+                          const SizedBox(height: 24),
+                          const Center(child: CircularProgressIndicator()),
+                          const SizedBox(height: 24),
+                        ] else if ((s.interestsError ?? '').isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Center(
+                            child: Text(
+                              t.interestLoadError,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.error,
+                              ),
+                            ),
                           ),
-                          selected: s.interests,
-                          onToggle: (id) => context.read<RegisterBloc>().add(
-                            RegToggleInterest(id),
+                          const SizedBox(height: 12),
+                          AppButton(
+                            onPressed: () => context.read<RegisterBloc>().add(
+                              RegFetchInterests(),
+                            ),
+                            label: t.buttonsContinue, // generic retry text
+                            expand: true,
                           ),
-                          onSubmit: () => context.read<RegisterBloc>().add(
-                            RegSubmitInterests(),
+                        ] else ...[
+                          InterestsGridRemote(
+                            items: s.interestOptions,
+                            selected: s.interests,
+                            showAll: _showAllInterests,
+                            onToggleShow: () => setState(
+                              () => _showAllInterests = !_showAllInterests,
+                            ),
+                            onToggle: (id) => context.read<RegisterBloc>().add(
+                              RegToggleInterest(id),
+                            ),
+                            onSubmit: () => context.read<RegisterBloc>().add(
+                              RegSubmitInterests(),
+                            ),
                           ),
-                        ),
+                        ],
+                      ],
 
-                      // ================== BUSINESS FLOW ==================
+                      // ===== BUSINESS: NAME =====
                       if (s.step == RegStep.bizName) ...[
                         const SizedBox(height: 16),
-                        _pillLabel(context, 'Business Name'),
+                        Text(
+                          t.registerCompleteStep1BusinessName,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         const SizedBox(height: 12),
-                        _pillField(
+                        PillField(
                           controller: _bizName,
-                          label: 'Business',
+                          label: t.registerBusinessName,
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegBusinessNameChanged(v),
                           ),
@@ -530,17 +595,23 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                           onPressed: () => context.read<RegisterBloc>().emit(
                             s.copyWith(step: RegStep.bizDetails),
                           ),
-                          label: 'Continue',
+                          label: t.registerCompleteButtonsContinue,
                           expand: true,
                         ),
                       ],
 
+                      // ===== BUSINESS: DETAILS =====
                       if (s.step == RegStep.bizDetails) ...[
                         const SizedBox(height: 8),
-                        _label(context, 'Business Description'),
+                        Text(
+                          t.registerCompleteStep2BusinessDescription,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         AppTextField(
                           controller: _bizDesc,
-                          label: 'Description',
+                          label: t.registerDescription,
                           maxLines: 4,
                           borderRadius: 18,
                           onChanged: (v) => context.read<RegisterBloc>().add(
@@ -548,10 +619,15 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        _label(context, 'Website URL (optional)'),
-                        _pillField(
+                        Text(
+                          t.registerCompleteStep2WebsiteUrl,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        PillField(
                           controller: _bizWebsite,
-                          label: 'Website',
+                          label: t.registerWebsite,
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegBusinessWebsiteChanged(v),
                           ),
@@ -561,15 +637,21 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                           onPressed: () => context.read<RegisterBloc>().emit(
                             s.copyWith(step: RegStep.bizProfile),
                           ),
-                          label: 'Continue',
+                          label: t.registerCompleteButtonsContinue,
                           expand: true,
                         ),
                       ],
 
+                      // ===== BUSINESS: PROFILE =====
                       if (s.step == RegStep.bizProfile) ...[
-                        _label(context, 'Business Logo'),
-                        _PickBox(
-                          label: 'Select logo',
+                        Text(
+                          t.registerSelectLogo,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        PickBox(
+                          label: t.registerSelectLogo,
                           onPick: () async {
                             final img = await _picker.pickImage(
                               source: ImageSource.gallery,
@@ -580,9 +662,14 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                           },
                         ),
                         const SizedBox(height: 12),
-                        _label(context, 'Business Banner'),
-                        _PickBox(
-                          label: 'Select banner',
+                        Text(
+                          t.registerSelectBanner,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        PickBox(
+                          label: t.registerSelectBanner,
                           onPick: () async {
                             final img = await _picker.pickImage(
                               source: ImageSource.gallery,
@@ -597,11 +684,12 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                           onPressed: () => context.read<RegisterBloc>().add(
                             RegSubmitBusinessProfile(),
                           ),
-                          label: 'Finish',
+                          label: t.registerCompleteButtonsFinish,
                           expand: true,
                         ),
                       ],
 
+                      // ===== DONE =====
                       if (s.step == RegStep.done) ...[
                         const SizedBox(height: 40),
                         Icon(Icons.check_circle, size: 64, color: cs.primary),
@@ -609,8 +697,8 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                         Center(
                           child: Text(
                             s.roleIndex == 0
-                                ? (t.registerSuccessUser)
-                                : (t.registerSuccessBusiness),
+                                ? t.registerSuccessUser
+                                : t.registerSuccessBusiness,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
@@ -621,7 +709,8 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                   ),
                 ),
 
-                if (s.loading)
+                // Loading overlay
+                if (context.watch<RegisterBloc>().state.loading)
                   Container(
                     color: Colors.black.withOpacity(.12),
                     child: Center(
@@ -630,7 +719,7 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                         children: [
                           const CircularProgressIndicator(),
                           const SizedBox(height: 10),
-                          Text(t.registerCompleteButtonsSubmitting),
+                          Text(t.emailRegistrationLoading),
                         ],
                       ),
                     ),
@@ -640,292 +729,6 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
           );
         },
       ),
-    );
-  }
-
-  // ===== small UI helpers (pill fields / labels) =====
-  Widget _pillField({
-    required TextEditingController controller,
-    required String label,
-    String? helper,
-    ValueChanged<String>? onChanged,
-  }) {
-    return AppTextField(
-      controller: controller,
-      label: label,
-      hint: label,
-      maxLines: 1,
-      borderRadius: 28,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      onChanged: onChanged,
-      helper: helper,
-      filled: false,
-    );
-  }
-
-  Widget _pillLabel(BuildContext context, String t) => Text(
-    t,
-    textAlign: TextAlign.center,
-    style: Theme.of(
-      context,
-    ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-  );
-
-  Widget _label(BuildContext context, String t) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(
-      t,
-      style: Theme.of(
-        context,
-      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-    ),
-  );
-}
-
-// ===== components =====
-
-class _Guidelines extends StatelessWidget {
-  const _Guidelines();
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodyMedium;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('• 8 characters (20 max)', style: style),
-        Text(
-          '• 1 letter, 1 number, 1 special character (# ? ! @)',
-          style: style,
-        ),
-        Text('• Strong password', style: style),
-      ],
-    );
-  }
-}
-
-class _LoginLink extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Center(
-        child: Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            const Text('Already have an account? '),
-            InkWell(
-              onTap: () => Navigator.of(context).pushNamed(Routes.login),
-              child: Text(
-                'Log in',
-                style: TextStyle(
-                  color: cs.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OtpBoxes extends StatelessWidget {
-  final List<TextEditingController> ctrls;
-  final List<FocusNode> nodes;
-  final ValueChanged<String> onChanged;
-  const _OtpBoxes({
-    required this.ctrls,
-    required this.nodes,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(6, (i) {
-        return Container(
-          width: 44,
-          height: 48,
-          margin: const EdgeInsets.symmetric(horizontal: 6),
-          child: TextField(
-            controller: ctrls[i],
-            focusNode: nodes[i],
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium,
-            maxLength: 1,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              counterText: '',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: cs.primary),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: cs.outlineVariant),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: cs.primary, width: 1.6),
-              ),
-            ),
-            onChanged: (v) {
-              if (v.isNotEmpty && i < 5) nodes[i + 1].requestFocus();
-              if (v.isEmpty && i > 0) nodes[i - 1].requestFocus();
-              onChanged(ctrls.map((c) => c.text).join());
-            },
-          ),
-        );
-      }),
-    );
-  }
-}
-
-class _PickBox extends StatelessWidget {
-  final String label;
-  final VoidCallback onPick;
-  const _PickBox({required this.label, required this.onPick});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onPick,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        height: 110,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: cs.surfaceVariant.withOpacity(.35),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: cs.outlineVariant),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.image_outlined),
-            const SizedBox(width: 8),
-            Text(label),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Interests with icons (compact chips)
-class _InterestsGrid extends StatelessWidget {
-  final bool showAll;
-  final VoidCallback onToggleShow;
-  final Set<int> selected;
-  final void Function(int) onToggle;
-  final VoidCallback onSubmit;
-
-  const _InterestsGrid({
-    required this.showAll,
-    required this.onToggleShow,
-    required this.selected,
-    required this.onToggle,
-    required this.onSubmit,
-  });
-
-  static const _all = [
-    {'id': 1, 'name': 'Fitness', 'icon': Icons.fitness_center},
-    {'id': 2, 'name': 'Cooking', 'icon': Icons.restaurant_menu},
-    {'id': 3, 'name': 'Travel', 'icon': Icons.flight_takeoff},
-    {'id': 4, 'name': 'Gaming', 'icon': Icons.sports_esports},
-    {'id': 5, 'name': 'Theater', 'icon': Icons.theaters},
-    {'id': 6, 'name': 'Language', 'icon': Icons.translate},
-    {'id': 7, 'name': 'Photography', 'icon': Icons.camera_alt},
-    {'id': 8, 'name': 'DIY', 'icon': Icons.handyman},
-    {'id': 9, 'name': 'Beauty', 'icon': Icons.brush},
-    {'id': 10, 'name': 'Finance', 'icon': Icons.attach_money},
-    {'id': 11, 'name': 'Other', 'icon': Icons.interests},
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final items = showAll ? _all : _all.take(6).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'What are you into?',
-          textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: items.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 2.6,
-          ),
-          itemBuilder: (_, i) {
-            final it = items[i];
-            final id = it['id'] as int;
-            final active = selected.contains(id);
-            final iconData = it['icon'] as IconData;
-            return InkWell(
-              onTap: () => onToggle(id),
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: active ? cs.primary : cs.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: active ? cs.primary : cs.outlineVariant,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      iconData,
-                      size: 20,
-                      color: active ? cs.onPrimary : cs.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      it['name'] as String,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: active ? cs.onPrimary : cs.onSurface,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 10),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: onToggleShow,
-            child: Text(showAll ? 'See less' : 'See all'),
-          ),
-        ),
-        const SizedBox(height: 8),
-        AppButton(onPressed: onSubmit, label: 'Continue', expand: true),
-      ],
     );
   }
 }

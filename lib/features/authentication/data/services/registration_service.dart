@@ -156,4 +156,23 @@ class RegistrationService {
       throw HttpException('Request failed: ${r.statusCode} ${r.statusMessage}');
     }
   }
+
+  // fetch all activity types from backend
+  Future<List<Map<String, dynamic>>> fetchActivityTypes() async {
+    // call GET /api/activity-types/all
+    final r = await dio.get('/activity-types/all'); // do request
+    _ok(r); // throw if not 2xx
+
+    // the API may return a List or a Map with a 'data' field
+    final data = r.data; // raw payload
+    if (data is List) {
+      // direct list?
+      return List<Map<String, dynamic>>.from(data); // cast to list of map
+    }
+    if (data is Map && data['data'] is List) {
+      // wrapped list?
+      return List<Map<String, dynamic>>.from(data['data']); // unwrap .data
+    }
+    return const <Map<String, dynamic>>[]; // safe empty list
+  }
 }
