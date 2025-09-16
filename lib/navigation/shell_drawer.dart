@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/constants/app_role.dart';
+import 'package:hobby_sphere/core/network/globals.dart' as g;
 
 // ==== Business Activity ====
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
@@ -62,12 +63,15 @@ import 'package:hobby_sphere/features/activities/Business/common/data/services/b
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
 
 // ==== User Screens ====
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
-import 'package:hobby_sphere/features/activities/user/common/presentation/user_explore_screen.dart';
+import 'package:hobby_sphere/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart';
 import 'package:hobby_sphere/features/activities/user/common/presentation/user_community_screen.dart';
-import 'package:hobby_sphere/features/activities/user/common/presentation/user_tickets_screen.dart';
+import 'package:hobby_sphere/features/activities/user/tickets/presentation/screens/user_tickets_screen.dart';
 import 'package:hobby_sphere/features/activities/user/common/presentation/user_profile_screen.dart';
 
 // ==== User Home feature (services/repos/usecases) ====
@@ -114,6 +118,25 @@ class ShellDrawer extends StatefulWidget {
 class _ShellDrawerState extends State<ShellDrawer> {
   int _index = 0;
 
+  String _serverRoot() {
+    final base = (g.appServerRoot ?? '');
+    return base.replaceFirst(RegExp(r'/api/?$'), '');
+  }
+
+  Map<String, dynamic>? _jwtPayload(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final decoded = utf8.decode(
+        base64Url.decode(base64Url.normalize(parts[1])),
+      );
+      final obj = jsonDecode(decoded);
+      return (obj is Map<String, dynamic>) ? obj : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ---- helpers to read jwt ----
   int? _extractUserId(String token) {
     try {
@@ -144,6 +167,36 @@ class _ShellDrawerState extends State<ShellDrawer> {
     }
   }
 
+  String? _extractFirstName(String token) {
+    final p = _jwtPayload(token);
+    if (p == null) return null;
+    final fn = (p['firstName'] ?? p['given_name'])?.toString();
+    if (fn != null && fn.trim().isNotEmpty) return fn.trim();
+
+    final name = p['name']?.toString();
+    if (name != null && name.trim().isNotEmpty) {
+      final parts = name.trim().split(RegExp(r'\s+'));
+      if (parts.isNotEmpty) return parts.first;
+    }
+    return null;
+  }
+
+  String? _extractLastName(String token) {
+    final p = _jwtPayload(token);
+    if (p == null) return null;
+    final ln = (p['lastName'] ?? p['family_name'])?.toString();
+    if (ln != null && ln.trim().isNotEmpty) return ln.trim();
+
+    final name = p['name']?.toString();
+    if (name != null && name.trim().isNotEmpty) {
+      final parts = name.trim().split(RegExp(r'\s+'));
+      if (parts.length > 1) {
+        return parts.sublist(1).join(' ');
+      }
+    }
+    return null;
+  }
+
   // ---- DI for User Home feature ----
   late final _homeRepo = HomeRepositoryImpl(HomeService());
   late final _getInterest = GetInterestBasedItems(_homeRepo);
@@ -156,23 +209,33 @@ class _ShellDrawerState extends State<ShellDrawer> {
   );
 
   late final int _userId = _extractUserId(widget.token) ?? 0;
-  late final String _userName = _extractDisplayName(widget.token) ?? 'User';
+  late final String? _firstName = _extractFirstName(widget.token);
+  late final String? _lastName = _extractLastName(widget.token);
 
   // ===== User pages =====
   late final List<Widget> _userPages = <Widget>[
     UserHomeScreen(
-      displayName: _userName,
+      firstName: _firstName, // << pass names (header shows First + Last)
+      lastName: _lastName,
       token: widget.token,
       userId: _userId, // if 0 => interests section hides
       getInterestBased: _getInterest,
       getUpcomingGuest: _getUpcoming,
       getItemTypes: _getItemTypes,
       getItemsByType: _getItemsByType,
-
     ),
-    const UserExploreScreen(),
+    ExploreScreen(
+      token: widget.token,
+      getItemTypes: _getItemTypes,
+      getItemsByType: _getItemsByType,
+      getUpcomingGuest: _getUpcoming,
+      getCurrencyCode: () async => (await GetCurrentCurrency(
+        CurrencyRepositoryImpl(CurrencyService()),
+      )(widget.token)).code,
+      imageBaseUrl: _serverRoot(),
+    ),
     const UserCommunityScreen(),
-    const UserTicketsScreen(),
+    UserTicketsScreen(token: widget.token),
     const UserProfileScreen(),
   ];
 

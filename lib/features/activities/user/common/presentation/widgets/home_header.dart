@@ -1,13 +1,15 @@
-// lib/features/activities/user/common/presentation/widgets/home_header.dart
 import 'package:flutter/material.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/widgets/notification_badge.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 
 class HomeHeader extends StatelessWidget {
-  final String displayName;
+  /// Show these in the title (never username).
+  final String? firstName;
+  final String? lastName;
+
   final String? subtitle;
-  final String? avatarUrl; // can be absolute or like "/uploads/.."
+  final String? avatarUrl; // absolute or "/uploads/.."
   final String? imageBaseUrl; // e.g. "http://3.96.140.126:8080"
   final int unreadCount;
   final VoidCallback? onBellTap;
@@ -20,7 +22,8 @@ class HomeHeader extends StatelessWidget {
 
   const HomeHeader({
     super.key,
-    required this.displayName,
+    this.firstName,
+    this.lastName,
     this.subtitle,
     this.avatarUrl,
     this.imageBaseUrl,
@@ -43,6 +46,13 @@ class HomeHeader extends StatelessWidget {
       return '${imageBaseUrl!.replaceFirst(RegExp(r'/$'), '')}$url';
     }
     return url;
+  }
+
+  String _fullNameOrGuest() {
+    final fn = (firstName ?? '').trim();
+    final ln = (lastName ?? '').trim();
+    final full = [fn, ln].where((s) => s.isNotEmpty).join(' ').trim();
+    return full.isNotEmpty ? full : 'Guest';
   }
 
   @override
@@ -95,7 +105,7 @@ class HomeHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  displayName,
+                  _fullNameOrGuest(), // <-- first + last only
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: (dense ? text.titleSmall : text.titleMedium)?.copyWith(

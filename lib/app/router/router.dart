@@ -126,7 +126,6 @@ abstract class Routes {
   static const businessActivityDetails = '/business/activity/details';
   static const businessInsights = '/business/insights';
   static const businessUsers = '/business/businessUser';
-  // NEW: keep consistent with other routes (leading slash)
   static const inviteManager = '/business/invite-manager';
 }
 
@@ -190,7 +189,6 @@ class BusinessUsersRouteArgs {
   final String token;
   final int businessId;
   final int itemId;
-  // FIX: make this optional instead of a dangling 'required' param
   final List<int>? enrolledUserIds;
 
   const BusinessUsersRouteArgs({
@@ -230,14 +228,18 @@ class EditBusinessRouteArgs {
   const EditBusinessRouteArgs({required this.token, required this.businessId});
 }
 
+// >>> UPDATED: use first/last name (no username)
 class UserHomeRouteArgs {
   final String token; // user jwt
   final int userId; // numeric user id
-  final String displayName;
+  final String? firstName;
+  final String? lastName;
+
   const UserHomeRouteArgs({
     required this.token,
     required this.userId,
-    required this.displayName,
+    this.firstName,
+    this.lastName,
   });
 }
 
@@ -302,9 +304,7 @@ class AppRouter {
 
       case Routes.register:
         {
-          final data = args is RegisterRouteArgs ? args : null;
           final dio = g.appDio ?? Dio();
-
           return _page(
             RegisterPage(service: RegistrationService(dio)),
             settings,
@@ -364,11 +364,11 @@ class AppRouter {
         );
 
       case Routes.reopenItem:
-        final args = settings.arguments as ReopenItemRouteArgs;
+        final rArgs = settings.arguments as ReopenItemRouteArgs;
         return MaterialPageRoute(
           builder: (_) => ReopenItemPage(
-            businessId: args.businessId,
-            oldItem: args.oldItem,
+            businessId: rArgs.businessId,
+            oldItem: rArgs.oldItem,
             getItemTypes: GetItemTypes(
               ItemTypeRepositoryImpl(ItemTypesService()),
             ),
@@ -379,8 +379,8 @@ class AppRouter {
         );
 
       case Routes.businessActivityDetails:
-        final data = args is BusinessActivityDetailsRouteArgs ? args : null;
-        if (data == null) {
+        final badArgs = args is BusinessActivityDetailsRouteArgs ? args : null;
+        if (badArgs == null) {
           return _error(
             "Missing BusinessActivityDetailsRouteArgs (token + activityId).",
           );
@@ -398,8 +398,8 @@ class AppRouter {
             final deleteOne = DeleteBusinessActivity(repo);
 
             return BusinessActivityDetailsScreen(
-              activityId: data.activityId,
-              token: data.token,
+              activityId: badArgs.activityId,
+              token: badArgs.token,
               getById: getOne,
               getCurrency: getCurrency,
               deleteActivity: deleteOne,
@@ -409,8 +409,8 @@ class AppRouter {
 
       // ===== Business Insights =====
       case Routes.businessInsights:
-        final data = args is BusinessInsightsRouteArgs ? args : null;
-        if (data == null) {
+        final biArgs = args is BusinessInsightsRouteArgs ? args : null;
+        if (biArgs == null) {
           return _error(
             'Missing BusinessInsightsRouteArgs (token + businessId).',
           );
@@ -418,30 +418,30 @@ class AppRouter {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => BusinessInsightsScreen(
-            token: data.token,
-            businessId: data.businessId,
-            itemId: data.itemId,
+            token: biArgs.token,
+            businessId: biArgs.businessId,
+            itemId: biArgs.itemId,
           ),
         );
 
       case Routes.businessUsers:
-        final data = args is BusinessUsersRouteArgs ? args : null;
-        if (data == null) {
+        final buArgs = args is BusinessUsersRouteArgs ? args : null;
+        if (buArgs == null) {
           return _error('Missing BusinessUsersRouteArgs (token + businessId).');
         }
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => BusinessUsersScreen(
-            token: data.token,
-            businessId: data.businessId,
-            itemId: data.itemId,
+            token: buArgs.token,
+            businessId: buArgs.businessId,
+            itemId: buArgs.itemId,
           ),
         );
 
       // ===== Business Analytics =====
       case Routes.businessAnalytics:
-        final data = args is BusinessHomeRouteArgs ? args : null;
-        if (data == null) {
+        final bhArgs = args is BusinessHomeRouteArgs ? args : null;
+        if (bhArgs == null) {
           return _error('Missing BusinessHomeRouteArgs (token + businessId).');
         }
         return MaterialPageRoute(
@@ -456,13 +456,13 @@ class AppRouter {
                     getBusinessAnalytics: GetBusinessAnalytics(repo),
                   )..add(
                     LoadBusinessAnalytics(
-                      token: data.token,
-                      businessId: data.businessId,
+                      token: bhArgs.token,
+                      businessId: bhArgs.businessId,
                     ),
                   ),
               child: BusinessAnalyticsScreen(
-                token: data.token,
-                businessId: data.businessId,
+                token: bhArgs.token,
+                businessId: bhArgs.businessId,
               ),
             );
           },
@@ -470,8 +470,8 @@ class AppRouter {
 
       // ===== Business Notifications =====
       case Routes.businessNotifications:
-        final data = args is BusinessNotificationsRouteArgs ? args : null;
-        if (data == null) {
+        final bnArgs = args is BusinessNotificationsRouteArgs ? args : null;
+        if (bnArgs == null) {
           return _error(
             'Missing BusinessNotificationsRouteArgs (token + businessId).',
           );
@@ -479,15 +479,15 @@ class AppRouter {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => BusinessNotificationScreen(
-            token: data.token,
-            businessId: data.businessId,
+            token: bnArgs.token,
+            businessId: bnArgs.businessId,
           ),
         );
 
       // ===== Business Activities =====
       case Routes.businessActivities:
-        final data = args is BusinessActivitiesRouteArgs ? args : null;
-        if (data == null) {
+        final baArgs = args is BusinessActivitiesRouteArgs ? args : null;
+        if (baArgs == null) {
           return _error(
             "Missing BusinessActivitiesRouteArgs (token + businessId).",
           );
@@ -505,13 +505,13 @@ class AppRouter {
                     deleteActivity: DeleteBusinessActivity(repo),
                   )..add(
                     LoadBusinessActivities(
-                      token: data.token,
-                      businessId: data.businessId,
+                      token: baArgs.token,
+                      businessId: baArgs.businessId,
                     ),
                   ),
               child: BusinessActivitiesScreen(
-                token: data.token,
-                businessId: data.businessId,
+                token: baArgs.token,
+                businessId: baArgs.businessId,
               ),
             );
           },
@@ -520,7 +520,7 @@ class AppRouter {
       // ===== User =====
       case Routes.userHome:
         {
-          final data = args is UserHomeRouteArgs ? args : null;
+          final uhArgs = args is UserHomeRouteArgs ? args : null;
 
           // DI — feature services/repos/usecases
           final homeRepo = HomeRepositoryImpl(HomeService());
@@ -536,14 +536,14 @@ class AppRouter {
 
           return _page(
             UserHomeScreen(
-              displayName: data?.displayName ?? 'Guest',
-              token: data?.token ?? '',
-              userId: data?.userId ?? 0, // 0 => hides "Interests" section
+              firstName: uhArgs?.firstName, // << use names
+              lastName: uhArgs?.lastName,
+              token: uhArgs?.token ?? '',
+              userId: uhArgs?.userId ?? 0, // 0 => hides "Interests" section
               getInterestBased: getInterest,
               getUpcomingGuest: getUpcoming,
               getItemTypes: itemTypes,
               getItemsByType: itemsByType,
-              
             ),
             settings,
           );
@@ -551,15 +551,14 @@ class AppRouter {
 
       // ===== Business Home =====
       case Routes.businessHome:
-        final data = args is BusinessHomeRouteArgs ? args : null;
-        if (data == null) {
+        final bhmArgs = args is BusinessHomeRouteArgs ? args : null;
+        if (bhmArgs == null) {
           return _error('Missing BusinessHomeRouteArgs (token + businessId).');
         }
         return MaterialPageRoute(
           settings: settings,
           builder: (context) => MultiBlocProvider(
             providers: [
-              // Home list (you already had)
               BlocProvider(
                 create: (_) => BusinessHomeBloc(
                   getList: GetBusinessActivities(
@@ -571,12 +570,11 @@ class AppRouter {
                   deleteOne: DeleteBusinessActivity(
                     BusinessActivityRepositoryImpl(BusinessActivityService()),
                   ),
-                  token: data.token,
-                  businessId: data.businessId,
+                  token: bhmArgs.token,
+                  businessId: bhmArgs.businessId,
                   optimisticDelete: false,
                 )..add(const BusinessHomeStarted()),
               ),
-              // 👇 add notifications bloc so WelcomeSection can read it
               BlocProvider(
                 create: (_) {
                   final repo = BusinessNotificationRepositoryImpl(
@@ -585,16 +583,16 @@ class AppRouter {
                   return BusinessNotificationBloc(
                       getBusinessNotifications: GetBusinessNotifications(repo),
                       repository: repo,
-                      token: data.token,
+                      token: bhmArgs.token,
                     )
                     ..add(LoadBusinessNotifications())
-                    ..add(LoadUnreadCount(data.token));
+                    ..add(LoadUnreadCount(bhmArgs.token));
                 },
               ),
             ],
             child: BusinessHomeScreen(
-              token: data.token,
-              businessId: data.businessId,
+              token: bhmArgs.token,
+              businessId: bhmArgs.businessId,
               onCreate: (ctx, bid) {
                 navigatorKey.currentState?.pushNamed(
                   Routes.createBusinessActivity,
@@ -606,8 +604,8 @@ class AppRouter {
         );
 
       case Routes.editBusiness:
-        final data = args is EditBusinessRouteArgs ? args : null;
-        if (data == null) {
+        final ebArgs = args is EditBusinessRouteArgs ? args : null;
+        if (ebArgs == null) {
           return _error("Missing EditBusinessRouteArgs (token + businessId).");
         }
         return MaterialPageRoute(
@@ -623,8 +621,8 @@ class AppRouter {
                 deleteBanner: DeleteBanner(repo),
               ),
               child: EditBusinessScreen(
-                token: data.token,
-                businessId: data.businessId,
+                token: ebArgs.token,
+                businessId: ebArgs.businessId,
               ),
             );
           },
@@ -632,13 +630,13 @@ class AppRouter {
 
       // ===== Create Activity =====
       case Routes.createBusinessActivity:
-        final data = args is CreateActivityRouteArgs ? args : null;
-        if (data == null) return _error("Missing CreateActivityRouteArgs");
+        final caArgs = args is CreateActivityRouteArgs ? args : null;
+        if (caArgs == null) return _error("Missing CreateActivityRouteArgs");
 
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => CreateItemPage(
-            businessId: data.businessId,
+            businessId: caArgs.businessId,
             getItemTypes: GetItemTypes(
               ItemTypeRepositoryImpl(ItemTypesService()),
             ),
@@ -650,8 +648,8 @@ class AppRouter {
 
       // ===== Edit Activity =====
       case Routes.editBusinessActivity:
-        final data = args is EditActivityRouteArgs ? args : null;
-        if (data == null) {
+        final eaArgs = args is EditActivityRouteArgs ? args : null;
+        if (eaArgs == null) {
           return _error('Missing EditActivityRouteArgs (itemId + businessId).');
         }
 
@@ -669,8 +667,8 @@ class AppRouter {
             final getOne = GetBusinessActivityById(activityRepo);
 
             return EditItemPage(
-              itemId: data.itemId,
-              businessId: data.businessId,
+              itemId: eaArgs.itemId,
+              businessId: eaArgs.businessId,
               getItemTypes: getItemTypes,
               getCurrentCurrency: getCurrency,
               getItemById: getOne,
@@ -680,26 +678,29 @@ class AppRouter {
 
       // ===== Invite Manager (NEW) =====
       case Routes.inviteManager:
-        final data = args is InviteManagerRouteArgs ? args : null;
-        if (data == null) {
+        final imArgs = args is InviteManagerRouteArgs ? args : null;
+        if (imArgs == null) {
           return _error('Missing InviteManagerRouteArgs (token + businessId).');
         }
         return _page(
-          InviteManagerScreen(token: data.token, businessId: data.businessId),
+          InviteManagerScreen(
+            token: imArgs.token,
+            businessId: imArgs.businessId,
+          ),
           settings,
         );
 
       // ===== Role-aware shell =====
       case Routes.shell:
-        final data = args is ShellRouteArgs ? args : null;
-        if (data == null) {
+        final shArgs = args is ShellRouteArgs ? args : null;
+        if (shArgs == null) {
           return _error('Missing ShellRouteArgs (role + token + businessId).');
         }
         return _page(
           NavBootstrap(
-            role: data.role,
-            token: data.token,
-            businessId: data.businessId,
+            role: shArgs.role,
+            token: shArgs.token,
+            businessId: shArgs.businessId,
             onChangeLocale: onChangeLocale,
             onToggleTheme: onToggleTheme,
           ),

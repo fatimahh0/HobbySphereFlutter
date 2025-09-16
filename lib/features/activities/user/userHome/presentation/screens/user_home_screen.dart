@@ -28,7 +28,10 @@ import 'package:hobby_sphere/features/activities/user/common/presentation/widget
 import 'package:hobby_sphere/shared/widgets/app_search_bar.dart';
 
 class UserHomeScreen extends StatelessWidget {
-  final String displayName;
+  /// Show these in the header (never username).
+  final String? firstName;
+  final String? lastName;
+
   final String? avatarUrl;
   final int unreadCount;
 
@@ -48,7 +51,8 @@ class UserHomeScreen extends StatelessWidget {
 
   const UserHomeScreen({
     super.key,
-    required this.displayName,
+    this.firstName,
+    this.lastName,
     this.avatarUrl,
     this.unreadCount = 0,
     required this.token,
@@ -89,7 +93,8 @@ class UserHomeScreen extends StatelessWidget {
           padding: EdgeInsets.zero,
           children: [
             HomeHeader(
-              displayName: displayName,
+              firstName: firstName, // <-- only first/last shown
+              lastName: lastName,
               avatarUrl: avatarUrl,
               unreadCount: unreadCount,
               margin: EdgeInsets.zero,
@@ -110,8 +115,8 @@ class UserHomeScreen extends StatelessWidget {
                 currencyCode: currencyFallback,
                 getCurrencyCode: getCurrencyCodeFn,
                 imageBaseUrl: serverRoot,
-                maxItems: 4, // unchanged
-                standalone: false, // unchanged
+                maxItems: 4,
+                standalone: false,
                 onItemTap: (id) {},
                 onShowAll: () {
                   Navigator.of(context).push(
@@ -132,13 +137,11 @@ class UserHomeScreen extends StatelessWidget {
             const SizedBox(height: 6),
 
             // ==== Categories ====
-            // in UserHomeScreen -> build()
-            // In UserHomeScreen -> build()
             ActivityTypesSection(
               getTypes: getItemTypes,
-              getItemsByType: getItemsByType, // <— add this
+              getItemsByType: getItemsByType,
               token: token,
-              onlyWithActivities: true, // <— show only types that have items
+              onlyWithActivities: true,
               onTypeTap: (id, name) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -147,6 +150,7 @@ class UserHomeScreen extends StatelessWidget {
                       typeName: name,
                       getItemsByType: getItemsByType,
                       currencyCode: currencyFallback,
+                      imageBaseUrl: serverRoot,
                     ),
                   ),
                 );
@@ -156,7 +160,7 @@ class UserHomeScreen extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => ActivityTypesAllScreen(
                       getTypes: getItemTypes,
-                      getItemsByType: getItemsByType, // <— add this
+                      getItemsByType: getItemsByType,
                       token: token,
                       onTypeTap: (id, name) {
                         Navigator.of(context).push(
@@ -166,6 +170,7 @@ class UserHomeScreen extends StatelessWidget {
                               typeName: name,
                               getItemsByType: getItemsByType,
                               currencyCode: currencyFallback,
+                              imageBaseUrl: serverRoot,
                             ),
                           ),
                         );
@@ -186,8 +191,8 @@ class UserHomeScreen extends StatelessWidget {
               currencyCode: currencyFallback,
               getCurrencyCode: getCurrencyCodeFn,
               imageBaseUrl: serverRoot,
-              maxItems: 6, // unchanged
-              standalone: false, // unchanged
+              maxItems: 6,
+              standalone: false,
               onItemTap: (id) {},
               onShowAll: () {
                 Navigator.of(context).push(
@@ -259,9 +264,9 @@ class _AllInterestsPageState extends State<_AllInterestsPage> {
         currencyCode: widget.currencyFallback,
         getCurrencyCode: widget.getCurrencyCode,
         imageBaseUrl: widget.imageBaseUrl,
-        maxItems: null, // show ALL
-        searchQuery: _query, // local filter
-        standalone: true, // makes it scrollable
+        maxItems: null,
+        searchQuery: _query,
+        standalone: true,
         onShowAll: null,
       ),
     );
@@ -308,9 +313,9 @@ class _AllExplorePageState extends State<_AllExplorePage> {
         currencyCode: widget.currencyFallback,
         getCurrencyCode: widget.getCurrencyCode,
         imageBaseUrl: widget.imageBaseUrl,
-        maxItems: null, // show ALL
-        searchQuery: _query, // local filter
-        standalone: true, // makes it scrollable
+        maxItems: null,
+        searchQuery: _query,
+        standalone: true,
         onShowAll: null,
       ),
     );

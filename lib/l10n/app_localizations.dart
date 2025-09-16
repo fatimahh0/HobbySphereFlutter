@@ -4153,6 +4153,54 @@ abstract class AppLocalizations {
   /// **'Time'**
   String get ticketTime;
 
+  /// No description provided for @ticketsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tickets'**
+  String get ticketsTitle;
+
+  /// No description provided for @ticketsEmptyPending.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending tickets.'**
+  String get ticketsEmptyPending;
+
+  /// No description provided for @ticketsEmptyCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'No completed tickets.'**
+  String get ticketsEmptyCompleted;
+
+  /// No description provided for @ticketsEmptyCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'No canceled tickets.'**
+  String get ticketsEmptyCanceled;
+
+  /// No description provided for @ticketsEmptyGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'No tickets found.'**
+  String get ticketsEmptyGeneric;
+
+  /// No description provided for @ticketsDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get ticketsDelete;
+
+  /// No description provided for @ticketsDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete ticket?'**
+  String get ticketsDeleteTitle;
+
+  /// No description provided for @ticketsDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'This will remove the canceled ticket.'**
+  String get ticketsDeleteConfirm;
+
   /// No description provided for @theme.
   ///
   /// In en, this message translates to:

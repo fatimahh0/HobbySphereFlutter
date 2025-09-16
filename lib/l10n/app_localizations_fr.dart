@@ -2051,6 +2051,30 @@ class AppLocalizationsFr extends AppLocalizations {
   String get ticketTime => 'Time';
 
   @override
+  String get ticketsTitle => 'Tickets';
+
+  @override
+  String get ticketsEmptyPending => 'No pending tickets.';
+
+  @override
+  String get ticketsEmptyCompleted => 'No completed tickets.';
+
+  @override
+  String get ticketsEmptyCanceled => 'No canceled tickets.';
+
+  @override
+  String get ticketsEmptyGeneric => 'No tickets found.';
+
+  @override
+  String get ticketsDelete => 'Delete';
+
+  @override
+  String get ticketsDeleteTitle => 'Delete ticket?';
+
+  @override
+  String get ticketsDeleteConfirm => 'This will remove the canceled ticket.';
+
+  @override
   String get theme => 'theme';
 
   @override

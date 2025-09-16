@@ -1,6 +1,6 @@
 // ===== Flutter 3.35.x =====
 // ShellTop — top tab navigation (fixed header + smooth tabs)
-// Updated: injects UserHome deps, parses JWT for userId/displayName,
+// Updated: injects UserHome deps, parses JWT for userId + first/last name,
 // and shows a badge on Bookings/Tickets tab.
 
 import 'dart:convert' show base64Url, jsonDecode, utf8;
@@ -11,6 +11,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/constants/app_role.dart';
+import 'package:hobby_sphere/core/network/globals.dart' as g;
 
 // Business Activity
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
@@ -64,12 +65,15 @@ import 'package:hobby_sphere/features/activities/Business/common/data/services/b
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
 
 // User Screens
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
-import 'package:hobby_sphere/features/activities/user/common/presentation/user_explore_screen.dart';
+import 'package:hobby_sphere/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart';
 import 'package:hobby_sphere/features/activities/user/common/presentation/user_community_screen.dart';
-import 'package:hobby_sphere/features/activities/user/common/presentation/user_tickets_screen.dart';
+import 'package:hobby_sphere/features/activities/user/tickets/presentation/screens/user_tickets_screen.dart';
 import 'package:hobby_sphere/features/activities/user/common/presentation/user_profile_screen.dart';
 
 // User Home DI (services/repos/usecases)
@@ -112,33 +116,55 @@ class ShellTop extends StatelessWidget {
   });
 
   // ---- JWT helpers ----
-  int? _extractUserId(String tkn) {
+  Map<String, dynamic>? _jwtPayload(String tkn) {
     try {
       final parts = tkn.split('.');
       if (parts.length != 3) return null;
-      final payload = jsonDecode(
-        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      final payload = utf8.decode(
+        base64Url.decode(base64Url.normalize(parts[1])),
       );
-      final raw = payload['id'] ?? payload['userId'];
-      if (raw is num) return raw.toInt();
-      return int.tryParse('$raw');
+      final obj = jsonDecode(payload);
+      return (obj is Map<String, dynamic>) ? obj : null;
     } catch (_) {
       return null;
     }
   }
 
-  String? _extractDisplayName(String tkn) {
-    try {
-      final parts = tkn.split('.');
-      if (parts.length != 3) return null;
-      final payload = jsonDecode(
-        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
-      );
-      final n = payload['name'] ?? payload['given_name'] ?? payload['username'];
-      return n?.toString();
-    } catch (_) {
-      return null;
+  int? _extractUserId(String tkn) {
+    final p = _jwtPayload(tkn);
+    if (p == null) return null;
+    final raw = p['id'] ?? p['userId'];
+    if (raw is num) return raw.toInt();
+    return int.tryParse('$raw');
+  }
+
+  String? _extractFirstName(String tkn) {
+    final p = _jwtPayload(tkn);
+    if (p == null) return null;
+    final fn = (p['firstName'] ?? p['given_name'])?.toString();
+    if (fn != null && fn.trim().isNotEmpty) return fn.trim();
+
+    final name = p['name']?.toString();
+    if (name != null && name.trim().isNotEmpty) {
+      return name.trim().split(RegExp(r'\s+')).first;
     }
+    return null;
+  }
+
+  String? _extractLastName(String tkn) {
+    final p = _jwtPayload(tkn);
+    if (p == null) return null;
+    final ln = (p['lastName'] ?? p['family_name'])?.toString();
+    if (ln != null && ln.trim().isNotEmpty) return ln.trim();
+
+    final name = p['name']?.toString();
+    if (name != null && name.trim().isNotEmpty) {
+      final parts = name.trim().split(RegExp(r'\s+'));
+      if (parts.length > 1) {
+        return parts.sublist(1).join(' ');
+      }
+    }
+    return null;
   }
 
   List<String> _labels(BuildContext ctx) {
@@ -280,7 +306,13 @@ class ShellTop extends StatelessWidget {
 
   List<Widget> _userViews() {
     final userId = _extractUserId(token) ?? 0;
-    final name = _extractDisplayName(token) ?? 'User';
+    final firstName = _extractFirstName(token);
+    final lastName = _extractLastName(token);
+
+    String _serverRoot() {
+      final base = (g.appServerRoot ?? '');
+      return base.replaceFirst(RegExp(r'/api/?$'), '');
+    }
 
     // DI for user home features
     final homeRepo = HomeRepositoryImpl(HomeService());
@@ -294,7 +326,9 @@ class ShellTop extends StatelessWidget {
 
     return [
       UserHomeScreen(
-        displayName: name,
+        // << show First + Last in header (no username)
+        firstName: firstName,
+        lastName: lastName,
         token: token,
         userId: userId, // if 0, interests section can be hidden internally
         getInterestBased: getInterest,
@@ -302,9 +336,19 @@ class ShellTop extends StatelessWidget {
         getItemTypes: getItemTypes,
         getItemsByType: getItemsByType,
       ),
-      const UserExploreScreen(),
+
+      ExploreScreen(
+        token: token,
+        getUpcomingGuest: getUpcoming,
+        getItemTypes: getItemTypes,
+        getItemsByType: getItemsByType,
+        getCurrencyCode: () async => (await GetCurrentCurrency(
+          CurrencyRepositoryImpl(CurrencyService()),
+        )(token)).code,
+        imageBaseUrl: _serverRoot(),
+      ),
       const UserCommunityScreen(),
-      const UserTicketsScreen(),
+      UserTicketsScreen(token: token),
       const UserProfileScreen(),
     ];
   }

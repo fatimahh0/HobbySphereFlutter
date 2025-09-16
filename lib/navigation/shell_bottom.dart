@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/constants/app_role.dart';
+import 'package:hobby_sphere/core/network/globals.dart' as g;
 
 // ===== Business blocs/usecases/data =====
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
@@ -53,12 +54,15 @@ import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/pres
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
 
 // ===== User screens =====
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
-import 'package:hobby_sphere/features/activities/user/common/presentation/user_explore_screen.dart';
+import 'package:hobby_sphere/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart';
 import 'package:hobby_sphere/features/activities/user/common/presentation/user_community_screen.dart';
-import 'package:hobby_sphere/features/activities/user/common/presentation/user_tickets_screen.dart';
+import 'package:hobby_sphere/features/activities/user/tickets/presentation/screens/user_tickets_screen.dart';
 import 'package:hobby_sphere/features/activities/user/common/presentation/user_profile_screen.dart';
 
 // ===== User Home feature (services/repos/usecases) =====
@@ -105,34 +109,62 @@ class ShellBottom extends StatefulWidget {
 class _ShellBottomState extends State<ShellBottom> {
   int _index = 0;
 
+  String _serverRoot() {
+    final base = (g.appServerRoot ?? '');
+    return base.replaceFirst(RegExp(r'/api/?$'), '');
+  }
+
   // ---- helpers to read jwt ----
-  int? _extractUserId(String token) {
+  Map<String, dynamic>? _jwtPayload(String token) {
     try {
       final parts = token.split('.');
       if (parts.length != 3) return null;
-      final payload = jsonDecode(
-        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      final decoded = utf8.decode(
+        base64Url.decode(base64Url.normalize(parts[1])),
       );
-      final raw = payload['id'] ?? payload['userId'];
-      if (raw is num) return raw.toInt();
-      return int.tryParse('$raw');
+      final obj = jsonDecode(decoded);
+      return (obj is Map<String, dynamic>) ? obj : null;
     } catch (_) {
       return null;
     }
   }
 
-  String? _extractDisplayName(String token) {
-    try {
-      final parts = token.split('.');
-      if (parts.length != 3) return null;
-      final payload = jsonDecode(
-        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
-      );
-      final n = payload['name'] ?? payload['given_name'] ?? payload['username'];
-      return n?.toString();
-    } catch (_) {
-      return null;
+  int? _extractUserId(String token) {
+    final payload = _jwtPayload(token);
+    if (payload == null) return null;
+    final raw = payload['id'] ?? payload['userId'];
+    if (raw is num) return raw.toInt();
+    return int.tryParse('$raw');
+  }
+
+  String? _extractFirstName(String token) {
+    final p = _jwtPayload(token);
+    if (p == null) return null;
+    final fn = (p['firstName'] ?? p['given_name'])?.toString();
+    if (fn != null && fn.trim().isNotEmpty) return fn.trim();
+
+    final name = p['name']?.toString();
+    if (name != null && name.trim().isNotEmpty) {
+      final parts = name.trim().split(RegExp(r'\s+'));
+      if (parts.isNotEmpty) return parts.first;
     }
+    return null;
+  }
+
+  String? _extractLastName(String token) {
+    final p = _jwtPayload(token);
+    if (p == null) return null;
+    final ln = (p['lastName'] ?? p['family_name'])?.toString();
+    if (ln != null && ln.trim().isNotEmpty) return ln.trim();
+
+    final name = p['name']?.toString();
+    if (name != null && name.trim().isNotEmpty) {
+      final parts = name.trim().split(RegExp(r'\s+'));
+      if (parts.length > 1) {
+        return parts.sublist(1).join(' ');
+      }
+    }
+    return null;
   }
 
   // ---- DI for User Home feature ----
@@ -147,23 +179,34 @@ class _ShellBottomState extends State<ShellBottom> {
   );
 
   late final int _userId = _extractUserId(widget.token) ?? 0;
-  late final String _userName = _extractDisplayName(widget.token) ?? 'User';
+  late final String? _firstName = _extractFirstName(widget.token);
+  late final String? _lastName = _extractLastName(widget.token);
 
   // ===== User pages =====
   late final List<Widget> _userPages = <Widget>[
     UserHomeScreen(
-      displayName: _userName,
+      firstName: _firstName, // << pass names (header shows First + Last)
+      lastName: _lastName,
       token: widget.token,
       userId: _userId, // if 0 => interests section hides
       getInterestBased: _getInterest,
       getUpcomingGuest: _getUpcoming,
       getItemTypes: _getItemTypes,
       getItemsByType: _getItemsByType,
-     
     ),
-    const UserExploreScreen(),
+    ExploreScreen(
+      token: widget.token,
+      getItemTypes: _getItemTypes,
+      getItemsByType: _getItemsByType,
+      getUpcomingGuest: _getUpcoming,
+      getCurrencyCode: () async => (await GetCurrentCurrency(
+        CurrencyRepositoryImpl(CurrencyService()),
+      )(widget.token)).code,
+      imageBaseUrl: _serverRoot(),
+    ),
+
     const UserCommunityScreen(),
-    const UserTicketsScreen(),
+    UserTicketsScreen(token: widget.token),
     const UserProfileScreen(),
   ];
 
