@@ -1,15 +1,33 @@
-// Flutter 3.35.x
-// Entity (your old shape) – UI shows "name"
 class ItemType {
-  final int id; // id
-  final String name; // display name text
-  final String? icon; // icon id from backend (Ionicons name)
-  final String? iconLib; // icon library name (e.g., "Ionicons")
+  final int id;
+  final String name;
+  final String? icon;
+  final String? iconLib;
+
+  /// NEW: optional count from backend (activities/items available for this type)
+  final int? itemsCount;
 
   const ItemType({
-    required this.id, // require id
-    required this.name, // require name
-    this.icon, // optional icon id
-    this.iconLib, // optional library
+    required this.id,
+    required this.name,
+    this.icon,
+    this.iconLib,
+    this.itemsCount,
   });
+
+  ItemType copyWith({
+    int? id,
+    String? name,
+    String? icon,
+    String? iconLib,
+    int? itemsCount,
+  }) {
+    return ItemType(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      icon: icon ?? this.icon,
+      iconLib: iconLib ?? this.iconLib,
+      itemsCount: itemsCount ?? this.itemsCount,
+    );
+  }
 }

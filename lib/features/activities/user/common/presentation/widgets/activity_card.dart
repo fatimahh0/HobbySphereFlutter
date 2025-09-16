@@ -1,11 +1,12 @@
-// activity_card.dart
+// lib/features/activities/user/common/presentation/widgets/activity_card.dart
 // Flutter 3.35.x
-// ActivityCard — responsive (no overflow) + absolute image URLs + debug logs
+// Smaller compact card: safe sizing, currency symbols, absolute image URLs.
 
-import 'package:flutter/foundation.dart'; // kDebugMode, debugPrint
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:hobby_sphere/shared/theme/app_theme.dart'; // AppColors.muted
+import 'package:hobby_sphere/shared/theme/app_theme.dart';
+import 'package:hobby_sphere/shared/utils/currency_utils.dart';
 
 class ActivityCardData {
   final int id;
@@ -13,7 +14,7 @@ class ActivityCardData {
   final DateTime? start;
   final num? price;
 
-  /// May be absolute ("http://.../img.jpg") or relative ("/uploads/xyz.jpg").
+  /// Can be absolute ("http://.../img.jpg") or relative ("/uploads/xyz.jpg").
   final String? imageUrl;
   final String? location;
 
@@ -33,13 +34,15 @@ class ActivityCard extends StatelessWidget {
   final ActivityCardData item;
   final ActivityCardVariant variant;
   final VoidCallback? onPressed;
+
+  /// Raw code from backend (e.g. "CAD", "EURO", "EUR", "USD", "LBP"...)
   final String? currencyCode;
 
-  /// Set this to your server host so relative paths become absolute.
-  /// Example: "http://3.96.140.126:8080"
+  /// If backend returns relative paths, pass your server root
+  /// e.g. "http://3.96.140.126:8080"
   final String? imageBaseUrl;
 
-  // layout options
+  // layout
   final bool isSingle;
   final double? width;
   final EdgeInsets margin;
@@ -48,82 +51,44 @@ class ActivityCard extends StatelessWidget {
   const ActivityCard({
     super.key,
     required this.item,
-    this.variant = ActivityCardVariant.square,
+    this.variant = ActivityCardVariant.compact,
     this.onPressed,
     this.currencyCode,
     this.imageBaseUrl,
     this.isSingle = false,
     this.width,
-    this.margin = const EdgeInsets.only(bottom: 12),
-    this.padding = const EdgeInsets.all(12),
+    this.margin = const EdgeInsets.only(bottom: 4), // smaller gap
+    this.padding = const EdgeInsets.all(8), // smaller padding
   });
 
-  // ---------------- helpers ----------------
-
-  String _symbolFor(String? code) {
-    switch ((code ?? '').trim().toUpperCase()) {
-      case 'USD':
-        return r'$';
-      case 'EUR':
-        return '€';
-      case 'CAD':
-        return 'C\$';
-      case 'LBP':
-      case 'L.L':
-        return 'ل.ل';
-      default:
-        return (code ?? '').toUpperCase();
-    }
-  }
-
-  String _formatPrice(num? p, String? code) {
-    if (p == null) return '';
-    final v = p % 1 == 0 ? p.toInt().toString() : p.toStringAsFixed(2);
-    final s = _symbolFor(code);
-    return s.isEmpty ? v : '$s$v';
-  }
-
+  // ---------- helpers ----------
   String _formatDate(DateTime? dt) {
     if (dt == null) return '';
     return '${DateFormat('EEE, d MMM').format(dt)} · ${DateFormat('HH:mm').format(dt)}';
   }
 
-  /// Turn a possibly-relative [u] into an absolute URL using [imageBaseUrl].
-  /// Also prints what it resolved to (debug builds only).
+  /// Make possibly-relative URLs absolute using [imageBaseUrl].
   String? _absolute(String? u) {
     if (u == null) return null;
     var url = u.trim();
     if (url.isEmpty) return null;
 
-    // Already absolute?
     if (url.startsWith('http://') || url.startsWith('https://')) {
-      if (kDebugMode) debugPrint('[IMG] raw="$u" (already absolute)');
       return Uri.parse(url).toString();
     }
-
-    // Normalize slashes in relative path
     url = url.replaceAll('\\', '/');
-    final base = (imageBaseUrl ?? '').trim();
 
+    final base = (imageBaseUrl ?? '').trim();
     if (base.isEmpty) {
-      if (kDebugMode) {
-        debugPrint(
-          '[IMG] raw="$u" but imageBaseUrl is empty -> cannot resolve',
-        );
-      }
+      if (kDebugMode) debugPrint('[IMG] base empty → placeholder for "$u"');
       return null;
     }
-
-    // Remove trailing slash from base, ensure path starts with one
     final cleanBase = base.endsWith('/')
         ? base.substring(0, base.length - 1)
         : base;
     final cleanPath = url.startsWith('/') ? url : '/$url';
-
     final resolved = Uri.parse('$cleanBase$cleanPath').toString();
-    if (kDebugMode) {
-      debugPrint('[IMG] raw="$u" base="$imageBaseUrl" -> resolved="$resolved"');
-    }
+    if (kDebugMode) debugPrint('[IMG] raw="$u" -> "$resolved"');
     return resolved;
   }
 
@@ -134,18 +99,15 @@ class ActivityCard extends StatelessWidget {
     BoxFit fit = BoxFit.cover,
   }) {
     final resolved = _absolute(url);
-
     if (resolved == null) {
-      if (kDebugMode) debugPrint('[IMG] resolved=null (showing placeholder)');
       return Container(
         width: width,
         height: height,
         color: Colors.black12,
         alignment: Alignment.center,
-        child: const Icon(Icons.image_not_supported_outlined),
+        child: const Icon(Icons.image_not_supported_outlined, size: 18),
       );
     }
-
     return Image.network(
       resolved,
       width: width,
@@ -153,28 +115,23 @@ class ActivityCard extends StatelessWidget {
       fit: fit,
       filterQuality: FilterQuality.medium,
       gaplessPlayback: true,
-      errorBuilder: (_, __, ___) {
-        if (kDebugMode) debugPrint('[IMG] FAILED to load: $resolved');
-        return Container(
-          width: width,
-          height: height,
-          color: Colors.black12,
-          alignment: Alignment.center,
-          child: const Icon(Icons.image_not_supported_outlined),
-        );
-      },
+      errorBuilder: (_, __, ___) => Container(
+        width: width,
+        height: height,
+        color: Colors.black12,
+        alignment: Alignment.center,
+        child: const Icon(Icons.image_not_supported_outlined, size: 18),
+      ),
       loadingBuilder: (ctx, child, progress) {
         if (progress == null) return child;
-        // Uncomment if you want spammy per-frame logs:
-        // if (kDebugMode) debugPrint('[IMG] loading: $resolved');
         return Container(
           width: width,
           height: height,
           color: Colors.black12,
           alignment: Alignment.center,
           child: const SizedBox(
-            width: 18,
-            height: 18,
+            width: 16,
+            height: 16,
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
         );
@@ -184,6 +141,27 @@ class ActivityCard extends StatelessWidget {
 
   Widget _info(BuildContext context) {
     final tt = Theme.of(context).textTheme;
+
+    // smaller text sizes to fit tiny tiles
+    final titleStyle = tt.bodyMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontSize: 12,
+      height: 1.15,
+    );
+    final subStyle = tt.bodyMedium?.copyWith(
+      fontSize: 10,
+      color: AppColors.muted,
+      height: 1.15,
+    );
+    final priceStyle = tt.bodyMedium?.copyWith(
+      fontWeight: FontWeight.w700,
+      fontSize: 12,
+      height: 1.15,
+    );
+
+    final dateText = _formatDate(item.start);
+    final priceText = formatPrice(item.price, currencyCode);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -192,63 +170,63 @@ class ActivityCard extends StatelessWidget {
           item.title.isEmpty ? '—' : item.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          softWrap: false,
+          style: titleStyle,
         ),
-        const SizedBox(height: 4),
-        if (item.start != null)
+        if (dateText.isNotEmpty) ...[
+          const SizedBox(height: 2),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
                 Icons.calendar_today_outlined,
-                size: 12,
+                size: 11,
                 color: AppColors.muted,
               ),
               const SizedBox(width: 4),
               Flexible(
                 child: Text(
-                  _formatDate(item.start),
+                  dateText,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: tt.bodyMedium?.copyWith(
-                    fontSize: 12,
-                    color: AppColors.muted,
-                  ),
+                  softWrap: false,
+                  style: subStyle,
                 ),
               ),
             ],
           ),
-        if (item.price != null) ...[
-          const SizedBox(height: 6),
+        ],
+        if (priceText.isNotEmpty) ...[
+          const SizedBox(height: 4),
           Text(
-            _formatPrice(item.price, currencyCode),
+            priceText,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: priceStyle,
           ),
         ],
       ],
     );
   }
 
-  // ---------------- build ----------------
-
+  // ---------- build ----------
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final radius = BorderRadius.circular(16);
+    final radius = BorderRadius.circular(12); // smaller radius
     void tap() => onPressed?.call();
 
     switch (variant) {
       case ActivityCardVariant.compact:
-        // Used inside a 2-col grid; compute an image height that fits without overflow.
+        // Optimized for 2-col grids with fixed mainAxisExtent.
         return Container(
           margin: margin,
           width: width,
           child: Material(
             color: cs.surface,
             borderRadius: radius,
-            elevation: 2,
+            clipBehavior: Clip.antiAlias,
+            elevation: 1, // a bit flatter
             child: InkWell(
               onTap: tap,
               borderRadius: radius,
@@ -256,47 +234,26 @@ class ActivityCard extends StatelessWidget {
                 padding: padding,
                 child: LayoutBuilder(
                   builder: (ctx, con) {
-                    final hasFiniteHeight = con.maxHeight.isFinite;
-                    final textScale = MediaQuery.textScaleFactorOf(ctx);
-                    // space needed for title/date/price
-                    final minText = 64.0 + (textScale - 1.0) * 22.0;
-                    final imgH = hasFiniteHeight
-                        ? (con.maxHeight - minText - 8).clamp(92.0, 160.0)
-                        : 120.0;
+                    final tileH = con.maxHeight.isFinite
+                        ? con.maxHeight
+                        : 168.0;
+                    // Smaller image so text always fits:
+                    // ~44–50% of tile height (tighter clamp).
+                    final imgH = (tileH * 0.46).clamp(72.0, 118.0);
 
-                    final image = ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: _imageBox(
-                        url: item.imageUrl,
-                        width: double.infinity,
-                        height: imgH,
-                      ),
-                    );
-
-                    if (hasFiniteHeight) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: imgH, child: image),
-                          const SizedBox(height: 8),
-                          Expanded(child: _info(context)),
-                        ],
-                      );
-                    }
-                    // fallback when parent is unconstrained
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: AspectRatio(
-                            aspectRatio: 16 / 10,
-                            child: _imageBox(url: item.imageUrl),
+                          borderRadius: BorderRadius.circular(10),
+                          child: _imageBox(
+                            url: item.imageUrl,
+                            width: double.infinity,
+                            height: imgH,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        _info(context),
+                        const SizedBox(height: 6),
+                        Flexible(fit: FlexFit.loose, child: _info(context)),
                       ],
                     );
                   },
@@ -313,7 +270,8 @@ class ActivityCard extends StatelessWidget {
           child: Material(
             color: cs.surface,
             borderRadius: radius,
-            elevation: 3,
+            clipBehavior: Clip.antiAlias,
+            elevation: 2,
             child: InkWell(
               onTap: tap,
               borderRadius: radius,
@@ -323,14 +281,14 @@ class ActivityCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       child: SizedBox(
-                        width: 72,
-                        height: 72,
+                        width: 56,
+                        height: 56,
                         child: _imageBox(url: item.imageUrl),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(child: _info(context)),
                   ],
                 ),
@@ -342,7 +300,7 @@ class ActivityCard extends StatelessWidget {
       case ActivityCardVariant.square:
         return Container(
           margin: margin,
-          width: width ?? (isSingle ? 220 : null),
+          width: width ?? (isSingle ? 200 : null), // narrower single width
           child: AspectRatio(
             aspectRatio: 1,
             child: Material(
@@ -359,19 +317,19 @@ class ActivityCard extends StatelessWidget {
                       Align(
                         alignment: Alignment.bottomCenter,
                         child: Container(
-                          margin: const EdgeInsets.all(10),
+                          margin: const EdgeInsets.all(8),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
+                            horizontal: 10,
+                            vertical: 8,
                           ),
                           decoration: BoxDecoration(
                             color: cs.surface,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(.12),
-                                blurRadius: 12,
-                                offset: const Offset(0, 6),
+                                color: Colors.black.withOpacity(.10),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
                               ),
                             ],
                           ),
