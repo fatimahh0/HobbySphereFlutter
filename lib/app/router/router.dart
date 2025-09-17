@@ -45,6 +45,12 @@ import 'package:hobby_sphere/features/activities/common/presentation/PrivacyPoli
 import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart';
+import 'package:hobby_sphere/features/activities/user/userActivityDetail/data/repositories/user_activity_detail_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/user/userActivityDetail/data/services/user_activity_detail_service.dart';
+import 'package:hobby_sphere/features/activities/user/userActivityDetail/domain/usecases/check_user_availability.dart';
+import 'package:hobby_sphere/features/activities/user/userActivityDetail/domain/usecases/confirm_user_booking.dart';
+import 'package:hobby_sphere/features/activities/user/userActivityDetail/domain/usecases/get_user_activity_detail.dart';
+import 'package:hobby_sphere/features/activities/user/userActivityDetail/presentation/screens/user_activity_detail_screen.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/data/repositories/home_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/data/services/home_service.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart'
@@ -127,6 +133,7 @@ abstract class Routes {
   static const businessInsights = '/business/insights';
   static const businessUsers = '/business/businessUser';
   static const inviteManager = '/business/invite-manager';
+  static const userActivityDetail = '/user/activity/details'; // user detail
 }
 
 // ===== Route Args =====
@@ -240,6 +247,21 @@ class UserHomeRouteArgs {
     required this.userId,
     this.firstName,
     this.lastName,
+  });
+}
+
+class UserActivityDetailRouteArgs {
+  // args model
+  final int itemId; // item id
+  final String? token; // bearer token (optional for guest)
+  final String? currencyCode; // currency (e.g. CAD)
+  final String? imageBaseUrl; // server base for relative images
+  const UserActivityDetailRouteArgs({
+    // ctor
+    required this.itemId, // set id
+    this.token, // set token
+    this.currencyCode, // set currency
+    this.imageBaseUrl, // set base
   });
 }
 
@@ -376,6 +398,42 @@ class AppRouter {
               CurrencyRepositoryImpl(CurrencyService()),
             ),
           ),
+        );
+
+      // ===== User Activity Detail (user) =====
+      case Routes.userActivityDetail:
+        final uaArgs = args is UserActivityDetailRouteArgs
+            ? args
+            : null; // read args
+        if (uaArgs == null) {
+          // guard
+          return _error(
+            'Missing UserActivityDetailRouteArgs (itemId).',
+          ); // error page
+        }
+        return MaterialPageRoute(
+          // build route
+          settings: settings, // keep settings
+          builder: (_) {
+            // page builder
+            // Simple local DI (service + repo + usecases)                 // DI note
+            final repo = UserActivityDetailRepositoryImpl(
+              // repo impl
+              UserActivityDetailService(), // service
+            );
+            final getOne = GetUserActivityDetail(repo); // usecase
+            final check = CheckUserAvailability(repo); // usecase
+            final confirm = ConfirmUserBooking(repo); // usecase
+
+            // Screen already wires the bloc internally using these UCs     // info
+            return UserActivityDetailScreen(
+              // screen
+              itemId: uaArgs.itemId, // pass id
+              imageBaseUrl: uaArgs.imageBaseUrl, // base
+              currencyCode: uaArgs.currencyCode, // currency
+              bearerToken: uaArgs.token, // token
+            );
+          },
         );
 
       case Routes.businessActivityDetails:

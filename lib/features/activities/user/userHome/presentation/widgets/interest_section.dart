@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
@@ -130,7 +131,30 @@ class InterestSection extends StatelessWidget {
                     variant: ActivityCardVariant.compact,
                     currencyCode: code ?? currencyCode,
                     imageBaseUrl: imageBaseUrl,
-                    onPressed: () => onItemTap?.call(it.id),
+                   onPressed: () {
+                      // build a proper Bearer token or pass null if empty              // comment
+                      final bearer = token.startsWith('Bearer ')
+                          ? token
+                          : 'Bearer $token';
+
+                      // navigate to the details screen                                 // comment
+                      Navigator.of(context).pushNamed(
+                        Routes.userActivityDetail, // route name
+                        arguments: UserActivityDetailRouteArgs(
+                          // typed args
+                          itemId: it.id, // item id
+                          token: bearer.trim().isEmpty
+                              ? null
+                              : bearer, // auth or guest
+                          currencyCode: code ?? currencyCode, // currency
+                          imageBaseUrl: imageBaseUrl, // base for images
+                        ),
+                      );
+
+                      // still notify optional callback if caller wants it               // comment
+                      onItemTap?.call(it.id);
+                    },
+
                   );
                 },
               );

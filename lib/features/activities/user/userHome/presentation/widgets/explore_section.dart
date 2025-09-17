@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
@@ -113,7 +114,22 @@ class ExploreSection extends StatelessWidget {
                     variant: ActivityCardVariant.compact,
                     currencyCode: code ?? currencyCode,
                     imageBaseUrl: imageBaseUrl,
-                    onPressed: () => onItemTap?.call(it.id),
+                    onPressed: () {
+                      // no token here → open as guest (token: null)                    // comment
+                      Navigator.of(context).pushNamed(
+                        Routes.userActivityDetail, // route
+                        arguments: UserActivityDetailRouteArgs(
+                          // args
+                          itemId: it.id, // id
+                          token: null, // guest
+                          currencyCode: code ?? currencyCode, // currency
+                          imageBaseUrl: imageBaseUrl, // base
+                        ),
+                      );
+
+                      // notify optional callback                                        // comment
+                      onItemTap?.call(it.id);
+                    },
                   );
                 },
               );

@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 
@@ -93,8 +94,19 @@ class ActivitiesByTypeScreen extends StatelessWidget {
                     currencyCode: currencyCode,
                     imageBaseUrl: resolvedBase, // <<< FIX: ensure absolute URL
                     onPressed: () {
-                      // TODO: navigate to details(it.id)
+                      // open details as guest (no token in this screen)                 // comment
+                      Navigator.of(context).pushNamed(
+                        Routes.userActivityDetail, // route
+                        arguments: UserActivityDetailRouteArgs(
+                          // args
+                          itemId: it.id, // id
+                          token: null, // guest
+                          currencyCode: currencyCode, // currency
+                          imageBaseUrl: resolvedBase, // absolute images
+                        ),
+                      );
                     },
+
                   );
                 },
               );

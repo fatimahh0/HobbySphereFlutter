@@ -1,5 +1,6 @@
 // Flutter 3.35.x — Tight header, dynamic currency (with fallback), absolute image URLs.
 import 'package:flutter/material.dart';
+import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 
@@ -68,6 +69,24 @@ class UserHomeScreen extends StatelessWidget {
   String _serverRoot() {
     final base = (g.appServerRoot ?? '');
     return base.replaceFirst(RegExp(r'/api/?$'), '');
+  }
+
+  // Go to activity-details screen                                   // comment
+  void _goToDetails(BuildContext context, int itemId, String imageBaseUrl) {
+    // Ensure token has "Bearer " prefix if required by backend       // comment
+    final bearer = token.startsWith('Bearer ') ? token : 'Bearer $token';
+
+    // Push named route with strongly-typed args                      // comment
+    Navigator.of(context).pushNamed(
+      Routes.userActivityDetail, // route name
+      arguments: UserActivityDetailRouteArgs(
+        // args bag
+        itemId: itemId, // which item
+        token: bearer.isNotEmpty ? bearer : null, // auth or guest
+        currencyCode: currencyFallback, // show prices
+        imageBaseUrl: imageBaseUrl, // build absolute img urls
+      ),
+    );
   }
 
   @override
