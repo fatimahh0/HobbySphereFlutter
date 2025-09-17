@@ -3,7 +3,8 @@ abstract class TicketsEvent {
 }
 
 class TicketsTabChanged extends TicketsEvent {
-  final String status; // 'Pending' | 'Completed' | 'Canceled'
+  final String
+  status; // 'Pending' | 'Completed' | 'CancelRequested' | 'Canceled'
   const TicketsTabChanged(this.status);
 }
 

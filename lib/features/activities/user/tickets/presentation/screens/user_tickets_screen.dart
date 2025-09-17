@@ -16,8 +16,7 @@ import '../bloc/tickets_state.dart';
 import '../widgets/ticket_card.dart';
 
 class UserTicketsScreen extends StatefulWidget {
-  final String token; // Bearer token
-
+  final String token; // Bearer <jwt> or <jwt>; both supported
   const UserTicketsScreen({super.key, required this.token});
 
   @override
@@ -25,16 +24,37 @@ class UserTicketsScreen extends StatefulWidget {
 }
 
 class _UserTicketsScreenState extends State<UserTicketsScreen> {
+  /// For image URLs only (strip trailing "/api")
   String _serverRoot() {
     final base = (g.appServerRoot ?? '');
     return base.replaceFirst(RegExp(r'/api/?$'), '');
   }
 
+  Dio _provideDio() {
+    if (g.appDio != null) return g.appDio!;
+    final raw = (g.appServerRoot ?? '').trim();
+    if (raw.isEmpty ||
+        !(raw.startsWith('http://') || raw.startsWith('https://'))) {
+      throw StateError('Invalid appServerRoot: "$raw"');
+    }
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: raw, // keep /api for API calls
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
+        headers: {'Accept': 'application/json'},
+      ),
+    );
+    g.appDio = dio;
+    return dio;
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final dio = g.appDio ?? Dio();
 
+    final dio = _provideDio();
     final repo = TicketsRepositoryImpl(TicketsService(dio));
     final getByStatus = GetTicketsByStatus(repo);
     final cancelUse = CancelTicket(repo);
@@ -47,113 +67,118 @@ class _UserTicketsScreenState extends State<UserTicketsScreen> {
         cancelTicket: cancelUse,
         deleteTicket: deleteUse,
       ),
-      child: Scaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Title
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    t.ticketScreenTitle, // "Tickets"
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
+      // use inner ctx so context.read finds the provider
+      child: Builder(
+        builder: (ctx) => Scaffold(
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Title
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      t.ticketScreenTitle,
+                      style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-              // Tabs
-              _Tabs(
-                onChanged: (s) =>
-                    context.read<TicketsBloc>().add(TicketsTabChanged(s)),
-              ),
+                // Tabs (Pending | Completed | Cancel -> Requested|Canceled)
+                _Tabs(
+                  onChanged: (s) =>
+                      ctx.read<TicketsBloc>().add(TicketsTabChanged(s)),
+                ),
 
-              // List
-              Expanded(
-                child: BlocBuilder<TicketsBloc, TicketsState>(
-                  builder: (_, state) {
-                    final cs = Theme.of(context).colorScheme;
+                // List
+                Expanded(
+                  child: BlocBuilder<TicketsBloc, TicketsState>(
+                    builder: (_, state) {
+                      final cs = Theme.of(ctx).colorScheme;
 
-                    if (state is TicketsLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (state is TicketsError) {
-                      return Center(
-                        child: Text(
-                          t.globalError,
-                          style: TextStyle(color: cs.error),
-                        ),
-                      );
-                    }
-                    if (state is TicketsLoaded) {
-                      if (state.tickets.isEmpty) {
-                        final label = switch (state.status) {
-                          'Pending' => t.ticketsEmptyPending,
-                          'Completed' => t.ticketsEmptyCompleted,
-                          'Canceled' => t.ticketsEmptyCanceled,
-                          _ => t.ticketsEmptyGeneric,
-                        };
+                      if (state is TicketsLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (state is TicketsError) {
                         return Center(
                           child: Text(
-                            label,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: AppColors.muted),
+                            t.globalError,
+                            style: TextStyle(color: cs.error),
                           ),
                         );
                       }
-                      return RefreshIndicator(
-                        onRefresh: () async => context.read<TicketsBloc>().add(
-                          const TicketsRefresh(),
-                        ),
-                        child: ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                          itemBuilder: (_, i) {
-                            final b = state.tickets[i];
-                            return Column(
-                              children: [
-                                TicketCard(
-                                  booking: b,
-                                  imageBaseUrl: _serverRoot(),
-                                  onCancel: (id, reason) => context
-                                      .read<TicketsBloc>()
-                                      .add(TicketsCancelRequested(id, reason)),
-                                ),
-                                if (state.status == 'Canceled') ...[
-                                  const SizedBox(height: 8),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: OutlinedButton(
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.white,
-                                        backgroundColor: AppColors.error,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
+                      if (state is TicketsLoaded) {
+                        if (state.tickets.isEmpty) {
+                          final label = switch (state.status) {
+                            'Pending' => t.ticketsEmptyPending,
+                            'Completed' => t.ticketsEmptyCompleted,
+                            'CancelRequested' => t.ticketsEmptyCanceled,
+                            'Canceled' => t.ticketsEmptyCanceled,
+                            _ => t.ticketsEmptyGeneric,
+                          };
+                          return Center(
+                            child: Text(
+                              label,
+                              style: Theme.of(ctx).textTheme.bodyMedium
+                                  ?.copyWith(color: AppColors.muted),
+                            ),
+                          );
+                        }
+                        return RefreshIndicator(
+                          onRefresh: () async => ctx.read<TicketsBloc>().add(
+                            const TicketsRefresh(),
+                          ),
+                          child: ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                            itemBuilder: (_, i) {
+                              final b = state.tickets[i];
+                              return Column(
+                                children: [
+                                  TicketCard(
+                                    booking: b,
+                                    imageBaseUrl: _serverRoot(),
+                                    onCancel: (id, reason) =>
+                                        ctx.read<TicketsBloc>().add(
+                                          TicketsCancelRequested(id, reason),
                                         ),
-                                      ),
-                                      onPressed: () =>
-                                          _confirmDelete(context, id: b.id),
-                                      child: Text(t.ticketsDelete),
-                                    ),
                                   ),
+                                  if (state.status == 'Canceled') ...[
+                                    const SizedBox(height: 8),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton(
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.white,
+                                          backgroundColor: AppColors.error,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                        ),
+                                        onPressed: () =>
+                                            _confirmDelete(ctx, id: b.id),
+                                        child: Text(t.ticketsDelete),
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                              ],
-                            );
-                          },
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 12),
-                          itemCount: state.tickets.length,
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
+                              );
+                            },
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 10),
+                            itemCount: state.tickets.length,
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -194,22 +219,33 @@ class _Tabs extends StatefulWidget {
 }
 
 class _TabsState extends State<_Tabs> {
-  String _status = 'Pending';
+  // main: 'Pending' | 'Completed' | 'Cancel'
+  String _main = 'Pending';
+  // sub for cancel: 'CancelRequested' | 'Canceled'
+  String _cancelSub = 'CancelRequested';
+
+  void _emit() {
+    if (_main == 'Cancel') {
+      widget.onChanged(_cancelSub);
+    } else {
+      widget.onChanged(_main);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _emit();
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
 
-    Widget chip(String label, String value) {
-      final selected = _status == value;
+    Widget chip(String label, bool selected, VoidCallback onTap) {
       return InkWell(
-        onTap: () {
-          if (_status != value) {
-            setState(() => _status = value);
-            widget.onChanged(value);
-          }
-        },
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -232,7 +268,8 @@ class _TabsState extends State<_Tabs> {
       );
     }
 
-    return Container(
+    // MAIN BAR
+    final mainBar = Container(
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: cs.outlineVariant)),
       ),
@@ -241,11 +278,51 @@ class _TabsState extends State<_Tabs> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          chip(t.ticketStatusPending, 'Pending'),
-          chip(t.ticketStatusCompleted, 'Completed'),
-          chip(t.ticketStatusCanceled, 'Canceled'),
+          chip(t.ticketStatusPending, _main == 'Pending', () {
+            setState(() => _main = 'Pending');
+            _emit();
+          }),
+          chip(t.ticketStatusCompleted, _main == 'Completed', () {
+            setState(() => _main = 'Completed');
+            _emit();
+          }),
+          chip(t.ticketStatusCanceled, _main == 'Cancel', () {
+            setState(() => _main = 'Cancel');
+            _emit();
+          }),
         ],
       ),
     );
+
+    // SUB BAR (only when Cancel main tab active)
+    final subBar = _main != 'Cancel'
+        ? const SizedBox.shrink()
+        : Container(
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: cs.outlineVariant)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            height: 40,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                chip(
+                  t.ticketsCancelRequested,
+                  _cancelSub == 'CancelRequested',
+                  () {
+                    setState(() => _cancelSub = 'CancelRequested');
+                    _emit();
+                  },
+                ),
+                const SizedBox(width: 16),
+                chip(t.ticketCancel, _cancelSub == 'Canceled', () {
+                  setState(() => _cancelSub = 'Canceled');
+                  _emit();
+                }),
+              ],
+            ),
+          );
+
+    return Column(mainAxisSize: MainAxisSize.min, children: [mainBar, subBar]);
   }
 }

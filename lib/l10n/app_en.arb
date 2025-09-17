@@ -689,6 +689,7 @@
   "ticketsDelete": "Delete",
   "ticketsDeleteTitle": "Delete ticket?",
   "ticketsDeleteConfirm": "This will remove the canceled ticket.",
+  "ticketsCancelRequested": "ticket cancel requests",
  
   "theme":"theme",
   "themeDark":"Dark",

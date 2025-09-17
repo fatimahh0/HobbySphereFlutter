@@ -4,20 +4,40 @@ class TicketsService {
   final Dio dio;
   TicketsService(this.dio);
 
-  // Helper to add bearer
-  Options _auth(String token) =>
-      Options(headers: {'Authorization': 'Bearer $token'});
+  // never double "Bearer"
+  Options _auth(String token) {
+    final t = (token).trim();
+    final bearer = t.startsWith('Bearer ') ? t : 'Bearer $t';
+    return Options(
+      headers: {'Authorization': bearer, 'Accept': 'application/json'},
+    );
+  }
 
   Future<List<dynamic>> getByStatus(String token, String status) async {
-    // backend endpoints mapped to tabs
-    final path = switch (status) {
-      'Pending' => '/bookings/mybookings/pending',
-      'Completed' => '/bookings/mybookings/completed',
-      'Canceled' => '/bookings/mybookings/canceled',
+    final s = (status).trim().toLowerCase();
+
+    // endpoints:
+    // pending  => server returns Pending + CancelRequested
+    // completed => Completed
+    // canceled  => Canceled
+    final path = switch (s) {
+      'pending' => '/bookings/mybookings/pending',
+      'completed' => '/bookings/mybookings/completed',
+      'cancelrequested' => '/bookings/mybookings/pending', // then client-filter
+      'canceled' => '/bookings/mybookings/canceled',
       _ => '/bookings/mybookings',
     };
-    final res = await dio.get(path, options: _auth(token));
-    return (res.data as List);
+
+    try {
+      final res = await dio.get(path, options: _auth(token));
+      final data = res.data;
+      if (data is List) return data;
+      if (data is Map && data['content'] is List)
+        return data['content'] as List;
+      return const <dynamic>[];
+    } on DioException {
+      rethrow;
+    }
   }
 
   Future<void> requestCancel(String token, int bookingId, String reason) async {

@@ -14,14 +14,23 @@ class BookingModel extends BookingEntity {
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     final item = (json['item'] as Map?) ?? const {};
+
+    String _status(dynamic v) => (v ?? '').toString().trim();
+
+    int _int(dynamic v) {
+      if (v is num) return v.toInt();
+      return int.tryParse('$v') ?? 0;
+    }
+
+    int _intOr(dynamic v, int d) {
+      if (v is num) return v.toInt();
+      return int.tryParse('$v') ?? d;
+    }
+
     return BookingModel(
-      id: (json['id'] ?? json['bookingId']) is num
-          ? (json['id'] ?? json['bookingId']).toInt()
-          : int.tryParse('${json['id'] ?? json['bookingId']}') ?? 0,
-      bookingStatus: '${json['bookingStatus'] ?? json['status'] ?? ''}',
-      numberOfParticipants: (json['numberOfParticipants'] ?? 1) is num
-          ? (json['numberOfParticipants'] ?? 1).toInt()
-          : int.tryParse('${json['numberOfParticipants'] ?? 1}') ?? 1,
+      id: _int(json['id'] ?? json['bookingId']),
+      bookingStatus: _status(json['bookingStatus'] ?? json['status']),
+      numberOfParticipants: _intOr(json['numberOfParticipants'] ?? 1, 1),
       startDatetime: item['startDatetime'] != null
           ? DateTime.tryParse('${item['startDatetime']}')
           : null,

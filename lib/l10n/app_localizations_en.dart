@@ -2075,6 +2075,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ticketsDeleteConfirm => 'This will remove the canceled ticket.';
 
   @override
+  String get ticketsCancelRequested => 'ticket cancel requests';
+
+  @override
   String get theme => 'theme';
 
   @override

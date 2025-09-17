@@ -4201,6 +4201,12 @@ abstract class AppLocalizations {
   /// **'This will remove the canceled ticket.'**
   String get ticketsDeleteConfirm;
 
+  /// No description provided for @ticketsCancelRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'ticket cancel requests'**
+  String get ticketsCancelRequested;
+
   /// No description provided for @theme.
   ///
   /// In en, this message translates to:

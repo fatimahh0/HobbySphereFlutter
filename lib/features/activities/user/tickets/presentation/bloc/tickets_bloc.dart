@@ -11,36 +11,36 @@ class TicketsBloc extends Bloc<TicketsEvent, TicketsState> {
   final CancelTicket cancelTicket;
   final DeleteTicket deleteTicket;
 
-  String _status = 'Pending';
+  String _status =
+      'Pending'; // UI values: Pending | Completed | CancelRequested | Canceled
 
   TicketsBloc({
     required this.token,
     required this.getByStatus,
     required this.cancelTicket,
     required this.deleteTicket,
-  }) : super(TicketsLoading('Pending')) {
+  }) : super(const TicketsLoading('Pending')) {
     on<TicketsTabChanged>(_onTab);
     on<TicketsRefresh>(_onRefresh);
     on<TicketsCancelRequested>(_onCancel);
     on<TicketsDeleteRequested>(_onDelete);
 
-    add(TicketsTabChanged(_status));
+    add(const TicketsTabChanged('Pending'));
   }
-  // lib/features/activities/user/tickets/presentation/bloc/tickets_bloc.dart
 
   Future<void> _load(Emitter<TicketsState> emit) async {
     emit(TicketsLoading(_status));
     try {
       final list = await getByStatus(token, _status);
 
-      final filtered = switch (_status) {
-        'Pending' => list.where(
-          (b) =>
-              b.bookingStatus == 'Pending' ||
-              b.bookingStatus == 'CancelRequested',
+      // hard client-side filter
+      final filtered = switch (_status.trim()) {
+        'Pending' => list.where((b) => b.bookingStatus.trim() == 'Pending'),
+        'Completed' => list.where((b) => b.bookingStatus.trim() == 'Completed'),
+        'CancelRequested' => list.where(
+          (b) => b.bookingStatus.trim() == 'CancelRequested',
         ),
-        'Completed' => list.where((b) => b.bookingStatus == 'Completed'),
-        'Canceled' => list.where((b) => b.bookingStatus == 'Canceled'),
+        'Canceled' => list.where((b) => b.bookingStatus.trim() == 'Canceled'),
         _ => list,
       }.toList(growable: false);
 
@@ -51,7 +51,7 @@ class TicketsBloc extends Bloc<TicketsEvent, TicketsState> {
   }
 
   Future<void> _onTab(TicketsTabChanged e, Emitter<TicketsState> emit) async {
-    _status = e.status;
+    _status = e.status.trim();
     await _load(emit);
   }
 
@@ -63,14 +63,13 @@ class TicketsBloc extends Bloc<TicketsEvent, TicketsState> {
     TicketsCancelRequested e,
     Emitter<TicketsState> emit,
   ) async {
-    // optimistic overlay
     if (state is TicketsLoaded) {
       final s = state as TicketsLoaded;
       emit(TicketsLoaded(_status, s.tickets, actionInFlight: true));
     }
     try {
       await cancelTicket(token, e.bookingId, e.reason);
-      await _load(emit); // reload Pending + Canceled on UI-level if needed
+      await _load(emit);
     } catch (err) {
       emit(TicketsError(_status, err.toString()));
     }

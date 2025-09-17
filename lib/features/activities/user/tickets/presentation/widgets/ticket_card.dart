@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:hobby_sphere/features/activities/user/tickets/domain/entities/booking_entity.dart';
 import 'package:intl/intl.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
-import '../../../tickets/domain/entities/booking_entity.dart';
 
 typedef CancelWithReason = void Function(int bookingId, String reason);
 
 class TicketCard extends StatelessWidget {
   final BookingEntity booking;
   final CancelWithReason? onCancel;
-  final String? imageBaseUrl; // to resolve /uploads/...
+  final String? imageBaseUrl;
 
   const TicketCard({
     super.key,
@@ -24,16 +24,17 @@ class TicketCard extends StatelessWidget {
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
     final base = (imageBaseUrl ?? '').trim();
     if (base.isEmpty) return null;
-    final baseClean = base.endsWith('/')
+    final cleanBase = base.endsWith('/')
         ? base.substring(0, base.length - 1)
         : base;
-    final path = url.startsWith('/') ? url : '/$url';
-    return '$baseClean$path';
+    final cleanPath = url.startsWith('/') ? url : '/$url';
+    return '$cleanBase$cleanPath';
   }
 
   Color _statusColor(String s) {
-    switch (s) {
+    switch (s.trim()) {
       case 'Pending':
+        return AppColors.pending;
       case 'CancelRequested':
         return AppColors.pending;
       case 'Completed':
@@ -62,19 +63,18 @@ class TicketCard extends StatelessWidget {
 
     return Material(
       color: cs.surface,
-      borderRadius: BorderRadius.circular(14),
-      elevation: 0, // flatter
+      borderRadius: BorderRadius.circular(16),
+      elevation: 0.5,
       child: Container(
         decoration: BoxDecoration(
           border: Border.all(color: cs.outlineVariant),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
         ),
-        padding: const EdgeInsets.all(10), // tighter
+        padding: const EdgeInsets.all(10),
         child: Column(
           children: [
             Row(
               children: [
-                // smaller thumbnail
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
@@ -97,7 +97,6 @@ class TicketCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // title + location
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,13 +121,11 @@ class TicketCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-
-            // no divider to save height
+            const SizedBox(height: 6),
+            Divider(color: cs.outlineVariant, height: 1, thickness: 1),
+            const SizedBox(height: 6),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // time
                 Expanded(
                   child: _kv(
                     context,
@@ -137,7 +134,6 @@ class TicketCard extends StatelessWidget {
                     sub: date,
                   ),
                 ),
-                // location (just the label to match small layout)
                 Expanded(
                   child: _kv(
                     context,
@@ -145,7 +141,6 @@ class TicketCard extends StatelessWidget {
                     value: booking.location,
                   ),
                 ),
-                // small status pill
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -156,17 +151,18 @@ class TicketCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    '${booking.bookingStatus} × ${booking.numberOfParticipants}',
+                    '${booking.bookingStatus.trim()} × ${booking.numberOfParticipants}',
                     style: tt.labelSmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-
-            if (booking.bookingStatus == 'Pending') ...[
+            if (booking.bookingStatus.trim() == 'Pending') ...[
               const SizedBox(height: 6),
               Align(
                 alignment: Alignment.centerRight,
@@ -178,7 +174,7 @@ class TicketCard extends StatelessWidget {
                       horizontal: 10,
                       vertical: 6,
                     ),
-                    minimumSize: const Size(0, 0),
+                    minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -187,7 +183,10 @@ class TicketCard extends StatelessWidget {
                   onPressed: () => _askReason(context),
                   child: Text(
                     t.ticketCancel,
-                    style: tt.labelSmall?.copyWith(color: Colors.white),
+                    style: tt.labelLarge?.copyWith(
+                      color: Colors.white,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),
@@ -212,8 +211,10 @@ class TicketCard extends StatelessWidget {
           label,
           style: tt.bodySmall?.copyWith(color: AppColors.muted, fontSize: 11),
         ),
-        const SizedBox(height: 1),
-        Text(value, style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+        Text(
+          value,
+          style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        ),
         if (sub != null)
           Text(
             sub,
@@ -233,18 +234,28 @@ class TicketCard extends StatelessWidget {
       builder: (_) => AlertDialog(
         title: Text(t.ticketCancelTitle),
         content: StatefulBuilder(
-          builder: (context, setState) => TextField(
-            controller: controller,
-            maxLines: 3,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              labelText: t.bookingCancelReason,
-              hintText: t.bookingCancelReason,
-              errorText: touched && controller.text.trim().isEmpty
-                  ? t.fieldRequired
-                  : null,
-              border: const OutlineInputBorder(),
-            ),
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(t.bookingCancelReason),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                maxLines: 3,
+                onChanged: (_) => setState(() {}),
+                onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                decoration: InputDecoration(
+                  hintText: t.bookingCancelReason,
+                  errorText: touched && controller.text.trim().isEmpty
+                      ? t.fieldRequired
+                      : null,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
           ),
         ),
         actions: [

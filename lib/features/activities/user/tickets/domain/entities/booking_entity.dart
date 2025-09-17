@@ -2,8 +2,7 @@ import 'package:equatable/equatable.dart';
 
 class BookingEntity extends Equatable {
   final int id;
-  final String
-  bookingStatus; // Pending, Completed, Canceled, CancelRequested...
+  final String bookingStatus; // Pending, Completed, Canceled, CancelRequested
   final int numberOfParticipants;
   final DateTime? startDatetime;
   final String itemName;
