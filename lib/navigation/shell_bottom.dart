@@ -1,16 +1,17 @@
 // ===== Flutter 3.35.x =====
 // ShellBottom — glassy transparent bottom bar + fixed animation.
-// Mirrors ShellDrawer: passes token + businessId, injects Blocs for Bookings + Analytics.
+// Adds User Profile tab (DI: service -> repo -> usecases -> bloc -> screen).
 
-import 'dart:ui' show ImageFilter;
-import 'dart:convert' show base64Url, jsonDecode, utf8; // << parse JWT
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:ui' show ImageFilter; // blur for glass bar
+import 'dart:convert' show base64Url, jsonDecode, utf8; // parse JWT payload
+import 'package:flutter/material.dart'; // Flutter UI
+import 'package:flutter/services.dart'; // Haptics + sys UI
+import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC providers
 
-import 'package:hobby_sphere/app/router/router.dart';
-import 'package:hobby_sphere/core/constants/app_role.dart';
-import 'package:hobby_sphere/core/network/globals.dart' as g;
+import 'package:hobby_sphere/app/router/router.dart'; // app routes
+import 'package:hobby_sphere/core/constants/app_role.dart'; // role enum
+import 'package:hobby_sphere/core/network/globals.dart'
+    as g; // server root + Dio
 
 // ===== Business blocs/usecases/data =====
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
@@ -70,7 +71,7 @@ import 'package:hobby_sphere/features/activities/user/userHome/data/repositories
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_upcoming_guest_items.dart';
 
-// ===== Common types + items-by-type (for Categories section) =====
+// ===== Common types + items-by-type =====
 import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart';
 import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
@@ -78,17 +79,28 @@ import 'package:hobby_sphere/features/activities/common/data/services/items_serv
 import 'package:hobby_sphere/features/activities/common/data/repositories/items_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_items_by_type.dart';
 
-import 'package:hobby_sphere/l10n/app_localizations.dart';
+// ===== User Profile feature (use alias for service to avoid resolver issues) =====
+import 'package:hobby_sphere/features/activities/user/userProfile/data/services/user_profile_service.dart'
+    as svc;
+import 'package:hobby_sphere/features/activities/user/userProfile/data/repositories/user_profile_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/user/userProfile/domain/usecases/get_user_profile.dart';
+import 'package:hobby_sphere/features/activities/user/userProfile/domain/usecases/toggle_user_visibility.dart';
+import 'package:hobby_sphere/features/activities/user/userProfile/domain/usecases/update_user_status.dart';
+import 'package:hobby_sphere/features/activities/user/userProfile/presentation/bloc/user_profile_bloc.dart';
+import 'package:hobby_sphere/features/activities/user/userProfile/presentation/bloc/user_profile_event.dart';
+import 'package:hobby_sphere/features/activities/user/userProfile/presentation/screens/user_profile_screen.dart';
+
+import 'package:hobby_sphere/l10n/app_localizations.dart'; // localization
 
 class ShellBottom extends StatefulWidget {
-  final AppRole role;
-  final String token;
-  final int businessId;
-  final void Function(Locale) onChangeLocale;
-  final VoidCallback onToggleTheme;
+  final AppRole role; // current role
+  final String token; // auth token (JWT)
+  final int businessId; // business id (if role business)
+  final void Function(Locale) onChangeLocale; // change language
+  final VoidCallback onToggleTheme; // toggle theme
 
-  final int bookingsBadge;
-  final int ticketsBadge;
+  final int bookingsBadge; // business badge count
+  final int ticketsBadge; // user badge count
 
   const ShellBottom({
     super.key,
@@ -106,10 +118,10 @@ class ShellBottom extends StatefulWidget {
 }
 
 class _ShellBottomState extends State<ShellBottom> {
-  int _index = 0;
+  int _index = 0; // selected tab
 
   String _serverRoot() {
-    final base = (g.appServerRoot ?? '');
+    final base = (g.appServerRoot ?? ''); // remove /api from base
     return base.replaceFirst(RegExp(r'/api/?$'), '');
   }
 
@@ -141,7 +153,6 @@ class _ShellBottomState extends State<ShellBottom> {
     if (p == null) return null;
     final fn = (p['firstName'] ?? p['given_name'])?.toString();
     if (fn != null && fn.trim().isNotEmpty) return fn.trim();
-
     final name = p['name']?.toString();
     if (name != null && name.trim().isNotEmpty) {
       final parts = name.trim().split(RegExp(r'\s+'));
@@ -155,45 +166,74 @@ class _ShellBottomState extends State<ShellBottom> {
     if (p == null) return null;
     final ln = (p['lastName'] ?? p['family_name'])?.toString();
     if (ln != null && ln.trim().isNotEmpty) return ln.trim();
-
     final name = p['name']?.toString();
     if (name != null && name.trim().isNotEmpty) {
       final parts = name.trim().split(RegExp(r'\s+'));
-      if (parts.length > 1) {
-        return parts.sublist(1).join(' ');
-      }
+      if (parts.length > 1) return parts.sublist(1).join(' ');
     }
     return null;
   }
 
   // ---- DI for User Home feature ----
-  late final _homeRepo = HomeRepositoryImpl(HomeService());
-  late final _getInterest = GetInterestBasedItems(_homeRepo);
-  late final _getUpcoming = GetUpcomingGuestItems(_homeRepo);
+  late final _homeRepo = HomeRepositoryImpl(HomeService()); // repo
+  late final _getInterest = GetInterestBasedItems(_homeRepo); // uc
+  late final _getUpcoming = GetUpcomingGuestItems(_homeRepo); // uc
   late final _getItemTypes = GetItemTypes(
     ItemTypeRepositoryImpl(ItemTypesService()),
-  );
+  ); // uc
   late final _getItemsByType = GetItemsByType(
     ItemsRepositoryImpl(ItemsService()),
-  );
+  ); // uc
 
+  // ---- parsed user info from token ----
   late final int _userId = _extractUserId(widget.token) ?? 0;
   late final String? _firstName = _extractFirstName(widget.token);
   late final String? _lastName = _extractLastName(widget.token);
 
-  // ===== User pages =====
+  // ===== User Profile page builder (service -> repo -> usecases -> bloc -> screen) =====
+  Widget _buildUserProfilePage() {
+    final service = svc.UserProfileService(); // ⬅️ alias used
+    final repo = UserProfileRepositoryImpl(service); // repo impl
+    final getUser = GetUserProfile(repo); // usecase
+    final toggleVis = ToggleUserVisibility(repo); // usecase
+    final setStatus = UpdateUserStatus(repo); // usecase
+
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider.value(
+          value: setStatus,
+        ), // for dialog read<UpdateUserStatus>()
+      ],
+      child: BlocProvider(
+        create: (_) => UserProfileBloc(
+          getUser: getUser,
+          toggleVisibility: toggleVis,
+          updateStatus: setStatus,
+        )..add(LoadUserProfile(widget.token, _userId)), // initial load
+        child: UserProfileScreen(
+          token: widget.token,
+          userId: _userId,
+          onChangeLocale: widget.onChangeLocale,
+        ),
+      ),
+    );
+  }
+
+  // ===== User pages (5 tabs: Home, Explore, Social, Tickets, Profile) =====
   late final List<Widget> _userPages = <Widget>[
     UserHomeScreen(
-      firstName: _firstName, // << pass names (header shows First + Last)
+      // 0) Home
+      firstName: _firstName,
       lastName: _lastName,
       token: widget.token,
-      userId: _userId, // if 0 => interests section hides
+      userId: _userId,
       getInterestBased: _getInterest,
       getUpcomingGuest: _getUpcoming,
       getItemTypes: _getItemTypes,
       getItemsByType: _getItemsByType,
     ),
     ExploreScreen(
+      // 1) Explore
       token: widget.token,
       getItemTypes: _getItemTypes,
       getItemsByType: _getItemsByType,
@@ -203,12 +243,12 @@ class _ShellBottomState extends State<ShellBottom> {
       )(widget.token)).code,
       imageBaseUrl: _serverRoot(),
     ),
-
-    const UserCommunityScreen(),
-    UserTicketsScreen(token: widget.token),
+    const UserCommunityScreen(), // 2) Social
+    UserTicketsScreen(token: widget.token), // 3) Tickets
+    _buildUserProfilePage(), // 4) Profile (NEW)
   ];
 
-  // ===== Business pages =====
+  // ===== Business pages (5 tabs) =====
   late final List<Widget> _businessPages = <Widget>[
     // 0. Home
     MultiBlocProvider(
@@ -328,7 +368,7 @@ class _ShellBottomState extends State<ShellBottom> {
     ),
   ];
 
-  // ===== Helpers =====
+  // ===== Helpers to pick pages/labels/icons by role =====
   List<Widget> _pagesFor(AppRole role) =>
       role == AppRole.business ? _businessPages : _userPages;
 
@@ -367,23 +407,26 @@ class _ShellBottomState extends State<ShellBottom> {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent, // translucent nav bar
+        systemNavigationBarDividerColor: Colors.transparent, // no divider
       ),
     );
 
-    final pages = _pagesFor(widget.role);
-    final labels = _labelsFor(context, widget.role);
-    final icons = _iconsFor(widget.role);
+    final pages = _pagesFor(widget.role); // pick pages by role
+    final labels = _labelsFor(context, widget.role); // pick labels
+    final icons = _iconsFor(widget.role); // pick icons
 
-    if (_index >= pages.length) _index = pages.length - 1;
+    if (_index >= pages.length) _index = pages.length - 1; // bound index
 
     return Scaffold(
       extendBody: false,
       body: SafeArea(
         top: true,
         bottom: false,
-        child: IndexedStack(index: _index, children: pages),
+        child: IndexedStack(
+          index: _index,
+          children: pages,
+        ), // keep state per tab
       ),
       bottomNavigationBar: SafeArea(
         top: false,
@@ -415,12 +458,12 @@ class _ShellBottomState extends State<ShellBottom> {
 
 /// Extracted Glass NavBar widget for clarity
 class _GlassNavBar extends StatelessWidget {
-  final int index;
-  final List<String> labels;
-  final List<(IconData, IconData)> icons;
-  final ValueChanged<int> onChanged;
-  final int badgeIndex;
-  final int badgeCount;
+  final int index; // selected tab
+  final List<String> labels; // tab labels
+  final List<(IconData, IconData)> icons; // (unselected, selected)
+  final ValueChanged<int> onChanged; // change callback
+  final int badgeIndex; // which tab has badge
+  final int badgeCount; // badge value
 
   const _GlassNavBar({
     required this.index,
