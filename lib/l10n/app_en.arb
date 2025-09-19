@@ -786,13 +786,13 @@
   "deactivateWarning": "After 30 days, it will be permanently deleted and you won't be able to log in again.",
   "currentPasswordLabel": "Current Password",
   "fieldRequired": "This field is required",
+"bookingNotAvailable": "This activity is not available for the selected participants.",
 
 
-  "@bookingMaxParticipants": {
+ "@bookingMaxParticipants": {
+    "description": "Shows the maximum number of participants for an activity",
     "placeholders": {
-      "count": {
-        "type": "int"
-      }
+      "count": { "type": "int" }
     }
   },
   "@bookingsNoBookings": {

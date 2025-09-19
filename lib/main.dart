@@ -1,4 +1,6 @@
-// Flutter 3.35.x — main.dart (only the realtime additions shown)
+// lib/main.dart
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -6,41 +8,64 @@ import 'package:hobby_sphere/core/network/api_config.dart';
 import 'package:hobby_sphere/core/network/api_client.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 
-import 'package:hobby_sphere/core/realtime/ws_url.dart';
-import 'package:hobby_sphere/core/realtime/realtime_service.dart';
 
+// import 'package:hobby_sphere/core/realtime/realtime_service.dart';
+
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'app/app.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
 
-  final cfg = await ApiConfig.load();
-  final apiClient = ApiClient(cfg);
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-  final sp = await SharedPreferences.getInstance();
-  final savedToken = sp.getString('token');
+      
+      try {
+     
+        Stripe.publishableKey =
+            'pk_test_51RnLY8ROH9W55MgTYuuYpaStORtbLEggQMGOYxzYacMiDUpbfifBgThEzcMgFnvyMaskalQ0WUcQv08aByizug1I00Wcq3XHll';
 
-  if (savedToken != null && savedToken.isNotEmpty) {
-    apiClient.setToken(savedToken);
-    g.Token = savedToken;
-  }
+    
+        await Stripe.instance.applySettings();
+        if (kDebugMode) debugPrint('[Stripe] initialized');
+      } catch (e, st) {
+       
+        debugPrint('[Stripe] init failed: $e\n$st');
+      }
+      // -------------------------------------------------------------------
 
-  g.appDio = apiClient.dio;
-  g.appServerRoot = cfg.serverRoot; // e.g. http://3.96.140.126:8080/api
+   
+      final cfg = await ApiConfig.load();
+      final apiClient = ApiClient(cfg);
 
-  // Build **HTTP base WITHOUT /api** for websockets
-  final httpBase = g.serverRootNoApi(); // e.g. http://3.96.140.126:8080
+      final sp = await SharedPreferences.getInstance();
+      final savedToken = sp.getString('token');
 
-  // Connect realtime (only when we have a token)
-  if ((savedToken ?? '').isNotEmpty) {
-    g.realtime ??= RealtimeService();
-    // Try a few common endpoints; the service will rotate paths automatically.
-    g.realtime!.connect(
-      httpBase: httpBase,
-      token: savedToken!,
-      candidatePaths: const ['/ws', '/ws/events', '/realtime', '/socket'],
-    );
-  }
+      if (savedToken != null && savedToken.isNotEmpty) {
+        apiClient.setToken(savedToken);
+        g.Token = savedToken;
+      }
 
-  runApp(const App());
+      g.appDio = apiClient.dio;
+      g.appServerRoot = cfg.serverRoot;
+
+    
+      // final httpBase = g.serverRootNoApi();
+      // if ((savedToken ?? '').isNotEmpty) {
+      //   g.realtime ??= RealtimeService();
+      //   g.realtime!.connect(
+      //     httpBase: httpBase,
+      //     token: savedToken!,
+      //     candidatePaths: const ['/ws', '/ws/events', '/realtime', '/socket'],
+      //   );
+      // }
+
+      runApp(const App());
+    },
+    (error, stack) {
+    
+      debugPrint('UNCAUGHT in main zone: $error\n$stack');
+    },
+  );
 }

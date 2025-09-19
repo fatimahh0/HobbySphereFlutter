@@ -1,50 +1,53 @@
-// Entity: immutable data for UI
+// UI business mini info (immutable)
 class UserBusinessMini {
-  final int id;
-  final String name;
-  final String? logoUrl;
-  final String? websiteUrl;
-  final String? description;
+  final int id; // business id
+  final String name; // business name
+  final String? logoUrl; // logo url
+  final String? websiteUrl; // website url
+  final String? description; // description
+  final String? stripeAccountId; // << NEW: Stripe connected account id
 
   const UserBusinessMini({
-    required this.id,
-    required this.name,
-    this.logoUrl,
-    this.websiteUrl,
-    this.description,
+    required this.id, // set id
+    required this.name, // set name
+    this.logoUrl, // opt logo
+    this.websiteUrl, // opt website
+    this.description, // opt description
+    this.stripeAccountId, // opt stripe account
   });
 }
 
+// UI entity for the full item details (immutable)
 class UserActivityDetailEntity {
-  final int id;
-  final String name;
-  final String? description;
-  final String typeName;
-  final String? imageUrl;
-  final String location;
-  final double? latitude;
-  final double? longitude;
-  final DateTime start;
-  final DateTime end;
-  final num price;
-  final int maxParticipants;
-  final String status;
-  final UserBusinessMini business;
+  final int id; // item id
+  final String name; // item name
+  final String? description; // description
+  final String typeName; // type name
+  final String? imageUrl; // image url
+  final String location; // location
+  final double? latitude; // lat
+  final double? longitude; // lng
+  final DateTime start; // start datetime
+  final DateTime end; // end datetime
+  final num price; // price per person
+  final int maxParticipants; // max seats
+  final String status; // status
+  final UserBusinessMini business; // business mini
 
   const UserActivityDetailEntity({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.typeName,
-    required this.imageUrl,
-    required this.location,
-    required this.latitude,
-    required this.longitude,
-    required this.start,
-    required this.end,
-    required this.price,
-    required this.maxParticipants,
-    required this.status,
-    required this.business,
+    required this.id, // set id
+    required this.name, // set name
+    required this.description, // set desc
+    required this.typeName, // set type
+    required this.imageUrl, // set img
+    required this.location, // set loc
+    required this.latitude, // set lat
+    required this.longitude, // set lng
+    required this.start, // set start
+    required this.end, // set end
+    required this.price, // set price
+    required this.maxParticipants, // set max
+    required this.status, // set status
+    required this.business, // set business
   });
 }

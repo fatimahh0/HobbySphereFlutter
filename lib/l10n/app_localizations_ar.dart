@@ -2346,4 +2346,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get fieldRequired => 'This field is required';
+
+  @override
+  String get bookingNotAvailable => 'This activity is not available for the selected participants.';
 }

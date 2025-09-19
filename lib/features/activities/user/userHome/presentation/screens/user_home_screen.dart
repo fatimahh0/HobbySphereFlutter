@@ -168,7 +168,8 @@ class UserHomeScreen extends StatelessWidget {
                       typeId: id,
                       typeName: name,
                       getItemsByType: getItemsByType,
-                      currencyCode: currencyFallback,
+                      currencyCode: currencyFallback, // optional fallback
+                      getCurrencyCode: getCurrencyCodeFn, 
                       imageBaseUrl: serverRoot,
                     ),
                   ),

@@ -523,7 +523,7 @@ abstract class AppLocalizations {
   /// **'Location'**
   String get bookingLocation;
 
-  /// No description provided for @bookingMaxParticipants.
+  /// Shows the maximum number of participants for an activity
   ///
   /// In en, this message translates to:
   /// **'Max {count} participants'**
@@ -4746,6 +4746,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This field is required'**
   String get fieldRequired;
+
+  /// No description provided for @bookingNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This activity is not available for the selected participants.'**
+  String get bookingNotAvailable;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

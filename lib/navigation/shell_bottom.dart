@@ -63,7 +63,6 @@ import 'package:hobby_sphere/features/activities/user/userHome/presentation/scre
 import 'package:hobby_sphere/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart';
 import 'package:hobby_sphere/features/activities/user/common/presentation/user_community_screen.dart';
 import 'package:hobby_sphere/features/activities/user/tickets/presentation/screens/user_tickets_screen.dart';
-import 'package:hobby_sphere/features/activities/user/common/presentation/user_profile_screen.dart';
 
 // ===== User Home feature (services/repos/usecases) =====
 import 'package:hobby_sphere/features/activities/user/userHome/data/services/home_service.dart';
@@ -207,7 +206,6 @@ class _ShellBottomState extends State<ShellBottom> {
 
     const UserCommunityScreen(),
     UserTicketsScreen(token: widget.token),
-    const UserProfileScreen(),
   ];
 
   // ===== Business pages =====
