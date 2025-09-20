@@ -276,6 +276,7 @@
   "editProfileUpdateSuccess": "Profile updated successfully.",
   "editProfileUsername": "Username",
   "editProfileWrongPassword": "Incorrect password. Please try again.",
+  "editProfileEmailInvalid": "Please enter a valid email address.",
   "email": "Email",
   "emailRegistrationContinue": "Continue",
   "emailRegistrationCreatePassword": "Create password",

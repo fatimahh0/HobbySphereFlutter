@@ -26,7 +26,7 @@ import '../bloc/login_event.dart';
 import '../bloc/login_state.dart';
 
 import '../widgets/role_selector.dart';
-import '../widgets/phone_input.dart';
+import '../../../../../shared/widgets/phone_input.dart';
 import '../widgets/email_input.dart';
 import '../widgets/password_input.dart';
 import '../widgets/primary_actions.dart';

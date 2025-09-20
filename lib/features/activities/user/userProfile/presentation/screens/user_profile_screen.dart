@@ -90,8 +90,15 @@ class UserProfileScreen extends StatelessWidget {
               context,
               icon: Icons.edit, // edit
               title: tr.profileEditProfile, // "Edit Profile"
-              onTap: () => Navigator.of(context).pushNamed(Routes.userHome),
+              onTap: () => Navigator.of(context).pushNamed(
+                Routes.editUserProfile,
+                arguments: EditUserProfileRouteArgs(
+                  token: token,
+                  userId: userId,
+                ),
+              ),
             ),
+
             _tile(
               context,
               icon: Icons.favorite_border, // interests

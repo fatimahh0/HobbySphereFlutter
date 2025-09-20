@@ -14,8 +14,7 @@ import 'package:hobby_sphere/features/activities/Business/businessActivity/prese
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_event.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/data/repositories/business_notification_repository_impl.dart'
-    show BusinessNotificationRepositoryImpl;
+import 'package:hobby_sphere/features/activities/Business/businessNotification/data/repositories/business_notification_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/businessNotification/data/services/business_notification_service.dart';
 import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/usecases/get_business_notifications.dart';
 import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
@@ -45,6 +44,15 @@ import 'package:hobby_sphere/features/activities/common/presentation/PrivacyPoli
 import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart';
+import 'package:hobby_sphere/features/activities/user/editProfileUser/data/repositories/edit_user_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/user/editProfileUser/data/services/edit_user_service.dart';
+import 'package:hobby_sphere/features/activities/user/editProfileUser/domain/usecases/delete_account_user.dart';
+import 'package:hobby_sphere/features/activities/user/editProfileUser/domain/usecases/delete_edit_user_image.dart';
+import 'package:hobby_sphere/features/activities/user/editProfileUser/domain/usecases/get_edit_user.dart';
+import 'package:hobby_sphere/features/activities/user/editProfileUser/domain/usecases/update_edit_user.dart';
+import 'package:hobby_sphere/features/activities/user/editProfileUser/presentation/bloc/edit_profile_bloc.dart';
+import 'package:hobby_sphere/features/activities/user/editProfileUser/presentation/bloc/edit_profile_event.dart';
+import 'package:hobby_sphere/features/activities/user/editProfileUser/presentation/screens/edit_profile_screen.dart';
 import 'package:hobby_sphere/features/activities/user/userActivityDetail/data/repositories/user_activity_detail_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/user/userActivityDetail/data/services/user_activity_detail_service.dart';
 import 'package:hobby_sphere/features/activities/user/userActivityDetail/domain/usecases/check_user_availability.dart';
@@ -134,6 +142,7 @@ abstract class Routes {
   static const businessUsers = '/business/businessUser';
   static const inviteManager = '/business/invite-manager';
   static const userActivityDetail = '/user/activity/details'; // user detail
+  static const editUserProfile = '/user/edit-profile';
 }
 
 // ===== Route Args =====
@@ -248,6 +257,12 @@ class UserHomeRouteArgs {
     this.firstName,
     this.lastName,
   });
+}
+
+class EditUserProfileRouteArgs {
+  final String token;
+  final int userId;
+  const EditUserProfileRouteArgs({required this.token, required this.userId});
 }
 
 class UserActivityDetailRouteArgs {
@@ -432,6 +447,37 @@ class AppRouter {
               imageBaseUrl: uaArgs.imageBaseUrl, // base
               currencyCode: uaArgs.currencyCode, // currency
               bearerToken: uaArgs.token, // token
+            );
+          },
+        );
+
+      // ===== User: Edit Profile =====
+      case Routes.editUserProfile:
+        final epArgs = args is EditUserProfileRouteArgs ? args : null;
+        if (epArgs == null) {
+          return _error('Missing EditUserProfileRouteArgs (token + userId).');
+        }
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) {
+            // DI: service -> repo -> usecases -> bloc
+            final repo = EditUserRepositoryImpl(EditUserService());
+            final getUser = GetEditUser(repo);
+            final update = UpdateEditUser(repo);
+            final delAcc = DeleteAccountUser(repo);
+            final removeImg = DeleteEditUserImage(repo);
+
+            return BlocProvider(
+              create: (ctx) => EditProfileBloc(
+                getUser: getUser,
+                updateUser: update,
+                deleteAccount: delAcc,
+                deleteImage: removeImg,
+              )..add(LoadEditProfile(epArgs.token, epArgs.userId)),
+              child: EditProfileScreen(
+                token: epArgs.token,
+                userId: epArgs.userId,
+              ),
             );
           },
         );

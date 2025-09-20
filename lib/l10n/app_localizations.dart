@@ -1723,6 +1723,12 @@ abstract class AppLocalizations {
   /// **'Incorrect password. Please try again.'**
   String get editProfileWrongPassword;
 
+  /// No description provided for @editProfileEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address.'**
+  String get editProfileEmailInvalid;
+
   /// No description provided for @email.
   ///
   /// In en, this message translates to:

@@ -826,6 +826,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get editProfileWrongPassword => 'Incorrect password. Please try again.';
 
   @override
+  String get editProfileEmailInvalid => 'Please enter a valid email address.';
+
+  @override
   String get email => 'Email';
 
   @override

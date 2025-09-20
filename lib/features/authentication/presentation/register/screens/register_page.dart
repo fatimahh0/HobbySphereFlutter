@@ -38,7 +38,7 @@ import 'package:hobby_sphere/features/authentication/presentation/register/bloc/
 
 // existing login widgets
 import 'package:hobby_sphere/features/authentication/presentation/login/widgets/role_selector.dart';
-import 'package:hobby_sphere/features/authentication/presentation/login/widgets/phone_input.dart';
+import 'package:hobby_sphere/shared/widgets/phone_input.dart';
 import 'package:hobby_sphere/features/authentication/presentation/login/widgets/password_input.dart';
 
 // routes

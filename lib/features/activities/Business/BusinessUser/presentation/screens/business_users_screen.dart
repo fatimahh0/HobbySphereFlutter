@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart'; // UI
 import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
-import 'package:hobby_sphere/features/authentication/presentation/login/widgets/phone_input.dart'; // Phone input
+import 'package:hobby_sphere/shared/widgets/phone_input.dart'; // Phone input
 
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
 import 'package:hobby_sphere/shared/theme/app_theme.dart'; // Colors
