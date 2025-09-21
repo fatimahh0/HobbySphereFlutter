@@ -1,6 +1,10 @@
 // === Screen: User profile (header + menu) ===
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart'; // UI
 import 'package:flutter_bloc/flutter_bloc.dart'; // bloc
+import 'package:hobby_sphere/core/network/globals.dart' as g;
+import 'package:hobby_sphere/features/activities/user/tickets/data/models/booking_model.dart';
+import 'package:hobby_sphere/features/activities/user/tickets/data/services/tickets_service.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // logout
 import 'package:hobby_sphere/app/router/router.dart'; // routes
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // l10n
@@ -80,12 +84,60 @@ class UserProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16), // spacing
             // ===== Menu tiles =====
+            // AFTER — navigates to Calendar screen using the SAME tickets service
+            // == CALENDAR TILE: open Calendar using the same tickets data ==
             _tile(
               context,
               icon: Icons.calendar_today, // calendar icon
-              title: tr.profileCalendar, // "My Calendar"
-              onTap: () => Navigator.of(context).pushNamed(Routes.userHome),
+              title: tr.profileCalendar, // l10n: "My Calendar"
+              onTap: () {
+                // 1) prepare a safe Dio instance (use global if set, else new)
+                final dio = g.appDio ?? Dio(); // shared HTTP client
+
+                // 2) create the tickets service (thin wrapper around Dio)
+                final svc = TicketsService(dio); // service instance
+
+                // 3) push the calendar route and pass a loader callback
+                Navigator.of(context).pushNamed(
+                  Routes.userTicketsCalendar, // route we added in router.dart
+                  arguments: CalendarTicketsRouteArgs(
+                    // loader returns ALL tickets as BookingEntity list
+                    loadTickets: () async {
+                      // a) call your 3 endpoints (pending/completed/canceled)
+                      final p = await svc.getByStatus(
+                        token,
+                        'pending',
+                      ); // Pending + CancelRequested
+                      final c = await svc.getByStatus(
+                        token,
+                        'completed',
+                      ); // Completed
+                      final x = await svc.getByStatus(
+                        token,
+                        'canceled',
+                      ); // Canceled
+
+                      // b) merge raw lists
+                      final all = <dynamic>[]
+                        ..addAll(p)
+                        ..addAll(c)
+                        ..addAll(x);
+
+                      // c) map raw json → BookingModel (which extends BookingEntity)
+                      //    (adjust constructor if your model differs)
+                      return all
+                          .map(
+                            (j) => BookingModel.fromJson(
+                              j as Map<String, dynamic>,
+                            ),
+                          )
+                          .toList();
+                    },
+                  ),
+                );
+              },
             ),
+
             _tile(
               context,
               icon: Icons.edit, // edit
@@ -99,12 +151,24 @@ class UserProfileScreen extends StatelessWidget {
               ),
             ),
 
+            // === EDIT INTERESTS ===
             _tile(
               context,
-              icon: Icons.favorite_border, // interests
-              title: tr.profileMyInterests, // "My Interests"
-              onTap: () => Navigator.of(context).pushNamed(Routes.userHome),
+              icon: Icons.favorite_border, // heart icon
+              title: tr.profileMyInterests, // l10n: "My Interests"
+              onTap: () {
+                // navigate to the Edit Interests screen
+                Navigator.of(context).pushNamed(
+                  Routes.editInterests, // route name we added
+                  arguments: EditInterestsRouteArgs(
+                    // pass args to screen
+                    token: token, // bearer/raw token
+                    userId: userId, // current user id
+                  ),
+                );
+              },
             ),
+
             _tile(
               context,
               icon: Icons.notifications_outlined, // notifications

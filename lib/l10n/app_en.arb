@@ -789,6 +789,22 @@
   "fieldRequired": "This field is required",
 "bookingNotAvailable": "This activity is not available for the selected participants.",
 
+  "editInterestsTitle": "Edit Your Interests",
+  "@editInterestsTitle": { "description": "AppBar title for edit interests screen" },
+
+
+
+  "interestSaved": "Interests saved successfully",
+  "@interestSaved": { "description": "Toast after saving interests" },
+  "selected": "selected",
+  "@selected": { "description": "Suffix after the number, e.g. '3 selected'" },
+
+  "somethingWentWrong": "Something went wrong",
+  "@somethingWentWrong": { "description": "Generic error title in error card" },
+
+  "retry": "Retry",
+  "@retry": { "description": "Button to retry loading after an error" },
+ 
 
  "@bookingMaxParticipants": {
     "description": "Shows the maximum number of participants for an activity",

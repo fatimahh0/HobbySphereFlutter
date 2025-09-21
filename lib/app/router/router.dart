@@ -53,6 +53,9 @@ import 'package:hobby_sphere/features/activities/user/editProfileUser/domain/use
 import 'package:hobby_sphere/features/activities/user/editProfileUser/presentation/bloc/edit_profile_bloc.dart';
 import 'package:hobby_sphere/features/activities/user/editProfileUser/presentation/bloc/edit_profile_event.dart';
 import 'package:hobby_sphere/features/activities/user/editProfileUser/presentation/screens/edit_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/user/interests/presentation/screens/edit_interests_screen.dart';
+import 'package:hobby_sphere/features/activities/user/tickets/domain/entities/booking_entity.dart';
+import 'package:hobby_sphere/features/activities/user/tickets/presentation/screens/calendar_tickets_screen.dart';
 import 'package:hobby_sphere/features/activities/user/userActivityDetail/data/repositories/user_activity_detail_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/user/userActivityDetail/data/services/user_activity_detail_service.dart';
 import 'package:hobby_sphere/features/activities/user/userActivityDetail/domain/usecases/check_user_availability.dart';
@@ -64,6 +67,8 @@ import 'package:hobby_sphere/features/activities/user/userHome/data/services/hom
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart'
     show GetInterestBasedItems;
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_upcoming_guest_items.dart';
+import 'package:hobby_sphere/features/authentication/data/repositories/interests_repository_impl.dart';
+import 'package:hobby_sphere/features/authentication/domain/usecases/register/get_activity_types.dart';
 import 'package:hobby_sphere/features/authentication/presentation/login/screen/login_page.dart';
 
 // ---------- User ----------
@@ -126,6 +131,7 @@ abstract class Routes {
   static const registerEmail = '/register/email';
   static const userHome = '/user/home';
   static const businessHome = '/business/home';
+  static const userTicketsCalendar = '/user/tickets/calendar'; // user calendar
   static const createBusinessActivity = '/business/activity/create';
   static const editBusinessActivity = '/business/activity/edit';
   static const businessBookings = '/business/bookings';
@@ -143,6 +149,7 @@ abstract class Routes {
   static const inviteManager = '/business/invite-manager';
   static const userActivityDetail = '/user/activity/details'; // user detail
   static const editUserProfile = '/user/edit-profile';
+  static const editInterests = '/user/edit-interests'; // edit interests screen
 }
 
 // ===== Route Args =====
@@ -182,6 +189,26 @@ class BusinessActivityDetailsRouteArgs {
     required this.token,
     required this.activityId,
   });
+}
+
+// args for Edit Interests screen
+class EditInterestsRouteArgs {
+  final String token; // bearer token (raw ok)
+  final int userId; // numeric user id
+  const EditInterestsRouteArgs({
+    required this.token, // set token
+    required this.userId, // set id
+  });
+}
+
+/// Loader typedef — same signature your Tickets screen already uses
+typedef TicketsLoader =
+    Future<List<BookingEntity>> Function(); // returns all tickets
+
+/// Args for Calendar Tickets route — inject the SAME loader used by Tickets screen
+class CalendarTicketsRouteArgs {
+  final TicketsLoader loadTickets; // callback to fetch tickets
+  const CalendarTicketsRouteArgs({required this.loadTickets}); // require it
 }
 
 class RegisterEmailRouteArgs {
@@ -482,6 +509,36 @@ class AppRouter {
           },
         );
 
+      // ===== Edit Interests (user) =====
+      case Routes.editInterests:
+        {
+          // read and validate args
+          final ei = args is EditInterestsRouteArgs ? args : null; // cast
+          if (ei == null) {
+            return _error(
+              'Missing EditInterestsRouteArgs (token + userId).',
+            ); // guard
+          }
+
+          // --- simple local DI for old stack: RegistrationService -> InterestsRepositoryImpl -> GetActivityTypes
+          final dio = g.appDio ?? Dio(); // shared Dio or new
+          final regService = RegistrationService(
+            dio,
+          ); // service used to fetch activity types
+          final interestsRepo = InterestsRepositoryImpl(regService); // repo
+          final getTypes = GetActivityTypes(interestsRepo); // usecase
+
+          // build screen and pass token/id + usecase
+          return _page(
+            EditInterestsScreen(
+              token: ei.token, // pass token
+              userId: ei.userId, // pass id
+              getTypes: getTypes, // pass old usecase
+            ),
+            settings,
+          );
+        }
+
       case Routes.businessActivityDetails:
         final badArgs = args is BusinessActivityDetailsRouteArgs ? args : null;
         if (badArgs == null) {
@@ -527,6 +584,28 @@ class AppRouter {
             itemId: biArgs.itemId,
           ),
         );
+
+      // ===== User Tickets Calendar =====
+      case Routes.userTicketsCalendar:
+        {
+          // read args safely
+          final cArgs = args is CalendarTicketsRouteArgs ? args : null; // cast
+
+          // guard if missing
+          if (cArgs == null) {
+            return _error(
+              'Missing CalendarTicketsRouteArgs (loadTickets).',
+            ); // error page
+          }
+
+          // build the page and pass the SAME loader your Tickets screen uses
+          return _page(
+            CalendarTicketsScreen(
+              loadTickets: cArgs.loadTickets, // inject service callback
+            ),
+            settings, // keep original settings
+          );
+        }
 
       case Routes.businessUsers:
         final buArgs = args is BusinessUsersRouteArgs ? args : null;

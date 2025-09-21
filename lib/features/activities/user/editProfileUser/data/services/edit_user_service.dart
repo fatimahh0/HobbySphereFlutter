@@ -6,13 +6,21 @@ class EditUserService {
   String get _baseUsers => '${g.appServerRoot}/api/users';
   String get _baseAuth => '${g.appServerRoot}/api/auth';
 
-  Future<Map<String, dynamic>> getUserMap({required int userId}) async {
+  Future<Map<String, dynamic>> getUserMap({
+    required String token,
+    required int userId,
+  }) async {
     final res = await _dio.get(
       '$_baseUsers/$userId',
-      options: Options(responseType: ResponseType.json),
+      options: Options(
+        responseType: ResponseType.json,
+        headers: {'Authorization': 'Bearer $token'},
+        // keep default validateStatus so non-2xx throws DioException
+      ),
     );
     return (res.data as Map).cast<String, dynamic>();
   }
+
 
   /// Backend: PUT /api/auth/{id} (multipart)
   Future<void> putUserMultipartAuth({

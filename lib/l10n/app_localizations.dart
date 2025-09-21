@@ -4758,6 +4758,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This activity is not available for the selected participants.'**
   String get bookingNotAvailable;
+
+  /// AppBar title for edit interests screen
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Your Interests'**
+  String get editInterestsTitle;
+
+  /// Toast after saving interests
+  ///
+  /// In en, this message translates to:
+  /// **'Interests saved successfully'**
+  String get interestSaved;
+
+  /// Suffix after the number, e.g. '3 selected'
+  ///
+  /// In en, this message translates to:
+  /// **'selected'**
+  String get selected;
+
+  /// Generic error title in error card
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get somethingWentWrong;
+
+  /// Button to retry loading after an error
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

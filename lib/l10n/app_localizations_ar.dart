@@ -2352,4 +2352,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get bookingNotAvailable => 'This activity is not available for the selected participants.';
+
+  @override
+  String get editInterestsTitle => 'Edit Your Interests';
+
+  @override
+  String get interestSaved => 'Interests saved successfully';
+
+  @override
+  String get selected => 'selected';
+
+  @override
+  String get somethingWentWrong => 'Something went wrong';
+
+  @override
+  String get retry => 'Retry';
 }

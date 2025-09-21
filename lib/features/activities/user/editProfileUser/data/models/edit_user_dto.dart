@@ -54,7 +54,8 @@ class EditUserDto {
     return EditUserDto(
       id: (idVal as num).toInt(),
       // username can be `username`, `userName`, or nested under user
-      username: _fromMany(root, ['username', 'userName']),
+      username: _fromMany(root, ['username', 'userName', 'user_name']),
+
       firstName: _str(root, 'firstName') ?? '',
       lastName: _str(root, 'lastName') ?? '',
       email: _fromMany(root, ['email']),

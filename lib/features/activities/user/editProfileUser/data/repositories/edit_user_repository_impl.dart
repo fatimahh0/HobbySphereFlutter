@@ -12,7 +12,7 @@ class EditUserRepositoryImpl implements EditUserRepository {
     required String token,
     required int userId,
   }) async {
-    final map = await service.getUserMap(userId: userId);
+    final map = await service.getUserMap(token: token, userId: userId);
     return EditUserDto.fromMap(map).toEntity();
   }
 
@@ -36,9 +36,12 @@ class EditUserRepositoryImpl implements EditUserRepository {
     // Ensure username
     String ensuredUsername = (username ?? '').trim();
     if (ensuredUsername.isEmpty) {
-      final current = await service.getUserMap(userId: userId);
-      ensuredUsername = (current['username'] as String? ?? '').trim();
+      final currentMap = await service.getUserMap(token: token, userId: userId);
+      // Reuse your tolerant parser (handles nesting and key variants)
+      final currentDto = EditUserDto.fromMap(currentMap);
+      ensuredUsername = (currentDto.username ?? '').trim();
     }
+
     if (ensuredUsername.isEmpty) {
       // last-resort fallback
       final slugFirst = firstName.trim().isEmpty ? 'user' : firstName.trim();
