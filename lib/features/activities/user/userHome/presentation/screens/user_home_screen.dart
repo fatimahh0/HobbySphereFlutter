@@ -1,6 +1,10 @@
 // Flutter 3.35.x — Tight header, dynamic currency (with fallback), absolute image URLs.
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/app/router/router.dart';
+import 'package:hobby_sphere/features/activities/user/userNotification/data/repositories/user_notification_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/user/userNotification/data/services/user_notification_service.dart';
+import 'package:hobby_sphere/features/activities/user/userNotification/presentation/bloc/user_unread_cubit.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 
@@ -104,46 +108,147 @@ class UserHomeScreen extends StatelessWidget {
           return cur.code; // e.g. "CAD"
         });
 
-    return Scaffold(
-      body: SafeArea(
-        top: true,
-        bottom: false,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            HomeHeader(
-              firstName: firstName, // <-- only first/last shown
-              lastName: lastName,
-              avatarUrl: avatarUrl,
-              unreadCount: unreadCount,
-              margin: EdgeInsets.zero,
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
-              radius: 10,
-              onBellTap: () {},
-            ),
-            const Divider(height: 1),
+    return BlocProvider<UserUnreadNotificationsCubit>(
+      create: (_) {
+        final repo = UserNotificationRepositoryImpl(UserNotificationService());
+        final cubit = UserUnreadNotificationsCubit(repo: repo, token: token);
+        // kick off initial fetch
+        cubit.refresh();
+        return cubit;
+      },
+      child: Scaffold(
+        body: SafeArea(
+          top: true,
+          bottom: false,
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              BlocBuilder<UserUnreadNotificationsCubit, UserUnreadState>(
+                builder: (context, s) {
+                  return HomeHeader(
+                    firstName: firstName,
+                    lastName: lastName,
+                    avatarUrl: avatarUrl,
+                    unreadCount: s.count, // ✅ live count from cubit
+                    margin: EdgeInsets.zero,
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+                    radius: 10,
+                    onBellTap: () {
+                      // navigate to user notifications
+                      Navigator.of(context)
+                          .pushNamed(
+                            Routes.userNotifications,
+                            arguments: UserNotificationsRouteArgs(token: token),
+                          )
+                          .then((_) {
+                            // refresh when returning from the screen
+                            context
+                                .read<UserUnreadNotificationsCubit>()
+                                .refresh();
+                          });
+                    },
+                  );
+                },
+              ),
 
-            // ==== Interest-based (HOME: 4) ====
-            if (token.trim().isNotEmpty && userId > 0)
-              InterestSection(
-                title: t.homeInterestBasedTitle,
-                showAllLabel: t.homeSeeAll,
-                usecase: getInterestBased,
+              const Divider(height: 1),
+
+              // ==== Interest-based (HOME: 4) ====
+              if (token.trim().isNotEmpty && userId > 0)
+                InterestSection(
+                  title: t.homeInterestBasedTitle,
+                  showAllLabel: t.homeSeeAll,
+                  usecase: getInterestBased,
+                  token: token,
+                  userId: userId,
+                  currencyCode: currencyFallback,
+                  getCurrencyCode: getCurrencyCodeFn,
+                  imageBaseUrl: serverRoot,
+                  maxItems: 4,
+                  standalone: false,
+                  onItemTap: (id) {},
+                  onShowAll: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => _AllInterestsPage(
+                          getInterestBased: getInterestBased,
+                          token: token,
+                          userId: userId,
+                          currencyFallback: currencyFallback,
+                          getCurrencyCode: getCurrencyCodeFn,
+                          imageBaseUrl: serverRoot,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+              const SizedBox(height: 6),
+
+              // ==== Categories ====
+              ActivityTypesSection(
+                getTypes: getItemTypes,
+                getItemsByType: getItemsByType,
                 token: token,
-                userId: userId,
+                onlyWithActivities: true,
+                onTypeTap: (id, name) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ActivitiesByTypeScreen(
+                        typeId: id,
+                        typeName: name,
+                        getItemsByType: getItemsByType,
+                        currencyCode: currencyFallback, // optional fallback
+                        getCurrencyCode: getCurrencyCodeFn,
+                        imageBaseUrl: serverRoot,
+                      ),
+                    ),
+                  );
+                },
+                onSeeAll: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ActivityTypesAllScreen(
+                        getTypes: getItemTypes,
+                        getItemsByType: getItemsByType,
+                        token: token,
+                        onTypeTap: (id, name) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ActivitiesByTypeScreen(
+                                typeId: id,
+                                typeName: name,
+                                getItemsByType: getItemsByType,
+                                currencyCode: currencyFallback,
+                                imageBaseUrl: serverRoot,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 6),
+
+              // ==== Explore (HOME: 6) ====
+              ExploreSection(
+                title: t.homeExploreActivities,
+                showAllLabel: t.homeSeeAll,
+                usecase: getUpcomingGuest,
                 currencyCode: currencyFallback,
                 getCurrencyCode: getCurrencyCodeFn,
                 imageBaseUrl: serverRoot,
-                maxItems: 4,
+                maxItems: 6,
                 standalone: false,
                 onItemTap: (id) {},
                 onShowAll: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => _AllInterestsPage(
-                        getInterestBased: getInterestBased,
-                        token: token,
-                        userId: userId,
+                      builder: (_) => _AllExplorePage(
+                        getUpcomingGuest: getUpcomingGuest,
                         currencyFallback: currencyFallback,
                         getCurrencyCode: getCurrencyCodeFn,
                         imageBaseUrl: serverRoot,
@@ -153,83 +258,9 @@ class UserHomeScreen extends StatelessWidget {
                 },
               ),
 
-            const SizedBox(height: 6),
-
-            // ==== Categories ====
-            ActivityTypesSection(
-              getTypes: getItemTypes,
-              getItemsByType: getItemsByType,
-              token: token,
-              onlyWithActivities: true,
-              onTypeTap: (id, name) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ActivitiesByTypeScreen(
-                      typeId: id,
-                      typeName: name,
-                      getItemsByType: getItemsByType,
-                      currencyCode: currencyFallback, // optional fallback
-                      getCurrencyCode: getCurrencyCodeFn, 
-                      imageBaseUrl: serverRoot,
-                    ),
-                  ),
-                );
-              },
-              onSeeAll: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ActivityTypesAllScreen(
-                      getTypes: getItemTypes,
-                      getItemsByType: getItemsByType,
-                      token: token,
-                      onTypeTap: (id, name) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ActivitiesByTypeScreen(
-                              typeId: id,
-                              typeName: name,
-                              getItemsByType: getItemsByType,
-                              currencyCode: currencyFallback,
-                              imageBaseUrl: serverRoot,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 6),
-
-            // ==== Explore (HOME: 6) ====
-            ExploreSection(
-              title: t.homeExploreActivities,
-              showAllLabel: t.homeSeeAll,
-              usecase: getUpcomingGuest,
-              currencyCode: currencyFallback,
-              getCurrencyCode: getCurrencyCodeFn,
-              imageBaseUrl: serverRoot,
-              maxItems: 6,
-              standalone: false,
-              onItemTap: (id) {},
-              onShowAll: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => _AllExplorePage(
-                      getUpcomingGuest: getUpcomingGuest,
-                      currencyFallback: currencyFallback,
-                      getCurrencyCode: getCurrencyCodeFn,
-                      imageBaseUrl: serverRoot,
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

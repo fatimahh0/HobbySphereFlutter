@@ -67,6 +67,7 @@ import 'package:hobby_sphere/features/activities/user/userHome/data/services/hom
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart'
     show GetInterestBasedItems;
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_upcoming_guest_items.dart';
+import 'package:hobby_sphere/features/activities/user/userNotification/presentation/screens/user_notification_screen.dart';
 import 'package:hobby_sphere/features/authentication/data/repositories/interests_repository_impl.dart';
 import 'package:hobby_sphere/features/authentication/domain/usecases/register/get_activity_types.dart';
 import 'package:hobby_sphere/features/authentication/presentation/login/screen/login_page.dart';
@@ -150,6 +151,7 @@ abstract class Routes {
   static const userActivityDetail = '/user/activity/details'; // user detail
   static const editUserProfile = '/user/edit-profile';
   static const editInterests = '/user/edit-interests'; // edit interests screen
+  static const String userNotifications = '/user-notifications';
 }
 
 // ===== Route Args =====
@@ -328,6 +330,11 @@ class RegisterRouteArgs {
   /// 0 = user, 1 = business
   final int initialRoleIndex;
   const RegisterRouteArgs({this.initialRoleIndex = 0});
+}
+
+class UserNotificationsRouteArgs {
+  final String token;
+  const UserNotificationsRouteArgs({required this.token});
 }
 
 /// Global navigator key (for programmatic navigation)
@@ -666,6 +673,30 @@ class AppRouter {
             businessId: bnArgs.businessId,
           ),
         );
+
+      case Routes.userNotifications:
+        {
+          final args = settings.arguments;
+          // Safe cast with helpful error in dev:
+          if (args is! UserNotificationsRouteArgs) {
+            assert(() {
+              throw FlutterError(
+                'Routes.userNotifications expects UserNotificationsRouteArgs, '
+                'but got: $args',
+              );
+            }());
+            // Fallback: render an error page in release if needed
+            return MaterialPageRoute(
+              builder: (_) => const Scaffold(
+                body: Center(child: Text('Invalid route args')),
+              ),
+            );
+          }
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => UserNotificationScreen(token: args.token),
+          );
+        }
 
       // ===== Business Activities =====
       case Routes.businessActivities:

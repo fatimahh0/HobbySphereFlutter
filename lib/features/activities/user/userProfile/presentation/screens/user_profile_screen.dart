@@ -171,10 +171,16 @@ class UserProfileScreen extends StatelessWidget {
 
             _tile(
               context,
-              icon: Icons.notifications_outlined, // notifications
-              title: tr.notifications, // "Notifications"
-              onTap: () => Navigator.of(context).pushNamed(Routes.userHome),
+              icon: Icons.notifications_outlined,
+              title: tr.notifications,
+              onTap: () {
+                Navigator.of(context).pushNamed(
+                  Routes.userNotifications,
+                  arguments: UserNotificationsRouteArgs(token: token),
+                );
+              },
             ),
+
             _tile(
               context,
               icon: Icons.privacy_tip_outlined, // privacy
