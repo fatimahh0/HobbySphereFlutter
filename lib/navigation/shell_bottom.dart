@@ -58,6 +58,7 @@ import 'package:hobby_sphere/features/activities/Business/businessProfile/presen
 import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
+import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/screens/community_screen.dart';
 
 // ===== User screens =====
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
@@ -243,7 +244,10 @@ class _ShellBottomState extends State<ShellBottom> {
       )(widget.token)).code,
       imageBaseUrl: _serverRoot(),
     ),
-    const UserCommunityScreen(), // 2) Social
+    CommunityScreen(
+      token: widget.token,
+      imageBaseUrl: _serverRoot(),
+    ), // 2) Social
     UserTicketsScreen(token: widget.token), // 3) Tickets
     _buildUserProfilePage(), // 4) Profile (NEW)
   ];

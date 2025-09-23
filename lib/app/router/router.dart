@@ -62,6 +62,8 @@ import 'package:hobby_sphere/features/activities/user/userActivityDetail/domain/
 import 'package:hobby_sphere/features/activities/user/userActivityDetail/domain/usecases/confirm_user_booking.dart';
 import 'package:hobby_sphere/features/activities/user/userActivityDetail/domain/usecases/get_user_activity_detail.dart';
 import 'package:hobby_sphere/features/activities/user/userActivityDetail/presentation/screens/user_activity_detail_screen.dart';
+import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/screens/community_screen.dart';
+import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/screens/create_post_screen.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/data/repositories/home_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/data/services/home_service.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart'
@@ -151,7 +153,14 @@ abstract class Routes {
   static const userActivityDetail = '/user/activity/details'; // user detail
   static const editUserProfile = '/user/edit-profile';
   static const editInterests = '/user/edit-interests'; // edit interests screen
-  static const String userNotifications = '/user-notifications';
+  static const userNotifications = '/user-notifications';
+  // Community / Social
+  static const community = '/community';
+  static const createPost = '/community/create';
+  static const commentPost = '/community/comments';
+  static const addFriend = '/community/add-friend'; // placeholder
+  static const myPosts = '/community/myposts'; // placeholder
+  static const friendship = '/community/chat'; // placeholder
 }
 
 // ===== Route Args =====
@@ -217,6 +226,8 @@ class RegisterEmailRouteArgs {
   final int initialRoleIndex;
   const RegisterEmailRouteArgs({this.initialRoleIndex = 0});
 }
+
+
 
 class BusinessInsightsRouteArgs {
   final String token;
@@ -545,6 +556,53 @@ class AppRouter {
             settings,
           );
         }
+
+        // ===== Community / Social =====
+      case Routes.community:
+        {
+          // Expect a String token (raw JWT) as arguments, but be resilient:
+          final token = (args is String)
+              ? args
+              : (args is UserHomeRouteArgs ? args.token : '');
+          final imageBaseUrl = (g.appServerRoot ?? '').replaceFirst(
+            RegExp(r'/api/?$'),
+            '',
+          );
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) =>
+                CommunityScreen(token: token, imageBaseUrl: imageBaseUrl),
+          );
+        }
+
+      case Routes.createPost:
+        {
+          final cp = args is CreatePostArgs ? args : null;
+          if (cp == null) return _error('Missing CreatePostArgs (token).');
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => CreatePostScreen(args: cp),
+          );
+        }
+
+      // Optional stubs so header buttons don’t break navigation.
+      // Swap these to your real screens when ready.
+      case Routes.addFriend:
+        return _page(
+          const Scaffold(body: Center(child: Text('Add Friend (stub)'))),
+          settings,
+        );
+      case Routes.myPosts:
+        return _page(
+          const Scaffold(body: Center(child: Text('My Posts (stub)'))),
+          settings,
+        );
+      case Routes.friendship:
+        return _page(
+          const Scaffold(body: Center(child: Text('Chat (stub)'))),
+          settings,
+        );
+
 
       case Routes.businessActivityDetails:
         final badArgs = args is BusinessActivityDetailsRouteArgs ? args : null;
