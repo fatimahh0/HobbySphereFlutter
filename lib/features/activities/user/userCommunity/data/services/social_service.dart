@@ -155,4 +155,54 @@ class SocialService {
     final v = res.data; // payload
     return v is num ? v.toInt() : int.tryParse('$v') ?? 0; // normalize
   }
+
+  // lib/features/activities/user/userCommunity/data/services/social_service.dart
+  // ... keep your imports and class as-is. Just ADD these two methods inside SocialService:
+
+  // get posts by specific user id
+  Future<List<dynamic>> getPostsByUser({
+    required String token, // jwt
+    required int userId, // current user id
+  }) async {
+    final res = await _fetch.fetch(
+      HttpMethod.get, // GET
+      '$_api/user/$userId', // -> /posts/user/{userId}  (ApiFetch adds /api)
+      headers: {'Authorization': _bearer(token)}, // bearer
+    );
+    final data = res.data; // payload
+    if (data is List) return data; // raw list
+    if (data is Map) {
+      // wrapped shapes
+      final maybe =
+          data['data'] ?? data['items'] ?? data['content'] ?? data['posts'];
+      if (maybe is List) return maybe;
+    }
+    return <dynamic>[]; // fallback
+  }
+
+  // delete a post (owner)
+  // inside SocialService
+
+  Future<void> deletePost({
+    required String token, // jwt
+    required int postId, // post id
+  }) async {
+    try {
+      await _fetch.fetch(
+        HttpMethod.delete, // DELETE
+        '$_api/$postId', // /posts/{id}
+        headers: {'Authorization': _bearer(token)},
+      );
+    } on DioException catch (e) {
+      // Server often returns 200 with a *string* body like "Post deleted successfully".
+      // Your wrapper may try to parse it as JSON → FormatException. Treat as success.
+      final code = e.response?.statusCode ?? 0;
+      final body = e.response?.data;
+      final isFormat = e.error is FormatException;
+      if (code == 200 || code == 204 || isFormat || body is String) {
+        return; // consider it successful
+      }
+      rethrow; // real network/server error
+    }
+  }
 }

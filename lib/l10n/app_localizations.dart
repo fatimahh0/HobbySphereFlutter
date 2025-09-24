@@ -3913,17 +3913,47 @@ abstract class AppLocalizations {
   /// **'An unexpected error occurred'**
   String get socialError;
 
+  /// No description provided for @socialNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts'**
+  String get socialNotifications;
+
   /// No description provided for @socialMyPosts.
   ///
   /// In en, this message translates to:
   /// **'My Posts'**
   String get socialMyPosts;
 
-  /// No description provided for @socialNotifications.
+  /// No description provided for @myPostsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Alerts'**
-  String get socialNotifications;
+  /// **'My Posts'**
+  String get myPostsTitle;
+
+  /// No description provided for @deletePostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete post?'**
+  String get deletePostTitle;
+
+  /// No description provided for @deletePostConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'This action cannot be undone.'**
+  String get deletePostConfirm;
+
+  /// No description provided for @deletePostSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Post deleted'**
+  String get deletePostSuccess;
+
+  /// No description provided for @deletePostFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete'**
+  String get deletePostFailed;
 
   /// No description provided for @socialSearchFriend.
   ///

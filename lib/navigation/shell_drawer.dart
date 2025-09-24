@@ -70,22 +70,33 @@ import 'package:hobby_sphere/features/activities/common/domain/usecases/get_curr
 // ==== User Screens ====
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
 import 'package:hobby_sphere/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart';
-import 'package:hobby_sphere/features/activities/user/common/presentation/user_community_screen.dart';
+import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/screens/community_screen.dart';
 import 'package:hobby_sphere/features/activities/user/tickets/presentation/screens/user_tickets_screen.dart';
 
-// ==== User Home feature (services/repos/usecases) ====
+// ==== User Home DI (services/repos/usecases) ====
 import 'package:hobby_sphere/features/activities/user/userHome/data/services/home_service.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/data/repositories/home_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_upcoming_guest_items.dart';
 
-// ==== Common (types + items-by-type) for Categories section ====
+// ==== Common (types + items-by-type) ====
 import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart';
 import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
 import 'package:hobby_sphere/features/activities/common/data/services/items_service.dart';
 import 'package:hobby_sphere/features/activities/common/data/repositories/items_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_items_by_type.dart';
+
+// ==== User Profile feature (alias service to avoid collisions) ====
+import 'package:hobby_sphere/features/activities/user/userProfile/data/services/user_profile_service.dart'
+    as upsvc;
+import 'package:hobby_sphere/features/activities/user/userProfile/data/repositories/user_profile_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/user/userProfile/domain/usecases/get_user_profile.dart';
+import 'package:hobby_sphere/features/activities/user/userProfile/domain/usecases/toggle_user_visibility.dart';
+import 'package:hobby_sphere/features/activities/user/userProfile/domain/usecases/update_user_status.dart';
+import 'package:hobby_sphere/features/activities/user/userProfile/presentation/bloc/user_profile_bloc.dart';
+import 'package:hobby_sphere/features/activities/user/userProfile/presentation/bloc/user_profile_event.dart';
+import 'package:hobby_sphere/features/activities/user/userProfile/presentation/screens/user_profile_screen.dart';
 
 // ==== Localization ====
 import 'package:hobby_sphere/l10n/app_localizations.dart';
@@ -136,7 +147,6 @@ class _ShellDrawerState extends State<ShellDrawer> {
     }
   }
 
-  // ---- helpers to read jwt ----
   int? _extractUserId(String token) {
     try {
       final parts = token.split('.');
@@ -147,20 +157,6 @@ class _ShellDrawerState extends State<ShellDrawer> {
       final raw = payload['id'] ?? payload['userId'];
       if (raw is num) return raw.toInt();
       return int.tryParse('$raw');
-    } catch (_) {
-      return null;
-    }
-  }
-
-  String? _extractDisplayName(String token) {
-    try {
-      final parts = token.split('.');
-      if (parts.length != 3) return null;
-      final payload = jsonDecode(
-        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
-      );
-      final n = payload['name'] ?? payload['given_name'] ?? payload['username'];
-      return n?.toString();
     } catch (_) {
       return null;
     }
@@ -211,13 +207,38 @@ class _ShellDrawerState extends State<ShellDrawer> {
   late final String? _firstName = _extractFirstName(widget.token);
   late final String? _lastName = _extractLastName(widget.token);
 
+  // ===== User Profile page (service -> repo -> usecases -> bloc -> screen) =====
+  Widget _buildUserProfilePage() {
+    final service = upsvc.UserProfileService();
+    final repo = UserProfileRepositoryImpl(service);
+    final getUser = GetUserProfile(repo);
+    final toggleVis = ToggleUserVisibility(repo);
+    final setStatus = UpdateUserStatus(repo);
+
+    return MultiRepositoryProvider(
+      providers: [RepositoryProvider.value(value: setStatus)],
+      child: BlocProvider(
+        create: (_) => UserProfileBloc(
+          getUser: getUser,
+          toggleVisibility: toggleVis,
+          updateStatus: setStatus,
+        )..add(LoadUserProfile(widget.token, _userId)),
+        child: UserProfileScreen(
+          token: widget.token,
+          userId: _userId,
+          onChangeLocale: widget.onChangeLocale,
+        ),
+      ),
+    );
+  }
+
   // ===== User pages =====
   late final List<Widget> _userPages = <Widget>[
     UserHomeScreen(
-      firstName: _firstName, // << pass names (header shows First + Last)
+      firstName: _firstName,
       lastName: _lastName,
       token: widget.token,
-      userId: _userId, // if 0 => interests section hides
+      userId: _userId,
       getInterestBased: _getInterest,
       getUpcomingGuest: _getUpcoming,
       getItemTypes: _getItemTypes,
@@ -233,9 +254,13 @@ class _ShellDrawerState extends State<ShellDrawer> {
       )(widget.token)).code,
       imageBaseUrl: _serverRoot(),
     ),
-    const UserCommunityScreen(),
+    CommunityScreen(
+      token: widget.token,
+      imageBaseUrl: _serverRoot(),
+      userId: _userId,
+    ),
     UserTicketsScreen(token: widget.token),
- 
+    _buildUserProfilePage(), // ✅ added profile page so menu index 4 is valid
   ];
 
   // ===== Business pages =====

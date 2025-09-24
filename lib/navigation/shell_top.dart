@@ -1,7 +1,6 @@
 // ===== Flutter 3.35.x =====
-// ShellTop — top tab navigation (fixed header + smooth tabs)
-// Updated: injects UserHome deps, parses JWT for userId + first/last name,
-// and shows a badge on Bookings/Tickets tab.
+// ShellTop — top tabs (5). Social tab uses CommunityScreen.
+// AppBar adds a quick action to "My Posts" (pushes Routes.myPosts).
 
 import 'dart:convert' show base64Url, jsonDecode, utf8;
 
@@ -13,24 +12,21 @@ import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/constants/app_role.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 
-// Business Activity
+// ===== Business stacks =====
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
 
-// Business Home
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
 
-// Business Notifications
 import 'package:hobby_sphere/features/activities/Business/businessNotification/data/repositories/business_notification_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/businessNotification/data/services/business_notification_service.dart';
 import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/usecases/get_business_notifications.dart';
 import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_event.dart';
 
-// Business Profile
 import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart';
@@ -42,7 +38,6 @@ import 'package:hobby_sphere/features/activities/Business/businessProfile/presen
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
 
-// Business Booking
 import 'package:hobby_sphere/features/activities/Business/businessBooking/data/repositories/business_booking_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/data/services/business_booking_service.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/domain/usecases/get_business_bookings.dart';
@@ -51,7 +46,6 @@ import 'package:hobby_sphere/features/activities/Business/businessBooking/presen
 import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/bloc/business_booking_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart';
 
-// Business Analytics
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/data/repositories/business_analytics_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/data/services/business_analytics_service.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/domain/usecases/get_business_analytics.dart';
@@ -59,37 +53,37 @@ import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/pres
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
 
-// Common UseCases
 import 'package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
-import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
-import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
 
-// User Screens
+// ===== User stacks =====
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
 import 'package:hobby_sphere/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart';
-import 'package:hobby_sphere/features/activities/user/common/presentation/user_community_screen.dart';
 import 'package:hobby_sphere/features/activities/user/tickets/presentation/screens/user_tickets_screen.dart';
+import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/screens/community_screen.dart';
 
-// User Home DI (services/repos/usecases)
+// User DI
 import 'package:hobby_sphere/features/activities/user/userHome/data/services/home_service.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/data/repositories/home_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_upcoming_guest_items.dart';
 
-// Categories + Items by Type
 import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart';
 import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
+
 import 'package:hobby_sphere/features/activities/common/data/services/items_service.dart';
 import 'package:hobby_sphere/features/activities/common/data/repositories/items_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_items_by_type.dart';
 
-// Localizations
+import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
+import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
+
+// l10n
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 
 class ShellTop extends StatelessWidget {
@@ -114,7 +108,7 @@ class ShellTop extends StatelessWidget {
     this.ticketsBadge = 0,
   });
 
-  // ---- JWT helpers ----
+  // ---- helpers ----
   Map<String, dynamic>? _jwtPayload(String tkn) {
     try {
       final parts = tkn.split('.');
@@ -129,43 +123,40 @@ class ShellTop extends StatelessWidget {
     }
   }
 
-  int? _extractUserId(String tkn) {
-    final p = _jwtPayload(tkn);
-    if (p == null) return null;
-    final raw = p['id'] ?? p['userId'];
+  int _userIdFromToken() {
+    final p = _jwtPayload(token);
+    final raw = p?['id'] ?? p?['userId'];
     if (raw is num) return raw.toInt();
-    return int.tryParse('$raw');
+    return int.tryParse('$raw') ?? 0;
   }
 
-  String? _extractFirstName(String tkn) {
-    final p = _jwtPayload(tkn);
-    if (p == null) return null;
-    final fn = (p['firstName'] ?? p['given_name'])?.toString();
+  String? _firstNameFromToken() {
+    final p = _jwtPayload(token);
+    final fn = (p?['firstName'] ?? p?['given_name'])?.toString();
     if (fn != null && fn.trim().isNotEmpty) return fn.trim();
-
-    final name = p['name']?.toString();
+    final name = p?['name']?.toString();
     if (name != null && name.trim().isNotEmpty) {
       return name.trim().split(RegExp(r'\s+')).first;
     }
     return null;
   }
 
-  String? _extractLastName(String tkn) {
-    final p = _jwtPayload(tkn);
-    if (p == null) return null;
-    final ln = (p['lastName'] ?? p['family_name'])?.toString();
+  String? _lastNameFromToken() {
+    final p = _jwtPayload(token);
+    final ln = (p?['lastName'] ?? p?['family_name'])?.toString();
     if (ln != null && ln.trim().isNotEmpty) return ln.trim();
-
-    final name = p['name']?.toString();
+    final name = p?['name']?.toString();
     if (name != null && name.trim().isNotEmpty) {
       final parts = name.trim().split(RegExp(r'\s+'));
-      if (parts.length > 1) {
-        return parts.sublist(1).join(' ');
-      }
+      if (parts.length > 1) return parts.sublist(1).join(' ');
     }
     return null;
   }
 
+  String _serverRoot() =>
+      (g.appServerRoot ?? '').replaceFirst(RegExp(r'/api/?$'), '');
+
+  // ---- labels/icons ----
   List<String> _labels(BuildContext ctx) {
     final t = AppLocalizations.of(ctx)!;
     return role == AppRole.business
@@ -179,6 +170,7 @@ class ShellTop extends StatelessWidget {
         : [t.tabHome, t.tabExplore, t.tabSocial, t.tabTickets, t.tabProfile];
   }
 
+  // (kept for parity; we’re using text tabs)
   List<(IconData, IconData)> _icons() {
     return role == AppRole.business
         ? const [
@@ -197,9 +189,10 @@ class ShellTop extends StatelessWidget {
           ];
   }
 
+  // ---- business pages ----
   List<Widget> _businessViews() {
     return [
-      // Home (with notifications + home bloc)
+      // 0) Home (with notifications + home bloc)
       MultiBlocProvider(
         providers: [
           BlocProvider(
@@ -244,7 +237,7 @@ class ShellTop extends StatelessWidget {
         ),
       ),
 
-      // Bookings
+      // 1) Bookings
       BlocProvider(
         create: (ctx) => BusinessBookingBloc(
           getBookings: GetBusinessBookings(
@@ -257,7 +250,7 @@ class ShellTop extends StatelessWidget {
         child: const BusinessBookingScreen(),
       ),
 
-      // Analytics
+      // 2) Analytics
       BlocProvider(
         create: (ctx) => BusinessAnalyticsBloc(
           getBusinessAnalytics: GetBusinessAnalytics(
@@ -267,7 +260,7 @@ class ShellTop extends StatelessWidget {
         child: BusinessAnalyticsScreen(token: token, businessId: businessId),
       ),
 
-      // Activities
+      // 3) Activities
       BlocProvider(
         create: (ctx) {
           final repo = BusinessActivityRepositoryImpl(
@@ -281,7 +274,7 @@ class ShellTop extends StatelessWidget {
         child: BusinessActivitiesScreen(token: token, businessId: businessId),
       ),
 
-      // Profile
+      // 4) Profile
       BlocProvider(
         create: (ctx) {
           final businessRepo = BusinessRepositoryImpl(BusinessService());
@@ -303,39 +296,35 @@ class ShellTop extends StatelessWidget {
     ];
   }
 
+  // ---- user pages ----
   List<Widget> _userViews() {
-    final userId = _extractUserId(token) ?? 0;
-    final firstName = _extractFirstName(token);
-    final lastName = _extractLastName(token);
+    final userId = _userIdFromToken();
+    final firstName = _firstNameFromToken();
+    final lastName = _lastNameFromToken();
 
-    String _serverRoot() {
-      final base = (g.appServerRoot ?? '');
-      return base.replaceFirst(RegExp(r'/api/?$'), '');
-    }
-
-    // DI for user home features
+    // DI for user home
     final homeRepo = HomeRepositoryImpl(HomeService());
     final getInterest = GetInterestBasedItems(homeRepo);
     final getUpcoming = GetUpcomingGuestItems(homeRepo);
-
     final getItemTypes = GetItemTypes(
       ItemTypeRepositoryImpl(ItemTypesService()),
     );
     final getItemsByType = GetItemsByType(ItemsRepositoryImpl(ItemsService()));
 
     return [
+      // 0) Home
       UserHomeScreen(
-        // << show First + Last in header (no username)
         firstName: firstName,
         lastName: lastName,
         token: token,
-        userId: userId, // if 0, interests section can be hidden internally
+        userId: userId,
         getInterestBased: getInterest,
         getUpcomingGuest: getUpcoming,
         getItemTypes: getItemTypes,
         getItemsByType: getItemsByType,
       ),
 
+      // 1) Explore
       ExploreScreen(
         token: token,
         getUpcomingGuest: getUpcoming,
@@ -346,9 +335,22 @@ class ShellTop extends StatelessWidget {
         )(token)).code,
         imageBaseUrl: _serverRoot(),
       ),
-      const UserCommunityScreen(),
+
+      // 2) Social (Community)
+      CommunityScreen(
+        token: token,
+        imageBaseUrl: _serverRoot(),
+        userId: userId,
+      ),
+
+      // 3) Tickets
       UserTicketsScreen(token: token),
- 
+
+      // 4) Profile (placeholder or replace with your profile screen)
+      Builder(
+        builder: (ctx) =>
+            Center(child: Text(AppLocalizations.of(ctx)!.tabProfile)),
+      ),
     ];
   }
 
@@ -364,7 +366,7 @@ class ShellTop extends StatelessWidget {
 
     final scheme = Theme.of(context).colorScheme;
     final labels = _labels(context);
-    final icons = _icons(); // not used visually (text tabs), kept for parity
+    // final icons = _icons(); // not used visually (text-only tabs)
     final pages = role == AppRole.business ? _businessViews() : _userViews();
 
     final badgeIndex = role == AppRole.business ? 1 : 3;
@@ -376,6 +378,26 @@ class ShellTop extends StatelessWidget {
         builder: (tabCtx) {
           final controller = DefaultTabController.of(tabCtx);
           return Scaffold(
+            appBar: AppBar(
+              title: Text(''),
+              centerTitle: true,
+              actions: [
+                if (role != AppRole.business)
+                  IconButton(
+                    tooltip: AppLocalizations.of(context)!.socialMyPosts,
+                    icon: const Icon(Icons.library_books_outlined),
+                    onPressed: () {
+                      Navigator.of(context).pushNamed(
+                        Routes.myPosts,
+                        arguments: {
+                          'token': token,
+                          'imageBaseUrl': _serverRoot(),
+                        },
+                      );
+                    },
+                  ),
+              ],
+            ),
             body: SafeArea(
               bottom: false,
               child: Column(
@@ -458,7 +480,7 @@ class ShellTop extends StatelessWidget {
   }
 }
 
-/// Tiny, tasteful selected animation (not used by text tabs, but handy if you switch to icon tabs)
+/// Tiny, tasteful selected animation (kept in case you switch to icon tabs)
 class _AnimatedNavIcon extends StatelessWidget {
   final IconData unselected;
   final IconData selected;

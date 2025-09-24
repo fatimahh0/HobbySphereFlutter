@@ -1929,10 +1929,25 @@ class AppLocalizationsAr extends AppLocalizations {
   String get socialError => 'An unexpected error occurred';
 
   @override
+  String get socialNotifications => 'Alerts';
+
+  @override
   String get socialMyPosts => 'My Posts';
 
   @override
-  String get socialNotifications => 'Alerts';
+  String get myPostsTitle => 'My Posts';
+
+  @override
+  String get deletePostTitle => 'Delete post?';
+
+  @override
+  String get deletePostConfirm => 'This action cannot be undone.';
+
+  @override
+  String get deletePostSuccess => 'Post deleted';
+
+  @override
+  String get deletePostFailed => 'Failed to delete';
 
   @override
   String get socialSearchFriend => 'Search ';

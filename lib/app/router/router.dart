@@ -1,5 +1,3 @@
-// ===== Flutter 3.35.x =====
-// router.dart — central app router (Navigator 1.0, onGenerateRoute)
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -54,6 +52,18 @@ import 'package:hobby_sphere/features/activities/user/editProfileUser/presentati
 import 'package:hobby_sphere/features/activities/user/editProfileUser/presentation/bloc/edit_profile_event.dart';
 import 'package:hobby_sphere/features/activities/user/editProfileUser/presentation/screens/edit_profile_screen.dart';
 import 'package:hobby_sphere/features/activities/user/interests/presentation/screens/edit_interests_screen.dart';
+import 'package:hobby_sphere/features/activities/user/social/data/repositories/chat_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/user/social/data/repositories/friends_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/user/social/data/services/friends_service.dart';
+import 'package:hobby_sphere/features/activities/user/social/data/services/message_service.dart';
+import 'package:hobby_sphere/features/activities/user/social/domain/entities/user_min.dart';
+import 'package:hobby_sphere/features/activities/user/social/domain/usecases/chat_usecases.dart';
+import 'package:hobby_sphere/features/activities/user/social/domain/usecases/friends_usecases.dart';
+import 'package:hobby_sphere/features/activities/user/social/presentation/bloc/chat/chat_bloc.dart';
+import 'package:hobby_sphere/features/activities/user/social/presentation/bloc/friends/friends_bloc.dart';
+import 'package:hobby_sphere/features/activities/user/social/presentation/screens/add_friend_screen.dart';
+import 'package:hobby_sphere/features/activities/user/social/presentation/screens/chat_home_screen.dart';
+import 'package:hobby_sphere/features/activities/user/social/presentation/screens/conversation_screen.dart';
 import 'package:hobby_sphere/features/activities/user/tickets/domain/entities/booking_entity.dart';
 import 'package:hobby_sphere/features/activities/user/tickets/presentation/screens/calendar_tickets_screen.dart';
 import 'package:hobby_sphere/features/activities/user/userActivityDetail/data/repositories/user_activity_detail_repository_impl.dart';
@@ -64,6 +74,7 @@ import 'package:hobby_sphere/features/activities/user/userActivityDetail/domain/
 import 'package:hobby_sphere/features/activities/user/userActivityDetail/presentation/screens/user_activity_detail_screen.dart';
 import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/screens/community_screen.dart';
 import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/screens/create_post_screen.dart';
+import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/screens/my_posts_screen.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/data/repositories/home_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/data/services/home_service.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart'
@@ -192,6 +203,17 @@ class ShellRouteArgs {
   });
 }
 
+class MyPostsRouteArgs {
+  final String token; // jwt token
+  final int userId; // current user id
+  final String? imageBaseUrl; // optional base for relative images
+  const MyPostsRouteArgs({
+    required this.token, // required token
+    required this.userId, // required id
+    this.imageBaseUrl, // optional base url
+  });
+}
+
 class BusinessActivityDetailsRouteArgs {
   final String token;
   final int activityId;
@@ -226,8 +248,6 @@ class RegisterEmailRouteArgs {
   final int initialRoleIndex;
   const RegisterEmailRouteArgs({this.initialRoleIndex = 0});
 }
-
-
 
 class BusinessInsightsRouteArgs {
   final String token;
@@ -347,6 +367,8 @@ class UserNotificationsRouteArgs {
   final String token;
   const UserNotificationsRouteArgs({required this.token});
 }
+
+
 
 /// Global navigator key (for programmatic navigation)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -557,21 +579,32 @@ class AppRouter {
           );
         }
 
-        // ===== Community / Social =====
+      // ===== Community / Social =====
       case Routes.community:
         {
-          // Expect a String token (raw JWT) as arguments, but be resilient:
+          // token can arrive as String or via UserHomeRouteArgs (keep your logic)
           final token = (args is String)
               ? args
               : (args is UserHomeRouteArgs ? args.token : '');
+
+          // derive image base one time (or pass null if you prefer)
           final imageBaseUrl = (g.appServerRoot ?? '').replaceFirst(
             RegExp(r'/api/?$'),
             '',
           );
+
+          // IMPORTANT: we also need the current user id
+          final uid = (args is UserHomeRouteArgs)
+              ? args.userId
+              : 0; // make sure you pass real id
+
           return MaterialPageRoute(
             settings: settings,
-            builder: (_) =>
-                CommunityScreen(token: token, imageBaseUrl: imageBaseUrl),
+            builder: (_) => CommunityScreen(
+              token: token, // pass token
+              userId: uid, // ← pass user id here
+              imageBaseUrl: imageBaseUrl, // pass image base
+            ),
           );
         }
 
@@ -588,21 +621,207 @@ class AppRouter {
       // Optional stubs so header buttons don’t break navigation.
       // Swap these to your real screens when ready.
       case Routes.addFriend:
-        return _page(
-          const Scaffold(body: Center(child: Text('Add Friend (stub)'))),
-          settings,
-        );
-      case Routes.myPosts:
-        return _page(
-          const Scaffold(body: Center(child: Text('My Posts (stub)'))),
-          settings,
-        );
-      case Routes.friendship:
-        return _page(
-          const Scaffold(body: Center(child: Text('Chat (stub)'))),
-          settings,
-        );
+        {
+          final meId =
+              (args is int) // get my id from args if int
+              ? args
+              : (args is UserHomeRouteArgs
+                    ? args.userId
+                    : 0); // or from UserHomeRouteArgs, else 0
 
+          final baseUrl =
+              g.appServerRoot ?? ''; // server base (ex: https://host/api)
+
+          final friendsService = FriendsService(
+            baseUrl,
+          ); // wire HTTP service (friends)
+          final friendsRepo = FriendsRepositoryImpl(
+            friendsService,
+          ); // repo on top of service
+
+          // build needed usecases for the screen
+          final getAll = GetAllUsersUC(friendsRepo); // list all users
+          final getSuggested = GetSuggestedUC(
+            friendsRepo,
+          ); // list suggested users
+          final sendFriend = SendFriendUC(friendsRepo); // send request
+          final cancelFriend = CancelFriendUC(friendsRepo); // cancel request
+          final getReceived = GetReceivedUC(friendsRepo); // received requests
+          final getSent = GetSentUC(friendsRepo); // sent requests
+          final getFriends = GetFriendsUC(friendsRepo); // my friends
+          final acceptUC = AcceptUC(friendsRepo); // accept request
+          final rejectUC = RejectUC(friendsRepo); // reject request
+          final unfriendUC = UnfriendUC(friendsRepo); // unfriend
+          final blockUC = BlockUC(friendsRepo); // block user
+          final unblockUC = UnblockUC(friendsRepo); // unblock user
+
+          return MaterialPageRoute(
+            // open page
+            settings: settings, // keep route metadata
+            builder: (_) => BlocProvider(
+              // provide FriendsBloc
+              create: (_) => FriendsBloc(
+                getAll: getAll,
+                getSuggested: getSuggested,
+                sendFriend: sendFriend,
+                cancelFriend: cancelFriend,
+                getReceived: getReceived,
+                getSent: getSent,
+                getFriends: getFriends,
+                acceptUC: acceptUC,
+                rejectUC: rejectUC,
+                unfriendUC: unfriendUC,
+                blockUC: blockUC,
+                unblockUC: unblockUC,
+              ),
+              child: AddFriendScreen(meId: meId), // target screen
+            ),
+          );
+        }
+
+      case Routes.myPosts:
+        {
+          // read args safely
+          final mp = args is MyPostsRouteArgs ? args : null; // typed cast
+          if (mp == null) {
+            // guard
+            return _error(
+              'Missing MyPostsRouteArgs (token + userId).',
+            ); // error page
+          }
+
+          // if caller didn’t pass imageBaseUrl, derive it from your app server root
+          final base =
+              mp.imageBaseUrl ??
+              (g.appServerRoot ?? '').replaceFirst(
+                RegExp(r'/api/?$'),
+                '',
+              ); // trim /api
+
+          // build the page
+          return MaterialPageRoute(
+            settings: settings, // keep meta
+            builder: (_) => MyPostsScreen(
+              // screen
+              args: MyPostsArgs(
+                // strong args
+                token: mp.token, // pass token
+                userId: mp.userId, // pass id
+                imageBaseUrl: base, // pass base
+              ),
+            ),
+          );
+        }
+
+     case Routes.friendship:
+        {
+          final baseUrl = g.appServerRoot ?? ''; // API base
+
+          // If you pass a UserMin → open a direct conversation.
+          if (args is UserMin) {
+            final peer = args; // chat partner
+            final meId = 0; // if you have it, pass real id via screen push
+
+            // services + repos
+            final friendsRepo = FriendsRepositoryImpl(FriendsService(baseUrl));
+            final chatRepo = ChatRepositoryImpl(
+              MessageService(baseUrl),
+              meId: meId,
+            );
+
+            // friends UCs (badge counts, quick actions from header)
+            final getFriends = GetFriendsUC(friendsRepo);
+            final acceptUC = AcceptUC(friendsRepo);
+            final rejectUC = RejectUC(friendsRepo);
+            final unfriendUC = UnfriendUC(friendsRepo);
+
+            // chat UCs
+            final conversation = ConversationUC(chatRepo); // load messages
+            final send = SendMessageUC(chatRepo); // send text/image
+            final markRead = MarkReadUC(chatRepo); // mark read
+            final deleteMsg = DeleteMessageUC(chatRepo); // delete mine
+
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (_) => MultiBlocProvider(
+                // provide both blocs
+                providers: [
+                  BlocProvider(
+                    create: (_) => FriendsBloc(
+                      getAll: GetAllUsersUC(friendsRepo),
+                      getSuggested: GetSuggestedUC(friendsRepo),
+                      sendFriend: SendFriendUC(friendsRepo),
+                      cancelFriend: CancelFriendUC(friendsRepo),
+                      getReceived: GetReceivedUC(friendsRepo),
+                      getSent: GetSentUC(friendsRepo),
+                      getFriends: getFriends,
+                      acceptUC: acceptUC,
+                      rejectUC: rejectUC,
+                      unfriendUC: unfriendUC,
+                      blockUC: BlockUC(friendsRepo),
+                      unblockUC: UnblockUC(friendsRepo),
+                    ),
+                  ),
+                  BlocProvider(
+                    create: (_) => ChatBloc(
+                      getConversation: conversation,
+                      sendMessage: send,
+                      markRead: markRead,
+                      deleteMessage: deleteMsg,
+                    ),
+                  ),
+                ],
+                child: ConversationScreen(peer: peer as UserMin), // open dialog screen
+              ),
+            );
+          }
+
+          // Else → open Chat Home (friends list + unread counters).
+          final meId = (args is int)
+              ? args
+              : (args is UserHomeRouteArgs ? args.userId : 0); // read my id
+
+          final friendsRepo = FriendsRepositoryImpl(
+            FriendsService(baseUrl),
+          ); // friends repo
+          final chatRepo = ChatRepositoryImpl(
+            MessageService(baseUrl),
+            meId: meId,
+          ); // chat repo
+
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider(
+                  create: (_) => FriendsBloc(
+                    getAll: GetAllUsersUC(friendsRepo),
+                    getSuggested: GetSuggestedUC(friendsRepo),
+                    sendFriend: SendFriendUC(friendsRepo),
+                    cancelFriend: CancelFriendUC(friendsRepo),
+                    getReceived: GetReceivedUC(friendsRepo),
+                    getSent: GetSentUC(friendsRepo),
+                    getFriends: GetFriendsUC(friendsRepo),
+                    acceptUC: AcceptUC(friendsRepo),
+                    rejectUC: RejectUC(friendsRepo),
+                    unfriendUC: UnfriendUC(friendsRepo),
+                    blockUC: BlockUC(friendsRepo),
+                    unblockUC: UnblockUC(friendsRepo),
+                  ),
+                ),
+                BlocProvider(
+                  create: (_) => ChatBloc(
+                    getConversation: ConversationUC(chatRepo),
+                    sendMessage: SendMessageUC(chatRepo),
+                    markRead: MarkReadUC(chatRepo),
+                    deleteMessage: DeleteMessageUC(chatRepo),
+                  ),
+                ),
+              ],
+              child: ChatHomeScreen(meId: meId), // chat home screen
+            ),
+          );
+        }
 
       case Routes.businessActivityDetails:
         final badArgs = args is BusinessActivityDetailsRouteArgs ? args : null;

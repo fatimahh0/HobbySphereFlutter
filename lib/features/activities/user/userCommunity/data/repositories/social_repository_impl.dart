@@ -98,4 +98,34 @@ class SocialRepositoryImpl implements SocialRepository {
     // forward to service
     return service.getUnreadNotificationCount(token: token);
   }
+
+  @override
+  Future<List<Post>> getPostsByUser(String token, int userId) async {
+    try {
+      final raw = await service.getPostsByUser(
+        token: token,
+        userId: userId,
+      ); // call service
+      final list = <Post>[];
+      for (final it in raw) {
+        if (it is Map<String, dynamic>) {
+          try {
+            list.add(PostModel.fromJson(it));
+          } catch (_) {}
+        }
+      }
+      list.sort(
+        (a, b) => b.postDatetime.compareTo(a.postDatetime),
+      ); // newest first
+      return list;
+    } on DioException catch (e) {
+      if ((e.response?.statusCode ?? 0) == 204) return <Post>[]; // empty ok
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> deletePost(String token, int postId) {
+    return service.deletePost(token: token, postId: postId); // pass-through
+  }
 }

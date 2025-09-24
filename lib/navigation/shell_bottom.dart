@@ -244,10 +244,13 @@ class _ShellBottomState extends State<ShellBottom> {
       )(widget.token)).code,
       imageBaseUrl: _serverRoot(),
     ),
+    // AFTER — pass userId too
     CommunityScreen(
       token: widget.token,
+      userId: _userId, // ← add this
       imageBaseUrl: _serverRoot(),
-    ), // 2) Social
+    ),
+    // 2) Social
     UserTicketsScreen(token: widget.token), // 3) Tickets
     _buildUserProfilePage(), // 4) Profile (NEW)
   ];

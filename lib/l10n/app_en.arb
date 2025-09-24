@@ -641,8 +641,15 @@
   "socialChat": "Chat",
   "socialEmpty": "No posts available.",
   "socialError": "An unexpected error occurred",
-  "socialMyPosts": "My Posts",
+  
   "socialNotifications": "Alerts",
+   "socialMyPosts": "My Posts",
+  "myPostsTitle": "My Posts",
+
+  "deletePostTitle": "Delete post?",
+  "deletePostConfirm": "This action cannot be undone.",
+  "deletePostSuccess": "Post deleted",
+  "deletePostFailed": "Failed to delete",
   "socialSearchFriend": "Search ",
   "socialTitle": "HobbySphere",
   "stripeError": "Error",

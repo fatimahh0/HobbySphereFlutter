@@ -22,6 +22,11 @@ abstract class SocialRepository {
   Future<void> addComment(String token, int postId, String content);
   Future<void> deleteComment(String token, int commentId);
 
+
   // notifications
   Future<int> getUnreadNotificationCount(String token);
+
+
+   Future<List<Post>> getPostsByUser(String token, int userId); // new
+  Future<void> deletePost(String token, int postId);           // new
 }
