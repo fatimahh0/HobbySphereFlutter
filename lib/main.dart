@@ -1,71 +1,54 @@
 // lib/main.dart
-import 'dart:async';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async'; // zone
+import 'dart:io'; // Platform check (Android/iOS)
+import 'package:flutter/foundation.dart'; // debugPrint
+import 'package:flutter/material.dart'; // UI
+import 'package:flutter/services.dart';
+import 'package:flutter_stripe/flutter_stripe.dart'; // Stripe SDK
 
-import 'package:hobby_sphere/core/network/api_config.dart';
-import 'package:hobby_sphere/core/network/api_client.dart';
-import 'package:hobby_sphere/core/network/globals.dart' as g;
-
-
-// import 'package:hobby_sphere/core/realtime/realtime_service.dart';
-
-import 'package:flutter_stripe/flutter_stripe.dart';
-import 'app/app.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // prefs
+import 'package:hobby_sphere/core/network/api_config.dart'; // cfg
+import 'package:hobby_sphere/core/network/api_client.dart'; // dio client
+import 'package:hobby_sphere/core/network/globals.dart' as g; // globals
+import 'app/app.dart'; // root widget
 
 Future<void> main() async {
-
   runZonedGuarded(
     () async {
-      WidgetsFlutterBinding.ensureInitialized();
-
-      
+      WidgetsFlutterBinding.ensureInitialized(); // init Flutter
       try {
-     
         Stripe.publishableKey =
-            'pk_test_51RnLY8ROH9W55MgTYuuYpaStORtbLEggQMGOYxzYacMiDUpbfifBgThEzcMgFnvyMaskalQ0WUcQv08aByizug1I00Wcq3XHll';
+            'pk_test_51RnLY8ROH9W55MgTYuuYpaStORtbLEggQMGOYxzYacMiDUpbfifBgThEzcMgFnvyMaskalQ0WUcQv08aByizug1I00Wcq3XHll'; // test key
+        Stripe.urlScheme = 'flutterstripe'; // must match Manifest scheme
+        Stripe.merchantIdentifier =
+            'merchant.com.hobbysphere'; // iOS ok on Android
 
-    
-        await Stripe.instance.applySettings();
-        if (kDebugMode) debugPrint('[Stripe] initialized');
+        await Stripe.instance.applySettings(); // initialize the plugin
+        debugPrint('[Stripe] init OK'); // log success
+      } on PlatformException catch (e, st) {
+        debugPrint(
+          '[Stripe] init FAIL code=${e.code} msg=${e.message} details=${e.details}',
+        );
+        debugPrint('$st'); // log full stack
       } catch (e, st) {
-       
-        debugPrint('[Stripe] init failed: $e\n$st');
-      }
-      // -------------------------------------------------------------------
-
-   
-      final cfg = await ApiConfig.load();
-      final apiClient = ApiClient(cfg);
-
-      final sp = await SharedPreferences.getInstance();
-      final savedToken = sp.getString('token');
-
-      if (savedToken != null && savedToken.isNotEmpty) {
-        apiClient.setToken(savedToken);
-        g.Token = savedToken;
+        debugPrint('[Stripe] init FAIL unexpected: $e\n$st');
       }
 
-      g.appDio = apiClient.dio;
-      g.appServerRoot = cfg.serverRoot;
-
-    
-      // final httpBase = g.serverRootNoApi();
-      // if ((savedToken ?? '').isNotEmpty) {
-      //   g.realtime ??= RealtimeService();
-      //   g.realtime!.connect(
-      //     httpBase: httpBase,
-      //     token: savedToken!,
-      //     candidatePaths: const ['/ws', '/ws/events', '/realtime', '/socket'],
-      //   );
-      // }
-
-      runApp(const App());
+      // ---- your existing boot logic (unchanged) ----
+      final cfg = await ApiConfig.load(); // load server cfg
+      final apiClient = ApiClient(cfg); // build dio
+      final sp = await SharedPreferences.getInstance(); // prefs
+      final savedToken = sp.getString('token'); // jwt from storage
+      if ((savedToken ?? '').isNotEmpty) {
+        apiClient.setToken(savedToken!); // set on client
+        g.Token = savedToken; // cache in globals
+      }
+      g.appDio = apiClient.dio; // expose dio
+      g.appServerRoot = cfg.serverRoot; // expose base
+      runApp(const App()); // start app
     },
     (error, stack) {
-    
-      debugPrint('UNCAUGHT in main zone: $error\n$stack');
+      debugPrint('UNCAUGHT in main zone: $error\n$stack'); // safety
     },
   );
 }

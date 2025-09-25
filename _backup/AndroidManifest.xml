@@ -1,0 +1,63 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.hobby_sphere">
+
+    <!-- ✅ Internet is required for Stripe network calls -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- your other permissions ... -->
+
+    <application
+        android:name="${applicationName}"
+        android:label="hobby_sphere"
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
+
+        <!-- (your existing meta-data + main activity remain unchanged) -->
+
+        <!-- ✅ Stripe: webview activity used internally -->
+        <activity
+            android:name="com.stripe.android.view.PaymentAuthWebViewActivity"
+            android:exported="false" />
+
+        <!-- ✅ Stripe: browser auth redirect activity (must be exported=true) -->
+        <activity
+            android:name="com.stripe.android.payments.core.authentication.PaymentBrowserAuthActivity"
+            android:exported="true">
+            <intent-filter android:label="stripe-redirect">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- 👇 scheme MUST match the one set in main.dart -->
+                <data android:scheme="flutterstripe" android:host="stripe-redirect" />
+            </intent-filter>
+        </activity>
+
+        <!-- your MainActivity stays here -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+    </application>
+
+    <!-- Package visibility (leave as-is) -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+</manifest>

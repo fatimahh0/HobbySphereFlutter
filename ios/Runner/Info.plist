@@ -29,14 +29,13 @@
 		<key>UIMainStoryboardFile</key>
 		<string>Main</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
-<string>We need your location to set the activity location.</string>
-<key>NSCameraUsageDescription</key>
-<string>We need camera to take an activity photo.</string>
-<key>NSPhotoLibraryUsageDescription</key>
-<string>We need gallery access to pick an activity photo.</string>
-<key>GMSApiKey</key>
-<string>AIzaSyB8AEGDTILVZYAu6zDmsR7m-hx3Kblxcz0</string>
-
+		<string>We need your location to set the activity location.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>We need camera to take an activity photo.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>We need gallery access to pick an activity photo.</string>
+		<key>GMSApiKey</key>
+		<string>AIzaSyB8AEGDTILVZYAu6zDmsR7m-hx3Kblxcz0</string>
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>

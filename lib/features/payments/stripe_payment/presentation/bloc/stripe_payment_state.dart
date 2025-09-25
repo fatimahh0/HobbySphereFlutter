@@ -1,15 +1,14 @@
-/// Immutable UI state for the Stripe flow.
+// immutable UI state for payment flow
 class StripePaymentState {
-  final bool loading; // creating intent or showing sheet
-  final String? error; // error message, if any
+  final bool loading; // busy flag
+  final String? error; // error text
 
-  const StripePaymentState({this.loading = false, this.error});
+  const StripePaymentState({this.loading = false, this.error}); // ctor
 
   StripePaymentState copyWith({bool? loading, String? error}) {
     return StripePaymentState(
-      loading: loading ?? this.loading,
-      error: error, // replace (can be null)
+      loading: loading ?? this.loading, // keep or replace loading
+      error: error, // replace error (can be null)
     );
-    // NOTE: use like copyWith(loading: false, error: '$err');
   }
 }

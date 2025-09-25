@@ -1,59 +1,51 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+﻿<manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.hobby_sphere">
 
-    <!-- ✅ PERMISSIONS: direct children of <manifest> -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-    <uses-permission android:name="android.permission.CAMERA"/>
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
-    <!-- For Android <= 12 -->
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32"/>
+  <uses-permission android:name="android.permission.INTERNET"/>
 
-    <application
-        android:name="${applicationName}"
-        android:label="hobby_sphere"
-        android:icon="@mipmap/ic_launcher"
-        android:enableOnBackInvokedCallback="true">
+  <application
+      android:name="${applicationName}"
+      android:label="hobby_sphere"
+      android:icon="@mipmap/ic_launcher"
+      android:enableOnBackInvokedCallback="true"
+      android:theme="@style/NormalTheme">
 
-        <!-- ✅ MAPS API KEY: inside <application>, NOT inside <activity> -->
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyB8AEGDTILVZYAu6zDmsR7m-hx3Kblxcz0" />
+    <meta-data
+        android:name="flutterEmbedding"
+        android:value="2" />
 
-        <!-- Flutter embedding marker -->
-        <meta-data
-            android:name="flutterEmbedding"
-            android:value="2" />
+    <activity
+        android:name="com.stripe.android.view.PaymentAuthWebViewActivity"
+        android:exported="false" />
 
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:launchMode="singleTop"
-            android:taskAffinity=""
-            android:theme="@style/LaunchTheme"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-            android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
+    <activity
+        android:name="com.stripe.android.payments.core.authentication.PaymentBrowserAuthActivity"
+        android:exported="true">
+      <intent-filter android:label="stripe-redirect">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="flutterstripe" android:host="stripe-redirect" />
+      </intent-filter>
+    </activity>
 
-            <!-- Normal theme for pre-Flutter UI -->
-            <meta-data
-                android:name="io.flutter.embedding.android.NormalTheme"
-                android:resource="@style/NormalTheme" />
+    <activity
+        android:name=".MainActivity"
+        android:exported="true"
+        android:launchMode="singleTop"
+        android:taskAffinity=""
+        android:theme="@style/LaunchTheme"
+        android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+        android:hardwareAccelerated="true"
+        android:windowSoftInputMode="adjustResize">
+      <meta-data
+          android:name="io.flutter.embedding.android.NormalTheme"
+          android:resource="@style/NormalTheme" />
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
 
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity>
-    </application>
-
-    <!-- Package visibility (leave as-is) -->
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
-        </intent>
-    </queries>
+  </application>
 </manifest>

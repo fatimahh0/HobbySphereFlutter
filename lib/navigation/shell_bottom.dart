@@ -63,7 +63,7 @@ import 'package:hobby_sphere/features/activities/user/userCommunity/presentation
 // ===== User screens =====
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
 import 'package:hobby_sphere/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart';
-import 'package:hobby_sphere/features/activities/user/common/presentation/user_community_screen.dart';
+
 import 'package:hobby_sphere/features/activities/user/tickets/presentation/screens/user_tickets_screen.dart';
 
 // ===== User Home feature (services/repos/usecases) =====

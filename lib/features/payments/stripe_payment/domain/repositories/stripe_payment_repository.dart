@@ -1,13 +1,12 @@
-// lib/features/payments/stripe_payment/domain/repositories/stripe_payment_repository.dart
+// contract: how UI/domain asks for a payment intent
+import '../entities/payment_intent_result.dart'; // result entity
 
-import '../entities/payment_intent_result.dart'; // entity
-
-// Abstraction for creating a payment intent on your backend
 abstract class StripePaymentRepository {
-  // asks backend to create PI with commission, returns secret + id
+  // create a PaymentIntent on backend and return secret + id
   Future<PaymentIntentResult> createPaymentIntent({
-    required num amount, // total price (per person * participants)
-    required String currency, // 'usd' | 'eur' | 'cad'...
-    required String accountId, // connected account id of the business
+    required num amount, // total amount (your backend handles minor units)
+    required String currency, // 'usd' | 'eur' | 'cad' (lowercase)
+    required String accountId, // connected Stripe account id (acct_...)
+    String? bearerToken, // optional "Bearer xxx" to auth on server
   });
 }
