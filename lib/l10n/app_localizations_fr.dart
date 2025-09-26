@@ -2372,6 +2372,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get editInterestsTitle => 'Modifier vos centres d’intérêt';
 
   @override
+  String get notLoggedInTitle => 'Not Logged In';
+
+  @override
+  String get notLoggedInMessage => 'You must be logged in to access this feature.';
+
+  @override
+  String get login => 'Login';
+
+  @override
+  String get register => 'Register';
+
+  @override
+  String get getStarted => 'Get Started';
+
+  @override
   String get interestSaved => 'Centres d’intérêt enregistrés avec succès';
 
   @override

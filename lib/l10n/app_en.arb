@@ -797,6 +797,12 @@
 "bookingNotAvailable": "This activity is not available for the selected participants.",
 
   "editInterestsTitle": "Edit Your Interests",
+   "notLoggedInTitle": "Not Logged In",
+  "notLoggedInMessage": "You must be logged in to access this feature.",
+  "login": "Login",
+  "register": "Register",
+  "getStarted": "Get Started",
+  
   "@editInterestsTitle": { "description": "AppBar title for edit interests screen" },
 
 

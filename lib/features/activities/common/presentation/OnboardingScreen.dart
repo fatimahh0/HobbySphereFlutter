@@ -1,24 +1,29 @@
 // ===== Flutter 3.35.x =====
 import 'package:flutter/material.dart'; // Flutter core UI
+import 'package:hobby_sphere/navigation/shell_bottom.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart'; // your app theme (colors/typography)
 import 'package:hobby_sphere/l10n/app_localizations.dart'
-    show AppLocalizations; // i18n
+    show AppLocalizations; // i18n strings
 import 'package:hobby_sphere/shared/widgets/app_button.dart'; // reusable AppButton
 
-// Onboarding screen with responsive layout and animated image
+// ===== added imports =====
+import 'package:hobby_sphere/app/router/router.dart'; // app routes (for login)
+import 'package:hobby_sphere/core/constants/app_role.dart'; // AppRole enum
+// ⬇️ adjust the path to where your ShellBottom lives
+
+// ^ if your file path is different, change this import only.
+
 class OnboardingScreen extends StatefulWidget {
-  // callback to toggle theme mode (light/dark)
-  final VoidCallback? onToggleTheme; // can be null
-  // callback to change language (Locale)
-  final void Function(Locale locale)? onChangeLocale; // can be null
-  // current selected locale
-  final Locale? currentLocale; // can be null
+  final VoidCallback? onToggleTheme; // toggle theme (optional)
+  final void Function(Locale locale)?
+  onChangeLocale; // change language (optional)
+  final Locale? currentLocale; // current locale (optional)
 
   const OnboardingScreen({
     super.key, // widget key
-    this.onToggleTheme, // theme toggle callback
-    this.onChangeLocale, // language change callback
-    this.currentLocale, // current locale
+    this.onToggleTheme, // pass theme toggle
+    this.onChangeLocale, // pass language change
+    this.currentLocale, // pass current locale
   });
 
   @override
@@ -27,115 +32,107 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen>
     with TickerProviderStateMixin {
-  // controllers for animations
-  late final AnimationController _introCtrl; // fade + scale
+  // --- animation controllers ---
+  late final AnimationController _introCtrl; // fade + scale in
   late final AnimationController _floatCtrl; // breathing float
 
-  // animated values
-  late final Animation<double> _opacity; // fade in
-  late final Animation<double> _scale; // scale in
-  late final Animation<double> _yOffset; // vertical float
+  // --- animated values ---
+  late final Animation<double> _opacity; // fade progress
+  late final Animation<double> _scale; // scale progress
+  late final Animation<double> _yOffset; // vertical offset
 
   @override
   void initState() {
-    super.initState(); // call parent
-
-    // setup intro controller (fast ease in)
+    super.initState(); // init base
     _introCtrl = AnimationController(
-      vsync: this, // ticker (required)
+      // intro controller
+      vsync: this, // ticker
       duration: const Duration(milliseconds: 800), // 0.8s
     );
-
-    // fade curve
     _opacity = CurvedAnimation(
-      parent: _introCtrl, // controller
-      curve: Curves.easeOutCubic, // smooth curve
+      // fade curve
+      parent: _introCtrl,
+      curve: Curves.easeOutCubic,
     );
-
-    // scale from 0.96 to 1.0 for subtle pop
     _scale = Tween<double>(begin: 0.96, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _introCtrl,
-        curve: Curves.easeOutBack,
-      ), // nice spring
+      // small pop
+      CurvedAnimation(parent: _introCtrl, curve: Curves.easeOutBack),
     );
-
-    // setup float controller (endless)
     _floatCtrl = AnimationController(
-      vsync: this, // ticker
+      // float controller
+      vsync: this,
       duration: const Duration(milliseconds: 2400), // slow loop
-    )..repeat(reverse: true); // back and forth
-
-    // y offset from -A to +A (A set later by curve here)
+    )..repeat(reverse: true); // ping-pong
     _yOffset = Tween<double>(begin: -6, end: 6).animate(
-      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut), // gentle
+      // up/down
+      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut),
     );
-
-    _introCtrl.forward(); // start intro animation
+    _introCtrl.forward(); // start intro
   }
 
   @override
   void dispose() {
-    _introCtrl.dispose(); // free controller
-    _floatCtrl.dispose(); // free controller
-    super.dispose(); // call parent
+    _introCtrl.dispose(); // free intro
+    _floatCtrl.dispose(); // free float
+    super.dispose(); // dispose base
   }
 
   // open bottom sheet to pick language
   void _openLanguageSheet(BuildContext context) {
-    final theme = Theme.of(context); // theme reference
+    final theme = Theme.of(context); // theme
     final cs = theme.colorScheme; // color scheme
-    final l10n = AppLocalizations.of(context)!; // localization
+    final l10n = AppLocalizations.of(context)!; // l10n
 
     showModalBottomSheet(
-      context: context, // show in this context
-      backgroundColor: cs.surface, // sheet background
+      // show sheet
+      context: context,
+      backgroundColor: cs.surface, // bg color
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20),
-        ), // rounded top
+        // rounded top
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        // small helper to build each language row
+        // helper tile builder
         Widget tile(String code, String name, Locale locale) {
           final selected =
               widget.currentLocale?.languageCode == code; // selected?
           return ListTile(
-            title: Text(name, style: theme.textTheme.bodyMedium), // name
+            title: Text(name, style: theme.textTheme.bodyMedium), // label
             trailing: selected
                 ? Icon(Icons.check, color: cs.primary)
-                : null, // check if selected
+                : null, // check
             onTap: () {
-              Navigator.pop(ctx); // close sheet
-              widget.onChangeLocale?.call(locale); // call change
+              Navigator.pop(ctx); // close
+              widget.onChangeLocale?.call(locale); // change
             },
           );
         }
 
         return SafeArea(
           child: Column(
-            mainAxisSize: MainAxisSize.min, // wrap content
+            mainAxisSize: MainAxisSize.min, // wrap height
             children: [
-              const SizedBox(height: 12), // spacing
+              const SizedBox(height: 12), // gap
               Container(
-                width: 48, // grabbar width
-                height: 4, // grabbar height
+                // grab bar
+                width: 48,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: cs.outlineVariant.withOpacity(0.7), // subtle color
-                  borderRadius: BorderRadius.circular(10), // rounded
+                  color: cs.outlineVariant.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              const SizedBox(height: 12), // spacing
+              const SizedBox(height: 12), // gap
               Text(
-                l10n.selectLanguage,
+                l10n.selectLanguage, // title
                 style: theme.textTheme.titleMedium,
-              ), // title
-              const SizedBox(height: 4), // spacing
+              ),
+              const SizedBox(height: 4), // gap
               Divider(color: cs.outlineVariant), // divider
               tile('en', 'English', const Locale('en')), // English
               tile('ar', 'العربية', const Locale('ar')), // Arabic
               tile('fr', 'Français', const Locale('fr')), // French
-              const SizedBox(height: 8), // bottom spacing
+              const SizedBox(height: 8), // bottom gap
             ],
           ),
         );
@@ -145,43 +142,42 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!; // localization instance
-    final theme = Theme.of(context); // theme instance
-    final cs = theme.colorScheme; // color scheme for colors
-    final isDark = theme.brightness == Brightness.dark; // theme mode
-    final code = (widget.currentLocale?.languageCode ?? 'en')
-        .toUpperCase(); // current lang
+    final l10n = AppLocalizations.of(context)!; // l10n instance
+    final theme = Theme.of(context); // theme
+    final cs = theme.colorScheme; // color scheme
+    final isDark = theme.brightness == Brightness.dark; // mode
+    final code =
+        (widget.currentLocale?.languageCode ?? 'en') // language code
+            .toUpperCase();
 
-    // ===== responsive metrics =====
+    // responsive metrics
     final size = MediaQuery.sizeOf(context); // screen size
     final w = size.width; // width
     final h = size.height; // height
-
-    // horizontal padding responsive (clamp between 16..24)
-    final horizontal = _clampDouble(w * 0.05, 16, 24); // 5% width
-    // space above illustration (responsive vertical gap)
-    final topGap = _clampDouble(h * 0.02, 8, 20); // small top gap
-    // amount to shift image UP (padding-bottom pushes it up visually)
-    final imageUpShift = _clampDouble(h * 0.06, 28, 56); // 6% height
-    // gap under subtitle before CTA (responsive)
-    final ctaGap = _clampDouble(h * 0.025, 16, 28); // spacing to CTA
-    // image corner radius responsive (slightly larger on tablets)
-    final imageRadius = _clampDouble(w * 0.04, 14, 22); // px radius
+    final horizontal = _clampDouble(w * 0.05, 16, 24); // side padding
+    final topGap = _clampDouble(h * 0.02, 8, 20); // top gap
+    final imageUpShift = _clampDouble(h * 0.06, 28, 56); // image shift
+    final ctaGap = _clampDouble(h * 0.025, 16, 28); // gap to CTA
+    final imageRadius = _clampDouble(
+      w * 0.04,
+      14,
+      22,
+    ); // radius (kept if you wrap)
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor, // scaffold bg
       body: Stack(
         fit: StackFit.expand, // fill screen
         children: [
-          // background gradient using primary color
+          // subtle primary gradient background
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topLeft, // start corner
-                end: Alignment.bottomRight, // end corner
+                begin: Alignment.topLeft, // start
+                end: Alignment.bottomRight, // end
                 colors: [
-                  cs.primary.withOpacity(0.12), // soft tint
-                  cs.primary.withOpacity(0.02), // fade out
+                  cs.primary.withOpacity(0.12), // tint
+                  cs.primary.withOpacity(0.02), // fade
                 ],
               ),
             ),
@@ -189,83 +185,81 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
           SafeArea(
             child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: horizontal,
-              ), // responsive sides
+              padding: EdgeInsets.symmetric(horizontal: horizontal), // sides
               child: Column(
                 children: [
-                  SizedBox(height: topGap), // top breathing space
-                  // ===== top actions (theme + language) =====
+                  SizedBox(height: topGap), // top space
+                  // top actions (theme + language)
                   Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween, // separate
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween, // spread
                     children: [
-                      // theme toggle (secondary filled)
                       AppButton(
-                        onPressed: widget.onToggleTheme, // toggle callback
+                        // theme button
+                        onPressed: widget.onToggleTheme, // toggle
                         type: AppButtonType.secondary, // soft fill
-                        size: AppButtonSize.sm, // compact
+                        size: AppButtonSize.sm, // small
                         leading: Icon(
-                          // theme icon
-                          isDark
-                              ? Icons.dark_mode
-                              : Icons.light_mode, // by mode
-                          size: 18, // small
+                          // icon
+                          isDark ? Icons.dark_mode : Icons.light_mode,
+                          size: 18,
                         ),
                         label:
                             '${l10n.changeTheme} • ${isDark ? "Dark" : "Light"}', // text
                       ),
-
-                      // language button (outlined)
                       AppButton(
+                        // language button
                         onPressed: () =>
                             _openLanguageSheet(context), // open sheet
-                        type: AppButtonType.outline, // outline style
-                        size: AppButtonSize.sm, // compact
+                        type: AppButtonType.outline, // outline
+                        size: AppButtonSize.sm, // small
                         leading: const Icon(Icons.translate, size: 18), // icon
-                        label: ' $code ', // show code (EN/AR/FR)
+                        label: ' $code ', // show code
                       ),
                     ],
                   ),
 
-                  SizedBox(
-                    height: _clampDouble(h * 0.03, 18, 36),
-                  ), // space under top row
-                  // ===== illustration (animated + shifted up) =====
+                  SizedBox(height: _clampDouble(h * 0.03, 18, 36)), // gap
+                  // illustration (animated + centered)
                   Expanded(
                     child: Center(
-                      // center wrapper
                       child: Padding(
                         padding: EdgeInsets.only(
                           bottom: imageUpShift,
-                        ), // push image up
-                        // ===== illustration (no crop, full image) =====
+                        ), // shift up
                         child: AnimatedBuilder(
+                          // rebuild on anim
                           animation: Listenable.merge([_introCtrl, _floatCtrl]),
                           builder: (context, _) {
-                            final h = MediaQuery.sizeOf(context).height;
-
+                            final hh = MediaQuery.sizeOf(
+                              context,
+                            ).height; // height
                             return Opacity(
+                              // fade in
                               opacity: _opacity.value,
                               child: Transform.translate(
+                                // float up/down
                                 offset: Offset(0, _yOffset.value),
                                 child: Transform.scale(
+                                  // small pop
                                   scale: _scale.value,
                                   child: Hero(
+                                    // hero tag (optional)
                                     tag: 'onboarding-illustration',
                                     child: SizedBox(
-                                      // responsive height: tweak limits if you like
-                                      height: _clampDouble(h * 0.34, 240, 420),
-                                      width: double.infinity,
+                                      height: _clampDouble(
+                                        hh * 0.34,
+                                        240,
+                                        420,
+                                      ), // size
+                                      width: double.infinity, // full width box
                                       child: FittedBox(
-                                        fit: BoxFit
-                                            .contain, // <-- show ALL of the image
-                                        alignment: Alignment
-                                            .center, // centered, no weird shifts
+                                        // fit image
+                                        fit: BoxFit.contain, // keep full image
+                                        alignment: Alignment.center, // centered
                                         child: Image.asset(
-                                          'assets/images/Onboarding.png',
-                                          filterQuality: FilterQuality
-                                              .high, // cleaner scaling
+                                          'assets/images/Onboarding.png', // asset
+                                          filterQuality:
+                                              FilterQuality.high, // crisp
                                         ),
                                       ),
                                     ),
@@ -279,57 +273,68 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     ),
                   ),
 
-                  SizedBox(height: _clampDouble(h * 0.005, 6, 12)), // small gap
-                  // ===== title =====
+                  SizedBox(height: _clampDouble(h * 0.005, 6, 12)), // gap
+                  // title text
                   Text(
-                    l10n.onboardingTitle, // localized title
-                    textAlign: TextAlign.center, // center text
+                    l10n.onboardingTitle, // title
+                    textAlign: TextAlign.center, // center
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800, // bold
-                      letterSpacing: 0.2, // tiny tracking
+                      letterSpacing: 0.2, // tracking
                     ),
                   ),
 
                   SizedBox(height: _clampDouble(h * 0.008, 6, 12)), // gap
-                  // ===== subtitle =====
+                  // subtitle text
                   Text(
-                    l10n.onboardingSubtitle, // localized subtitle
-                    textAlign: TextAlign.center, // center text
+                    l10n.onboardingSubtitle, // subtitle
+                    textAlign: TextAlign.center, // center
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.textTheme.bodyMedium?.color?.withOpacity(
                         0.75,
-                      ), // softer
+                      ),
                       height: 1.35, // line height
                     ),
                   ),
 
                   SizedBox(height: ctaGap), // gap before CTA
-                  // ===== CTA: Get Started (full width) =====
+                  // ===== PRIMARY CTA: Get Started (→ open GUEST shell) =====
                   AppButton(
-                    onPressed: () => Navigator.pushReplacementNamed(
-                      context,
-                      '/login',
-                    ), // go login
-                    type: AppButtonType.primary, // solid primary
+                    onPressed: () {
+                      // push the ShellBottom with EMPTY token => guest mode
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => ShellBottom(
+                            role: AppRole.user, // user shell
+                            token: '', // '' => guest
+                            businessId: 0, // not used here
+                            onChangeLocale:
+                                widget.onChangeLocale ??
+                                (_) {}, // no-op if null
+                            onToggleTheme:
+                                widget.onToggleTheme ?? () {}, // no-op if null
+                          ),
+                        ),
+                      );
+                    },
+                    type: AppButtonType.primary, // solid button
                     size: AppButtonSize.lg, // large
                     expand: true, // full width
                     label: l10n.onboardingGetStarted, // text
                   ),
 
                   SizedBox(height: _clampDouble(h * 0.012, 8, 16)), // gap
-                  // ===== secondary link =====
+                  // ===== SECONDARY: Already have an account? (→ Login) =====
                   AppButton(
-                    onPressed: () => Navigator.pushReplacementNamed(
-                      context,
-                      '/login',
-                    ), // go login
-                    type: AppButtonType.text, // link-like
+                    onPressed: () {
+                      // go to login screen using your router constant (adjust if needed)
+                      Navigator.pushReplacementNamed(context, Routes.login);
+                    },
+                    type: AppButtonType.text, // text style
                     label: l10n.onboardingAlreadyHaveAccount, // text
                   ),
 
-                  SizedBox(
-                    height: _clampDouble(h * 0.01, 6, 12),
-                  ), // bottom breathing
+                  SizedBox(height: _clampDouble(h * 0.01, 6, 12)), // bottom gap
                 ],
               ),
             ),
@@ -339,11 +344,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // helper: clamp a value between min and max
+  // clamp helper
   double _clampDouble(double v, double min, double max) {
-    // ensure v is within [min, max]
-    if (v < min) return min; // lower bound
-    if (v > max) return max; // upper bound
-    return v; // within range
+    if (v < min) return min; // min bound
+    if (v > max) return max; // max bound
+    return v; // within
   }
 }

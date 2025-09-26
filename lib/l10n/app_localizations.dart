@@ -4795,6 +4795,36 @@ abstract class AppLocalizations {
   /// **'Edit Your Interests'**
   String get editInterestsTitle;
 
+  /// No description provided for @notLoggedInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Logged In'**
+  String get notLoggedInTitle;
+
+  /// No description provided for @notLoggedInMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be logged in to access this feature.'**
+  String get notLoggedInMessage;
+
+  /// No description provided for @login.
+  ///
+  /// In en, this message translates to:
+  /// **'Login'**
+  String get login;
+
+  /// No description provided for @register.
+  ///
+  /// In en, this message translates to:
+  /// **'Register'**
+  String get register;
+
+  /// No description provided for @getStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Started'**
+  String get getStarted;
+
   /// Toast after saving interests
   ///
   /// In en, this message translates to:

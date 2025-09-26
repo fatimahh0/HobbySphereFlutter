@@ -50,4 +50,5 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.06.00")) // BOM controls versions below
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
+      
 }
