@@ -10,14 +10,13 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl(this.service); // inject service
 
   AuthResult _mapLogin(Map<String, dynamic> res, String role) {
-    final wasInactive = (res['wasInactive'] == true); // inactive flag
-    final token = '${res['token'] ?? res['jwt'] ?? ''}'
-        .trim(); // token (may be temp)
-    // get ids safely
-    final user = (res['user'] is Map) ? res['user'] as Map : null; // user map
-    final biz = (res['business'] is Map)
-        ? res['business'] as Map
-        : null; // business map
+    final wasInactive = (res['wasInactive'] == true);
+    final isNewUser = (res['isNewUser'] == true); // NEW
+    final token = '${res['token'] ?? res['jwt'] ?? ''}'.trim();
+
+    // unwrap payloads
+    final user = (res['user'] is Map) ? res['user'] as Map? : null;
+    final biz = (res['business'] is Map) ? res['business'] as Map? : null;
 
     final subjectId = (role == 'business')
         ? (biz?['id'] is int
@@ -25,21 +24,21 @@ class AuthRepositoryImpl implements AuthRepository {
               : int.tryParse('${biz?['id'] ?? 0}') ?? 0)
         : (user?['id'] is int
               ? user!['id']
-              : int.tryParse('${user?['id'] ?? 0}') ?? 0); // id to reactivate
+              : int.tryParse('${user?['id'] ?? 0}') ?? 0);
 
-    final businessId = (role == 'business')
-        ? subjectId // for business, subjectId is the businessId
-        : 0; // for user, 0
+    final businessId = (role == 'business') ? subjectId : 0;
 
     return AuthResult(
-      token: token, // token string
-      role: role, // role
-      businessId: businessId, // business id
-      subjectId: subjectId, // id to reactivate
-      wasInactive: wasInactive, // need reactivate?
-      message: res['message']?.toString(), // message
+      token: token,
+      role: role,
+      businessId: businessId,
+      subjectId: subjectId,
+      wasInactive: wasInactive,
+      isNewUser: isNewUser, // NEW
+      userId: (role == 'user') ? subjectId : 0, // NEW
+      message: res['message']?.toString(),
       error:
-          res['error']?.toString() ?? // error or message on failure
+          res['error']?.toString() ??
           (res['message']?.toString().startsWith('Incorrect') == true
               ? res['message']
               : null),
@@ -51,11 +50,8 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    final res = await service.loginUserEmail(
-      email: email,
-      password: password,
-    ); // call
-    return _mapLogin(res, 'user'); // map
+    final res = await service.loginUserEmail(email: email, password: password);
+    return _mapLogin(res, 'user');
   }
 
   @override
@@ -102,11 +98,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AuthResult> reactivate({required int id, required String role}) async {
-    final res =
-        (role == 'business') // choose endpoint
+    final res = (role == 'business')
         ? await service.reactivateBusiness(id)
         : await service.reactivateUser(id);
-    // after reactivate backend returns normal token + user/business
     return _mapLogin(res, role);
   }
 }

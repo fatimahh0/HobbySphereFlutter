@@ -13,6 +13,10 @@ class LoginState {
   final String token;
   final int businessId;
 
+  // NEW: onboarding flags for Google first-time users
+  final bool needsOnboarding;
+  final int onboardUserId;
+
   const LoginState({
     this.roleIndex = 0,
     this.usePhone = true,
@@ -27,6 +31,8 @@ class LoginState {
     this.reactivateRole = 'user',
     this.token = '',
     this.businessId = 0,
+    this.needsOnboarding = false, // NEW
+    this.onboardUserId = 0, // NEW
   });
 
   LoginState copyWith({
@@ -43,6 +49,8 @@ class LoginState {
     String? reactivateRole,
     String? token,
     int? businessId,
+    bool? needsOnboarding, // NEW
+    int? onboardUserId, // NEW
   }) {
     return LoginState(
       roleIndex: roleIndex ?? this.roleIndex,
@@ -58,6 +66,8 @@ class LoginState {
       reactivateRole: reactivateRole ?? this.reactivateRole,
       token: token ?? this.token,
       businessId: businessId ?? this.businessId,
+      needsOnboarding: needsOnboarding ?? this.needsOnboarding,
+      onboardUserId: onboardUserId ?? this.onboardUserId,
     );
   }
 }

@@ -10,6 +10,8 @@
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	
+
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
@@ -42,6 +44,27 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
+		<!-- Google Sign-In callback -->
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLName</key>
+    <string>Google</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>851915342014-40r0ta9nuunrmss5i6jfl6rvd16qlmcb.apps.googleusercontent.com</string>
+    </array>
+  </dict>
+</array>
+
+
+<key>LSApplicationQueriesSchemes</key>
+<array>
+  <string>google</string>
+  <string>com.google</string>
+  <string>851915342014-40r0ta9nuunrmss5i6jfl6rvd16qlmcb.apps.googleusercontent.com</string>
+</array>
+
 		<key>UISupportedInterfaceOrientations~ipad</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>

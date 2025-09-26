@@ -9,1367 +9,1367 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get activitiesFiltersTerminated => 'Terminated';
+  String get activitiesFiltersTerminated => 'منتهية';
 
   @override
-  String get activitiesFiltersUpcoming => 'Upcoming';
+  String get activitiesFiltersUpcoming => 'قادمة';
 
   @override
-  String get activitiesMyActivities => 'My Activities';
+  String get activitiesMyActivities => 'أنشطتي';
 
   @override
-  String get activitiesNoActivities => 'No activities found.';
+  String get activitiesNoActivities => 'لا توجد أنشطة.';
 
   @override
-  String get activitiesReopen => 'Reopen Activity';
+  String get activitiesReopen => 'إعادة فتح النشاط';
 
   @override
-  String get activityDetailsCancel => 'Cancel';
+  String get activityDetailsCancel => 'إلغاء';
 
   @override
-  String get activityDetailsConfirmDelete => 'Confirm Delete';
+  String get activityDetailsConfirmDelete => 'تأكيد الحذف';
 
   @override
-  String get activityDetailsDelete => 'Delete';
+  String get activityDetailsDelete => 'حذف';
 
   @override
-  String get activityDetailsDeleteError => 'Failed to delete activity.';
+  String get activityDetailsDeleteError => 'فشل حذف النشاط.';
 
   @override
-  String get activityDetailsDeletePrompt => 'Are you sure you want to delete this activity?';
+  String get activityDetailsDeletePrompt => 'هل أنت متأكد أنك تريد حذف هذا النشاط؟';
 
   @override
-  String get activityDetailsDeleteSuccess => 'Activity has been deleted.';
+  String get activityDetailsDeleteSuccess => 'تم حذف النشاط.';
 
   @override
-  String get activityDetailsDeleted => 'Deleted';
+  String get activityDetailsDeleted => 'محذوف';
 
   @override
-  String get activityDetailsDescription => 'Description';
+  String get activityDetailsDescription => 'الوصف';
 
   @override
-  String get activityDetailsEdit => 'Edit';
+  String get activityDetailsEdit => 'تعديل';
 
   @override
-  String get activityDetailsParticipants => 'Participants';
+  String get activityDetailsParticipants => 'المشاركون';
 
   @override
-  String get activityDetailsStatus => 'Status';
+  String get activityDetailsStatus => 'الحالة';
 
   @override
-  String get activityDetailsViewInsights => 'View Insights';
+  String get activityDetailsViewInsights => 'عرض الإحصاءات';
 
   @override
-  String get activityInsightsTitle => 'Activity Insights';
+  String get activityInsightsTitle => 'رؤى النشاط';
 
   @override
-  String get addNewUser => 'Add New Client';
+  String get addNewUser => 'إضافة عميل جديد';
 
   @override
-  String get analyticsBookingGrowth => 'Booking Growth';
+  String get analyticsBookingGrowth => 'نمو الحجوزات';
 
   @override
-  String get analyticsCancel => 'Cancel';
+  String get analyticsCancel => 'إلغاء';
 
   @override
-  String get analyticsCustomerRetention => 'Customer Retention';
+  String get analyticsCustomerRetention => 'الاحتفاظ بالعملاء';
 
   @override
-  String get analyticsDownloadReport => 'Download PDF Report';
+  String get analyticsDownloadReport => 'تنزيل تقرير PDF';
 
   @override
-  String get analyticsPeakHours => 'Peak Hours';
+  String get analyticsPeakHours => 'ساعات الذروة';
 
   @override
-  String get analyticsReportDate => 'Report Date';
+  String get analyticsReportDate => 'تاريخ التقرير';
 
   @override
-  String get analyticsRevenueOverview => 'Revenue Overview';
+  String get analyticsRevenueOverview => 'نظرة عامة على الإيرادات';
 
   @override
-  String get analyticsShare => 'Share';
+  String get analyticsShare => 'مشاركة';
 
   @override
-  String get analyticsShareMessage => 'Your PDF has been saved in the Downloads folder.\nWould you like to share it now?';
+  String get analyticsShareMessage => 'تم حفظ ملف PDF في مجلد التنزيلات.\nهل ترغب بمشاركته الآن؟';
 
   @override
-  String get analyticsTitle => 'Business Analytics';
+  String get analyticsTitle => 'تحليلات الأعمال';
 
   @override
-  String get analyticsToday => 'Today';
+  String get analyticsToday => 'اليوم';
 
   @override
-  String get analyticsTopActivity => 'Top Activity';
+  String get analyticsTopActivity => 'أفضل نشاط';
 
   @override
-  String get analyticsTotalRevenue => 'Total Revenue';
+  String get analyticsTotalRevenue => 'إجمالي الإيرادات';
 
   @override
-  String get analyticsYesterday => 'Yesterday';
+  String get analyticsYesterday => 'الأمس';
 
   @override
-  String get assignToActivity => 'Assign to Activity';
+  String get assignToActivity => 'إسناد إلى نشاط';
 
   @override
-  String get authNotLoggedInMessage => 'You must be logged in to access this feature.';
+  String get authNotLoggedInMessage => 'يجب تسجيل الدخول للوصول إلى هذه الميزة.';
 
   @override
-  String get alreadyHaveAccount => 'Already have an account? ';
+  String get alreadyHaveAccount => 'لديك حساب بالفعل؟ ';
 
   @override
-  String get signIn => 'Sign In';
+  String get signIn => 'تسجيل الدخول';
 
   @override
-  String get businessWelcomeTitle => 'Welcome to your dashboard!';
+  String get businessWelcomeTitle => 'مرحبًا بك في لوحة التحكم!';
 
   @override
-  String get businessWelcomeSubtitle => 'Manage your activities and engage with users easily.';
+  String get businessWelcomeSubtitle => 'أدِر أنشطتك وتفاعل مع المستخدمين بسهولة.';
 
   @override
-  String get createNewActivity => 'Create New Activity';
+  String get createNewActivity => 'إنشاء نشاط جديد';
 
   @override
-  String get activitiesEmpty => 'No activities yet';
+  String get activitiesEmpty => 'لا توجد أنشطة بعد';
 
   @override
-  String get profileLastUpdated => 'Last updated';
+  String get profileLastUpdated => 'آخر تحديث';
 
   @override
-  String get viewDetails => 'View';
+  String get viewDetails => 'عرض';
 
   @override
-  String get buttonWebsite => 'Website';
+  String get buttonWebsite => 'الموقع';
 
   @override
-  String get buttonCall => 'Call';
+  String get buttonCall => 'اتصال';
 
   @override
-  String get mapOpen => 'Open in Maps';
+  String get mapOpen => 'افتح في الخرائط';
 
   @override
-  String get copy => 'Copy';
+  String get copy => 'نسخ';
 
   @override
-  String get copied => 'Copied!';
+  String get copied => 'تم النسخ!';
 
   @override
-  String get badgeStripe => 'Stripe';
+  String get badgeStripe => 'سترايب';
 
   @override
-  String get labelDuration => 'Duration';
+  String get labelDuration => 'المدة';
 
   @override
-  String get authNotLoggedInTitle => 'Not Logged In';
+  String get authNotLoggedInTitle => 'غير مسجل الدخول';
 
   @override
-  String get appTitle => 'هواياتي';
+  String get appTitle => 'Hobby Sphere';
 
   @override
-  String get splashLoading => 'جاري التحميل...';
+  String get splashLoading => 'جارٍ التحميل...';
 
   @override
-  String get bookingAbout => 'About';
+  String get bookingAbout => 'حول';
 
   @override
-  String get bookingApprove => 'Approve';
+  String get bookingApprove => 'موافقة';
 
   @override
-  String get bookingBookNow => 'Book Now';
+  String get bookingBookNow => 'احجز الآن';
 
   @override
-  String get bookingBooking => 'Booking...';
+  String get bookingBooking => 'جارٍ الحجز...';
 
   @override
-  String get bookingCancel => 'Cancel';
+  String get bookingCancel => 'إلغاء';
 
   @override
-  String get bookingCancelReason => 'Reason';
+  String get bookingCancelReason => 'السبب';
 
   @override
-  String get bookingConfirmRejectMessage => 'Are you sure you want to reject this booking?';
+  String get bookingConfirmRejectMessage => 'هل أنت متأكد أنك تريد رفض هذا الحجز؟';
 
   @override
-  String get bookingConfirmRejectTitle => 'Reject Booking';
+  String get bookingConfirmRejectTitle => 'رفض الحجز';
 
   @override
-  String get bookingConfirmUnrejectMessage => 'Do you want to undo the rejection?';
+  String get bookingConfirmUnrejectMessage => 'هل تريد التراجع عن الرفض؟';
 
   @override
-  String get bookingConfirmUnrejectTitle => 'Undo Rejection';
+  String get bookingConfirmUnrejectTitle => 'التراجع عن الرفض';
 
   @override
-  String get bookingConfirm_approveCancel => 'Approve Cancellation';
+  String get bookingConfirm_approveCancel => 'الموافقة على الإلغاء';
 
   @override
-  String get bookingConfirm_reject => 'Confirm Reject';
+  String get bookingConfirm_reject => 'تأكيد الرفض';
 
   @override
-  String get bookingConfirm_rejectCancel => 'Reject Cancellation';
+  String get bookingConfirm_rejectCancel => 'رفض طلب الإلغاء';
 
   @override
-  String get bookingConfirm_unreject => 'Confirm Unreject';
+  String get bookingConfirm_unreject => 'تأكيد التراجع عن الرفض';
 
   @override
-  String get bookingErrorFailed => 'Booking failed. Please try again.';
+  String get bookingErrorFailed => 'فشل الحجز. حاول مرة أخرى.';
 
   @override
-  String get bookingErrorLoginRequired => 'You must be logged in to book.';
+  String get bookingErrorLoginRequired => 'يجب تسجيل الدخول لإتمام الحجز.';
 
   @override
-  String get bookingErrorMaxParticipantsReached => 'You cannot book more than the maximum allowed participants.';
+  String get bookingErrorMaxParticipantsReached => 'لا يمكنك الحجز بأكثر من الحد الأقصى للمشاركين.';
 
   @override
-  String get bookingLocation => 'Location';
+  String get bookingLocation => 'الموقع';
 
   @override
   String bookingMaxParticipants(int count) {
-    return 'Max $count participants';
+    return 'الحد الأقصى $count مشاركًا';
   }
 
   @override
-  String get bookingMessage_approveCancel => 'Are you sure you want to approve this cancellation request?';
+  String get bookingMessage_approveCancel => 'هل تريد الموافقة على طلب الإلغاء هذا؟';
 
   @override
-  String get bookingMessage_reject => 'Are you sure you want to reject this booking?';
+  String get bookingMessage_reject => 'هل أنت متأكد أنك تريد رفض هذا الحجز؟';
 
   @override
-  String get bookingMessage_rejectCancel => 'Are you sure you want to reject this cancellation request?';
+  String get bookingMessage_rejectCancel => 'هل أنت متأكد أنك تريد رفض طلب الإلغاء هذا؟';
 
   @override
-  String get bookingMessage_unreject => 'Are you sure you want to unreject this booking?';
+  String get bookingMessage_unreject => 'هل أنت متأكد أنك تريد التراجع عن رفض هذا الحجز؟';
 
   @override
-  String get bookingMethod => 'Payment Method';
+  String get bookingMethod => 'طريقة الدفع';
 
   @override
-  String get bookingMissing => 'Booking ID or token is missing';
+  String get bookingMissing => 'معرّف الحجز أو الرمز مفقود';
 
   @override
-  String get bookingParticipants => 'Number of Participants';
+  String get bookingParticipants => 'عدد المشاركين';
 
   @override
-  String get bookingPaymentCash => 'Cash';
+  String get bookingPaymentCash => 'نقدًا';
 
   @override
-  String get bookingPaymentMethod => 'Payment Method';
+  String get bookingPaymentMethod => 'طريقة الدفع';
 
   @override
-  String get bookingPerPerson => 'per person';
+  String get bookingPerPerson => 'لكل شخص';
 
   @override
-  String get bookingPrice => 'Price';
+  String get bookingPrice => 'السعر';
 
   @override
-  String get bookingProcessing => 'Processing...';
+  String get bookingProcessing => 'جارٍ المعالجة...';
 
   @override
-  String get bookingReject => 'Reject';
+  String get bookingReject => 'رفض';
 
   @override
-  String get bookingRejectCancel => 'Reject Cancellation';
+  String get bookingRejectCancel => 'رفض الإلغاء';
 
   @override
-  String get bookingTotal => 'Total Price';
+  String get bookingTotal => 'السعر الإجمالي';
 
   @override
-  String get bookingTotalPrice => 'Total Price';
+  String get bookingTotalPrice => 'السعر الإجمالي';
 
   @override
-  String get bookingUnreject => 'Unreject';
+  String get bookingUnreject => 'إلغاء الرفض';
 
   @override
-  String get bookingUpdated => 'Booking updated successfully';
+  String get bookingUpdated => 'تم تحديث الحجز بنجاح';
 
   @override
-  String get bookingsFiltersAll => 'All';
+  String get bookingsFiltersAll => 'الكل';
 
   @override
-  String get bookingsFiltersCanceled => 'Canceled';
+  String get bookingsFiltersCanceled => 'ملغاة';
 
   @override
-  String get bookingsFiltersCompleted => 'Completed';
+  String get bookingsFiltersCompleted => 'مكتملة';
 
   @override
-  String get bookingsFiltersPending => 'Pending';
+  String get bookingsFiltersPending => 'قيد الانتظار';
 
   @override
-  String get bookingsFiltersRejected => 'Rejected';
+  String get bookingsFiltersRejected => 'مرفوضة';
 
   @override
   String bookingsNoBookings(String status) {
-    return 'No bookings found for \"$status\".';
+    return 'لا توجد حجوزات ضمن \"$status\".';
   }
 
   @override
-  String get bookingsTitle => 'Business Bookings';
+  String get bookingsTitle => 'حجوزات الأعمال';
 
   @override
-  String get businessCreateActivity => 'Create New Activity';
+  String get businessCreateActivity => 'إنشاء نشاط جديد';
 
   @override
-  String get businessGreeting => 'Hello,';
+  String get businessGreeting => 'مرحبًا،';
 
   @override
-  String get businessManageText => 'Manage your activities and engage with users easily.';
+  String get businessManageText => 'أدِر أنشطتك وتفاعل مع المستخدمين بسهولة.';
 
   @override
-  String get businessNoActivities => 'No activities found. Start by creating one!';
+  String get businessNoActivities => 'لا توجد أنشطة. ابدأ بإنشاء واحد!';
 
   @override
-  String get businessUsers => 'Business Users';
+  String get businessUsers => 'مستخدمو النشاط التجاري';
 
   @override
-  String get businessWelcome => 'Welcome to your dashboard!';
+  String get businessWelcome => 'مرحبًا بك في لوحة التحكم!';
 
   @override
-  String get businessYourActivities => 'Your Activities';
+  String get businessYourActivities => 'أنشطتك';
 
   @override
-  String get buttonCancel => 'Cancel';
+  String get buttonCancel => 'إلغاء';
 
   @override
-  String get buttonConfirm => 'Confirm';
+  String get buttonConfirm => 'تأكيد';
 
   @override
-  String get buttonDelete => 'Delete';
+  String get buttonDelete => 'حذف';
 
   @override
-  String get buttonLoading => 'Loading...';
+  String get buttonLoading => 'جارٍ التحميل...';
 
   @override
-  String get buttonLogin => 'Login';
+  String get buttonLogin => 'تسجيل الدخول';
 
   @override
-  String get buttonLogout => 'Logout';
+  String get buttonLogout => 'تسجيل الخروج';
 
   @override
-  String get buttonOk => 'OK';
+  String get buttonOk => 'حسنًا';
 
   @override
-  String get buttonRegister => 'Register';
+  String get buttonRegister => 'تسجيل';
 
   @override
-  String get buttonSendInvite => 'Send Invite';
+  String get buttonSendInvite => 'إرسال دعوة';
 
   @override
-  String get buttonSubmit => 'Submit';
+  String get buttonSubmit => 'إرسال';
 
   @override
-  String get buttonsCancel => 'Cancel';
+  String get buttonsCancel => 'إلغاء';
 
   @override
-  String get buttonsConfirm => 'Confirm';
+  String get buttonsConfirm => 'تأكيد';
 
   @override
-  String get buttonsContinue => 'Continue';
+  String get buttonsContinue => 'متابعة';
 
   @override
-  String get buttonsFinish => 'Finish';
+  String get buttonsFinish => 'إنهاء';
 
   @override
-  String get buttonsLogin => 'Login';
+  String get buttonsLogin => 'تسجيل الدخول';
 
   @override
-  String get buttonsRegister => 'Register';
+  String get buttonsRegister => 'تسجيل';
 
   @override
-  String get buttonsSeeAll => 'See All';
+  String get buttonsSeeAll => 'عرض الكل';
 
   @override
-  String get buttonsSeeLess => 'See Less';
+  String get buttonsSeeLess => 'عرض أقل';
 
   @override
-  String get buttonsSubmitting => 'Submitting...';
+  String get buttonsSubmitting => 'جارٍ الإرسال...';
 
   @override
-  String get calendarNoActivities => 'No activities found.';
+  String get calendarNoActivities => 'لا توجد أنشطة.';
 
   @override
-  String get calendarNoActivitiesForDate => 'No activities for the selected date.';
+  String get calendarNoActivitiesForDate => 'لا توجد أنشطة في التاريخ المحدد.';
 
   @override
-  String get calendarTabsPast => 'Past Activities';
+  String get calendarTabsPast => 'أنشطة سابقة';
 
   @override
-  String get calendarTabsUpcoming => 'Upcoming';
+  String get calendarTabsUpcoming => 'قادمة';
 
   @override
-  String get calendarTitle => 'Calendar';
+  String get calendarTitle => 'التقويم';
 
   @override
-  String get cancel => 'Cancel';
+  String get cancel => 'إلغاء';
 
   @override
-  String get chatNoFriends => 'Add a friend to start chatting!';
+  String get chatNoFriends => 'أضف صديقًا لبدء الدردشة!';
 
   @override
-  String get chatSubtitle => 'Tap to start chatting';
+  String get chatSubtitle => 'اضغط لبدء الدردشة';
 
   @override
-  String get chatTitle => 'My Friends';
+  String get chatTitle => 'أصدقائي';
 
   @override
-  String get chatfriendSubtitle => 'Tap to start chatting';
+  String get chatfriendSubtitle => 'اضغط لبدء الدردشة';
 
   @override
-  String get chatfriendTitle => 'My Friends';
+  String get chatfriendTitle => 'أصدقائي';
 
   @override
-  String get commentEmpty => 'No comments yet.';
+  String get commentEmpty => 'لا توجد تعليقات بعد.';
 
   @override
-  String get commentLike => 'like';
+  String get commentLike => 'إعجاب';
 
   @override
-  String get commentLikes => 'likes';
+  String get commentLikes => 'إعجابات';
 
   @override
-  String get commentPlaceholder => 'Write a comment...';
+  String get commentPlaceholder => 'اكتب تعليقًا...';
 
   @override
-  String get commonAreYouSure => 'Are you sure?';
+  String get commonAreYouSure => 'هل أنت متأكد؟';
 
   @override
-  String get commonCancel => 'Cancel';
+  String get commonCancel => 'إلغاء';
 
   @override
-  String get commonConfirm => 'Confirm';
+  String get commonConfirm => 'تأكيد';
 
   @override
-  String get confirm => 'Confirm';
+  String get confirm => 'تأكيد';
 
   @override
-  String get create => 'Create';
+  String get create => 'إنشاء';
 
   @override
-  String get createActivityActivityName => 'Activity Name';
+  String get createActivityActivityName => 'اسم النشاط';
 
   @override
-  String get createActivityActivityType => 'Activity Type';
+  String get createActivityActivityType => 'نوع النشاط';
 
   @override
-  String get createActivityChange => 'Change';
+  String get createActivityChange => 'تغيير';
 
   @override
-  String get createActivityChooseLibrary => 'Choose from library';
+  String get createActivityChooseLibrary => 'اختيار من المكتبة';
 
   @override
-  String get createActivityDescription => 'Description';
+  String get createActivityDescription => 'الوصف';
 
   @override
-  String get createActivityEndDate => 'End Date & Time';
+  String get createActivityEndDate => 'تاريخ ووقت الانتهاء';
 
   @override
-  String get createActivityErrorRequired => 'Please fill in all required fields.';
+  String get createActivityErrorRequired => 'يرجى تعبئة جميع الحقول المطلوبة.';
 
   @override
-  String get createActivityFail => 'Failed to create activity. Try again.';
+  String get createActivityFail => 'فشل إنشاء النشاط. حاول مرة أخرى.';
 
   @override
-  String get createActivityGetMyLocation => 'Get My Location';
+  String get createActivityGetMyLocation => 'احصل على موقعي';
 
   @override
-  String get createActivityLocation => 'Location';
+  String get createActivityLocation => 'الموقع';
 
   @override
-  String get createActivityLocationErrorPermission => 'Please enable GPS to detect your current location.';
+  String get createActivityLocationErrorPermission => 'يرجى تفعيل الـGPS لاكتشاف موقعك.';
 
   @override
-  String get createActivityLocationErrorTimeout => 'Location request timed out.';
+  String get createActivityLocationErrorTimeout => 'انتهت مهلة تحديد الموقع.';
 
   @override
-  String get createActivityLocationErrorUnavailable => 'Unable to get your location.';
+  String get createActivityLocationErrorUnavailable => 'تعذر الحصول على موقعك.';
 
   @override
-  String get createActivityMaxParticipants => 'Max Participants';
+  String get createActivityMaxParticipants => 'الحد الأقصى للمشاركين';
 
   @override
-  String get createActivityPickHint => 'Take a photo or choose from library';
+  String get createActivityPickHint => 'التقط صورة أو اختر من المكتبة';
 
   @override
-  String get createActivityPickImage => 'Pick an Image';
+  String get createActivityPickImage => 'اختر صورة';
 
   @override
-  String get createActivityPrice => 'Price';
+  String get createActivityPrice => 'السعر';
 
   @override
-  String get createActivityRemovePhoto => 'Remove photo';
+  String get createActivityRemovePhoto => 'إزالة الصورة';
 
   @override
-  String get createActivitySearchPlaceholder => 'Search activity types...';
+  String get createActivitySearchPlaceholder => 'ابحث عن أنواع الأنشطة...';
 
   @override
-  String get createActivitySelectType => 'Select Activity Type';
+  String get createActivitySelectType => 'اختر نوع النشاط';
 
   @override
-  String get createActivityStartDate => 'Start Date & Time';
+  String get createActivityStartDate => 'تاريخ ووقت البدء';
 
   @override
-  String get createActivityStripeRequired => 'You must connect a Stripe account before creating an activity.';
+  String get createActivityStripeRequired => 'يجب ربط حساب Stripe قبل إنشاء نشاط.';
 
   @override
-  String get createActivitySubmit => 'Submit';
+  String get createActivitySubmit => 'إرسال';
 
   @override
-  String get createActivitySuccess => 'Activity created successfully!';
+  String get createActivitySuccess => 'تم إنشاء النشاط بنجاح!';
 
   @override
-  String get createActivityTakePhoto => 'Take photo';
+  String get createActivityTakePhoto => 'التقاط صورة';
 
   @override
-  String get createActivityTapToPick => 'Tap to pick';
+  String get createActivityTapToPick => 'اضغط للاختيار';
 
   @override
-  String get createActivityTitle => 'Create Activity';
+  String get createActivityTitle => 'إنشاء نشاط';
 
   @override
-  String get reopenedSuccessfully => 'reopen successfully';
+  String get reopenedSuccessfully => 'تمت إعادة الفتح بنجاح';
 
   @override
-  String get updatedSuccessfully => 'updated successfully';
+  String get updatedSuccessfully => 'تم التحديث بنجاح';
 
   @override
-  String get createPostCancel => 'Cancel';
+  String get createPostCancel => 'إلغاء';
 
   @override
-  String get createPostClose => 'Close';
+  String get createPostClose => 'إغلاق';
 
   @override
-  String get createPostEmojiTitle => 'Choose your feeling';
+  String get createPostEmojiTitle => 'اختر شعورك';
 
   @override
-  String get createPostEmptyError => 'Post content cannot be empty.';
+  String get createPostEmptyError => 'لا يمكن أن يكون محتوى المنشور فارغًا.';
 
   @override
-  String get createPostFail => 'Failed to create post';
+  String get createPostFail => 'فشل إنشاء المنشور';
 
   @override
-  String get createPostFeeling => 'Feeling';
+  String get createPostFeeling => 'شعور';
 
   @override
-  String get createPostFriendsOnly => 'Friends Only';
+  String get createPostFriendsOnly => 'الأصدقاء فقط';
 
   @override
-  String get createPostHashtagsPlaceholder => '#hashtags (optional)';
+  String get createPostHashtagsPlaceholder => '#وسوم (اختياري)';
 
   @override
-  String get createPostImage => 'Post image';
+  String get createPostImage => 'صورة المنشور';
 
   @override
-  String get createPostPhoto => 'Photo';
+  String get createPostPhoto => 'صورة';
 
   @override
-  String get createPostPickHint => 'Take a photo or choose from gallery';
+  String get createPostPickHint => 'التقط صورة أو اختر من المعرض';
 
   @override
-  String get createPostPlaceholder => 'What\'s on your mind?';
+  String get createPostPlaceholder => 'بماذا تفكر؟';
 
   @override
-  String get createPostPost => 'Post';
+  String get createPostPost => 'نشر';
 
   @override
-  String get createPostPublic => 'Public';
+  String get createPostPublic => 'عام';
 
   @override
-  String get createPostSelectEmojiTitle => 'Select an Emoji';
+  String get createPostSelectEmojiTitle => 'اختر رمزًا تعبيريًا';
 
   @override
-  String get createPostSuccess => 'Your post has been published!';
+  String get createPostSuccess => 'تم نشر منشورك!';
 
   @override
-  String get createPostVisibilityAnyone => 'Anyone';
+  String get createPostVisibilityAnyone => 'أي شخص';
 
   @override
-  String get createPostVisibilityFriends => 'Friends';
+  String get createPostVisibilityFriends => 'الأصدقاء';
 
   @override
-  String get createPostVisibilityTitle => 'Post Visibility';
+  String get createPostVisibilityTitle => 'خصوصية المنشور';
 
   @override
-  String get editActivityDescription => 'Description';
+  String get editActivityDescription => 'الوصف';
 
   @override
-  String get editActivityEnd => 'End Date & Time';
+  String get editActivityEnd => 'تاريخ ووقت الانتهاء';
 
   @override
-  String get editActivityFailure => 'Failed to update activity.';
+  String get editActivityFailure => 'فشل تحديث النشاط.';
 
   @override
-  String get editActivityLocation => 'Location';
+  String get editActivityLocation => 'الموقع';
 
   @override
-  String get editActivityName => 'Activity Name';
+  String get editActivityName => 'اسم النشاط';
 
   @override
-  String get editActivityParticipants => 'Max Participants';
+  String get editActivityParticipants => 'الحد الأقصى للمشاركين';
 
   @override
-  String get editActivityPrice => 'Price ()';
+  String get editActivityPrice => 'السعر ()';
 
   @override
-  String get editActivityStart => 'Start Date & Time';
+  String get editActivityStart => 'تاريخ ووقت البدء';
 
   @override
-  String get editActivityStatus => 'Status';
+  String get editActivityStatus => 'الحالة';
 
   @override
-  String get editActivitySuccess => 'Activity has been updated successfully.';
+  String get editActivitySuccess => 'تم تحديث النشاط بنجاح.';
 
   @override
-  String get editActivityTitle => 'Edit Activity';
+  String get editActivityTitle => 'تعديل النشاط';
 
   @override
-  String get editActivityUpdate => 'Update Activity';
+  String get editActivityUpdate => 'تحديث النشاط';
 
   @override
-  String get editBusinessAddBanner => 'Add banner';
+  String get editBusinessAddBanner => 'إضافة بانر';
 
   @override
-  String get editBusinessAlert => 'Alert';
+  String get editBusinessAlert => 'تنبيه';
 
   @override
-  String get editBusinessBannerDeleted => 'Banner removed.';
+  String get editBusinessBannerDeleted => 'تمت إزالة البانر.';
 
   @override
-  String get editBusinessBannerHint => 'Take a photo or choose from gallery';
+  String get editBusinessBannerHint => 'التقط صورة أو اختر من المعرض';
 
   @override
-  String get editBusinessBannerImage => 'Banner image';
+  String get editBusinessBannerImage => 'صورة البانر';
 
   @override
-  String get editBusinessBusinessName => 'Business Name';
+  String get editBusinessBusinessName => 'اسم النشاط التجاري';
 
   @override
-  String get editBusinessCancel => 'Cancel';
+  String get editBusinessCancel => 'إلغاء';
 
   @override
-  String get editBusinessConfirmDeleteMessage => 'Are you sure you want to delete your account? This action cannot be undone.';
+  String get editBusinessConfirmDeleteMessage => 'هل أنت متأكد أنك تريد حذف حسابك؟ لا يمكن التراجع.';
 
   @override
-  String get editBusinessConfirmDeletePassword => 'Confirm Password to Delete Account';
+  String get editBusinessConfirmDeletePassword => 'تأكيد كلمة المرور لحذف الحساب';
 
   @override
-  String get editBusinessConfirmDeleteTitle => 'Confirm Account Deletion';
+  String get editBusinessConfirmDeleteTitle => 'تأكيد حذف الحساب';
 
   @override
-  String get editBusinessConfirmPassword => 'Confirm Password';
+  String get editBusinessConfirmPassword => 'تأكيد كلمة المرور';
 
   @override
-  String get editBusinessCurrentPassword => 'Current Password';
+  String get editBusinessCurrentPassword => 'كلمة المرور الحالية';
 
   @override
-  String get editBusinessDelete => 'Delete';
+  String get editBusinessDelete => 'حذف';
 
   @override
-  String get editBusinessDeleteAccount => 'Delete Account';
+  String get editBusinessDeleteAccount => 'حذف الحساب';
 
   @override
-  String get editBusinessDeleteFailed => 'Failed to delete the account. Please try again.';
+  String get editBusinessDeleteFailed => 'فشل حذف الحساب. حاول مرة أخرى.';
 
   @override
-  String get editBusinessDeleteLogoFailed => 'Failed to delete logo.';
+  String get editBusinessDeleteLogoFailed => 'فشل حذف الشعار.';
 
   @override
-  String get editBusinessDeleting => 'Deleting...';
+  String get editBusinessDeleting => 'جارٍ الحذف...';
 
   @override
-  String get editBusinessDescription => 'Description';
+  String get editBusinessDescription => 'الوصف';
 
   @override
-  String get editBusinessEmail => 'Email';
+  String get editBusinessEmail => 'البريد الإلكتروني';
 
   @override
-  String get editBusinessEnterPassword => 'Enter your password';
+  String get editBusinessEnterPassword => 'أدخل كلمة المرور';
 
   @override
-  String get editBusinessEnterPasswordToDelete => 'Please enter your password to delete the account.';
+  String get editBusinessEnterPasswordToDelete => 'يرجى إدخال كلمة المرور لحذف الحساب.';
 
   @override
-  String get editBusinessErrorDelete => 'Failed to delete business.';
+  String get editBusinessErrorDelete => 'فشل حذف النشاط التجاري.';
 
   @override
-  String get editBusinessIncorrectPassword => 'Incorrect password. Please try again.';
+  String get editBusinessIncorrectPassword => 'كلمة مرور غير صحيحة. حاول مجددًا.';
 
   @override
-  String get editBusinessLogoDeleted => 'Logo removed.';
+  String get editBusinessLogoDeleted => 'تمت إزالة الشعار.';
 
   @override
-  String get editBusinessNewPassword => 'New Password';
+  String get editBusinessNewPassword => 'كلمة المرور الجديدة';
 
   @override
-  String get editBusinessOk => 'OK';
+  String get editBusinessOk => 'حسنًا';
 
   @override
-  String get editBusinessPasswordMismatch => 'Passwords do not match.';
+  String get editBusinessPasswordMismatch => 'كلمتا المرور غير متطابقتين.';
 
   @override
-  String get editBusinessPasswordTooShort => 'Password must be at least 8 characters long.';
+  String get editBusinessPasswordTooShort => 'يجب ألا تقل كلمة المرور عن 8 أحرف.';
 
   @override
-  String get editBusinessPhoneNumber => 'Phone Number';
+  String get editBusinessPhoneNumber => 'رقم الهاتف';
 
   @override
-  String get editBusinessSaveChanges => 'Save Changes';
+  String get editBusinessSaveChanges => 'حفظ التغييرات';
 
   @override
-  String get editBusinessSaving => 'Saving...';
+  String get editBusinessSaving => 'جارٍ الحفظ...';
 
   @override
-  String get editBusinessSuccessDelete => 'Business deleted successfully.';
+  String get editBusinessSuccessDelete => 'تم حذف النشاط التجاري بنجاح.';
 
   @override
-  String get editBusinessTitle => 'Edit Business Profile';
+  String get editBusinessTitle => 'تعديل ملف النشاط التجاري';
 
   @override
-  String get editBusinessUpdateFailed => 'Failed to update profile.';
+  String get editBusinessUpdateFailed => 'فشل تحديث الملف.';
 
   @override
-  String get editBusinessUpdateSuccess => 'Business profile updated successfully.';
+  String get editBusinessUpdateSuccess => 'تم تحديث ملف النشاط التجاري بنجاح.';
 
   @override
-  String get editBusinessWebsite => 'Website';
+  String get editBusinessWebsite => 'الموقع الإلكتروني';
 
   @override
-  String get editProfileCancel => 'Cancel';
+  String get editProfileCancel => 'إلغاء';
 
   @override
-  String get editProfileConfirmPassword => 'Confirm Password';
+  String get editProfileConfirmPassword => 'تأكيد كلمة المرور';
 
   @override
-  String get editProfileContact => 'Contact Number';
+  String get editProfileContact => 'رقم التواصل';
 
   @override
-  String get editProfileCurrentPassword => 'Current Password';
+  String get editProfileCurrentPassword => 'كلمة المرور الحالية';
 
   @override
-  String get editProfileDelete => 'Delete';
+  String get editProfileDelete => 'حذف';
 
   @override
-  String get editProfileDeleteAccount => 'Delete Account';
+  String get editProfileDeleteAccount => 'حذف الحساب';
 
   @override
-  String get editProfileDeleteConfirmMsg => 'Are you sure you want to delete your account? This action cannot be undone.';
+  String get editProfileDeleteConfirmMsg => 'هل أنت متأكد أنك تريد حذف حسابك؟ لا يمكن التراجع.';
 
   @override
-  String get editProfileDeleteConfirmTitle => 'Confirm Account Deletion';
+  String get editProfileDeleteConfirmTitle => 'تأكيد حذف الحساب';
 
   @override
-  String get editProfileDeleteFailed => 'Failed to delete account.';
+  String get editProfileDeleteFailed => 'فشل حذف الحساب.';
 
   @override
-  String get editProfileDeleteInfoWarning => 'You signed in with Google, please set a password first if not already set.';
+  String get editProfileDeleteInfoWarning => 'قمت بتسجيل الدخول عبر Google، الرجاء تعيين كلمة مرور أولاً إن لم تكن موجودة.';
 
   @override
-  String get editProfileDeleteProfileImage => 'Remove Profile Image';
+  String get editProfileDeleteProfileImage => 'إزالة صورة الملف';
 
   @override
-  String get editProfileDeleteProfileImageConfirm => 'Are you sure you want to delete your profile picture?';
+  String get editProfileDeleteProfileImageConfirm => 'هل تريد حذف صورتك الشخصية؟';
 
   @override
-  String get editProfileDeleteSuccess => 'Account deleted successfully.';
+  String get editProfileDeleteSuccess => 'تم حذف الحساب بنجاح.';
 
   @override
-  String get editProfileEmail => 'Email';
+  String get editProfileEmail => 'البريد الإلكتروني';
 
   @override
-  String get editProfileFirstName => 'First Name';
+  String get editProfileFirstName => 'الاسم الأول';
 
   @override
-  String get editProfileImageSelectedSuccess => 'Image selected.';
+  String get editProfileImageSelectedSuccess => 'تم اختيار الصورة.';
 
   @override
-  String get editProfileImageSelectionCancelled => 'Image selection cancelled.';
+  String get editProfileImageSelectionCancelled => 'تم إلغاء اختيار الصورة.';
 
   @override
-  String get editProfileImageSelectionError => 'Could not open image picker.';
+  String get editProfileImageSelectionError => 'تعذر فتح منتقي الصور.';
 
   @override
-  String get editProfileLastName => 'Last Name';
+  String get editProfileLastName => 'اسم العائلة';
 
   @override
-  String get editProfileNewPassword => 'New Password';
+  String get editProfileNewPassword => 'كلمة المرور الجديدة';
 
   @override
-  String get editProfilePasswordMismatch => 'Passwords do not match.';
+  String get editProfilePasswordMismatch => 'كلمتا المرور غير متطابقتين.';
 
   @override
-  String get editProfilePasswordRequired => 'Please enter your current password.';
+  String get editProfilePasswordRequired => 'يرجى إدخال كلمة المرور الحالية.';
 
   @override
-  String get editProfilePickHint => 'Take a photo or choose from gallery';
+  String get editProfilePickHint => 'التقط صورة أو اختر من المعرض';
 
   @override
-  String get editProfileProfileImage => 'profile image';
+  String get editProfileProfileImage => 'صورة الملف';
 
   @override
-  String get editProfileProfileImageDeleted => 'Profile image removed.';
+  String get editProfileProfileImageDeleted => 'تمت إزالة صورة الملف.';
 
   @override
-  String get editProfileSaveChanges => 'Save Changes';
+  String get editProfileSaveChanges => 'حفظ التغييرات';
 
   @override
-  String get editProfileSelectImage => 'Select Profile Image';
+  String get editProfileSelectImage => 'اختر صورة الملف';
 
   @override
-  String get editProfileTitle => 'Edit Profile';
+  String get editProfileTitle => 'تعديل الملف الشخصي';
 
   @override
-  String get editProfileUpdateFailed => 'Failed to update profile.';
+  String get editProfileUpdateFailed => 'فشل تحديث الملف.';
 
   @override
-  String get editProfileUpdateSuccess => 'Profile updated successfully.';
+  String get editProfileUpdateSuccess => 'تم تحديث الملف بنجاح.';
 
   @override
-  String get editProfileUsername => 'Username';
+  String get editProfileUsername => 'اسم المستخدم';
 
   @override
-  String get editProfileWrongPassword => 'Incorrect password. Please try again.';
+  String get editProfileWrongPassword => 'كلمة مرور غير صحيحة. حاول مجددًا.';
 
   @override
-  String get editProfileEmailInvalid => 'Please enter a valid email address.';
+  String get editProfileEmailInvalid => 'يرجى إدخال بريد إلكتروني صالح.';
 
   @override
-  String get email => 'Email';
+  String get email => 'البريد الإلكتروني';
 
   @override
-  String get emailRegistrationContinue => 'Continue';
+  String get emailRegistrationContinue => 'متابعة';
 
   @override
-  String get emailRegistrationCreatePassword => 'Create password';
+  String get emailRegistrationCreatePassword => 'إنشاء كلمة مرور';
 
   @override
-  String get emailRegistrationEmailDesc => 'You’ll receive a verification code via email. Your email address may be used to connect you with others, improve ads, and more, depending on your settings.';
+  String get emailRegistrationEmailDesc => 'ستتلقى رمز تحقق عبر البريد الإلكتروني. قد يُستخدم بريدك لربطك بالآخرين وتحسين الإعلانات وغير ذلك وفق إعداداتك.';
 
   @override
-  String get emailRegistrationEmailPlaceholder => 'Email address';
+  String get emailRegistrationEmailPlaceholder => 'عنوان البريد الإلكتروني';
 
   @override
-  String get emailRegistrationEnterEmail => 'Enter email';
+  String get emailRegistrationEnterEmail => 'أدخل البريد الإلكتروني';
 
   @override
-  String get emailRegistrationErrorGeneric => 'Something went wrong';
+  String get emailRegistrationErrorGeneric => 'حدث خطأ ما';
 
   @override
-  String get emailRegistrationLoading => 'Loading...';
+  String get emailRegistrationLoading => 'جارٍ التحميل...';
 
   @override
-  String get emailRegistrationPasswordPlaceholder => 'Enter password';
+  String get emailRegistrationPasswordPlaceholder => 'أدخل كلمة المرور';
 
   @override
-  String get emailRegistrationRule1 => '• 8 characters (20 max)';
+  String get emailRegistrationRule1 => '• 8 أحرف (بحد أقصى 20)';
 
   @override
-  String get emailRegistrationRule2 => '• 1 letter, 1 number, 1 special character (# ? ! @)';
+  String get emailRegistrationRule2 => '• حرف واحد ورقم واحد ورمز خاص (# ? ! @)';
 
   @override
-  String get emailRegistrationSaveInfo => 'Get trending content, newsletters, and updates sent to your email';
+  String get emailRegistrationSaveInfo => 'احصل على محتوى رائج ونشرات وتحديثات على بريدك';
 
   @override
-  String get emailRegistrationSignUp => 'Sign Up';
+  String get emailRegistrationSignUp => 'إنشاء حساب';
 
   @override
-  String get emailRegistrationVerificationSent => 'Verification code sent to email.';
+  String get emailRegistrationVerificationSent => 'تم إرسال رمز التحقق إلى البريد.';
 
   @override
-  String get exploreSubtitle => 'Discover different business profiles and their services';
+  String get exploreSubtitle => 'اكتشف ملفات الأعمال المختلفة وخدماتها';
 
   @override
-  String get exploreTitle => 'Explore Businesses';
+  String get exploreTitle => 'استكشف الأنشطة التجارية';
 
   @override
-  String get exportExcel => 'Export Excel';
+  String get exportExcel => 'تصدير Excel';
 
   @override
-  String get exportPdf => 'Export PDF';
+  String get exportPdf => 'تصدير PDF';
 
   @override
-  String get filtersAll => 'All';
+  String get filtersAll => 'الكل';
 
   @override
-  String get filtersNotPaid => 'Not Paid';
+  String get filtersNotPaid => 'غير مدفوع';
 
   @override
-  String get filtersPaid => 'Paid';
+  String get filtersPaid => 'مدفوع';
 
   @override
-  String get firstName => 'First Name';
+  String get firstName => 'الاسم الأول';
 
   @override
-  String get forgetPasswordEmailPlaceholder => 'Email Address';
+  String get forgetPasswordEmailPlaceholder => 'عنوان البريد الإلكتروني';
 
   @override
-  String get forgetPasswordEnterEmail => 'Please enter your email.';
+  String get forgetPasswordEnterEmail => 'يرجى إدخال بريدك الإلكتروني.';
 
   @override
-  String get forgetPasswordGeneralError => 'Something went wrong. Try again.';
+  String get forgetPasswordGeneralError => 'حدث خطأ ما. حاول مجددًا.';
 
   @override
-  String get forgetPasswordSendCode => 'Send Code';
+  String get forgetPasswordSendCode => 'إرسال الرمز';
 
   @override
-  String get forgetPasswordSending => 'Sending...';
+  String get forgetPasswordSending => 'جارٍ الإرسال...';
 
   @override
   String forgetPasswordSubtitle(String role) {
-    return 'Resetting password for: $role';
+    return 'إعادة تعيين كلمة المرور لـ: $role';
   }
 
   @override
-  String get forgetPasswordTitle => 'Reset Password';
+  String get forgetPasswordTitle => 'إعادة تعيين كلمة المرور';
 
   @override
-  String get forgetPasswordUnableToSend => 'Unable to send reset code.';
+  String get forgetPasswordUnableToSend => 'تعذر إرسال رمز الاستعادة.';
 
   @override
-  String get friendAccept => 'Accept';
+  String get friendAccept => 'قبول';
 
   @override
-  String get friendAccepted => 'Friend request accepted.';
+  String get friendAccepted => 'تم قبول طلب الصداقة.';
 
   @override
-  String get friendCancel => 'Cancel Request';
+  String get friendCancel => 'إلغاء الطلب';
 
   @override
-  String get friendCancelled => 'Request cancelled.';
+  String get friendCancelled => 'تم إلغاء الطلب.';
 
   @override
-  String get friendChat => 'Chat';
+  String get friendChat => 'دردشة';
 
   @override
-  String get friendConfirmUnfriendText => 'Are you sure you want to unfriend this user?';
+  String get friendConfirmUnfriendText => 'هل أنت متأكد أنك تريد إزالة هذا الصديق؟';
 
   @override
-  String get friendConfirmUnfriendTitle => 'Unfriend';
+  String get friendConfirmUnfriendTitle => 'إلغاء الصداقة';
 
   @override
-  String get friendErrorLoad => 'Failed to load data.';
+  String get friendErrorLoad => 'فشل تحميل البيانات.';
 
   @override
-  String get friendFailedAction => 'Action failed. Try again.';
+  String get friendFailedAction => 'فشلت العملية. حاول مجددًا.';
 
   @override
-  String get friendNoFriends => 'You don’t have any friends yet. Start adding some!';
+  String get friendNoFriends => 'ليس لديك أصدقاء بعد. ابدأ بالإضافة!';
 
   @override
   String friendNoUsersFound(String tab) {
-    return 'No $tab users found.';
+    return 'لم يتم العثور على مستخدمين في $tab.';
   }
 
   @override
-  String get friendReject => 'Reject';
+  String get friendReject => 'رفض';
 
   @override
-  String get friendRejected => 'Friend request rejected.';
+  String get friendRejected => 'تم رفض طلب الصداقة.';
 
   @override
-  String get friendTabFriends => 'Friends';
+  String get friendTabFriends => 'الأصدقاء';
 
   @override
-  String get friendTabReceived => 'Received';
+  String get friendTabReceived => 'الواردة';
 
   @override
-  String get friendTabSent => 'Sent';
+  String get friendTabSent => 'المرسلة';
 
   @override
-  String get friendTab_friends => 'friends';
+  String get friendTab_friends => 'أصدقاء';
 
   @override
-  String get friendTab_received => 'received';
+  String get friendTab_received => 'واردة';
 
   @override
-  String get friendTab_sent => 'sent';
+  String get friendTab_sent => 'مرسلة';
 
   @override
   String friendTotalFriends(int count) {
-    return 'You have $count friends';
+    return 'لديك $count صديقًا';
   }
 
   @override
-  String get friendUnfriend => 'Unfriend';
+  String get friendUnfriend => 'إلغاء الصداقة';
 
   @override
-  String get friendUnfriended => 'Unfriended successfully.';
+  String get friendUnfriended => 'تمت إزالة الصديق.';
 
   @override
-  String get friendshipAccept => 'Accept';
+  String get friendshipAccept => 'قبول';
 
   @override
-  String get friendshipAddFriendAll => 'All Users';
+  String get friendshipAddFriendAll => 'كل المستخدمين';
 
   @override
-  String get friendshipAddFriendAvailable => 'Available to add';
+  String get friendshipAddFriendAvailable => 'متاحون للإضافة';
 
   @override
-  String get friendshipAddFriendError => 'Failed to send friend request.';
+  String get friendshipAddFriendError => 'فشل إرسال طلب الصداقة.';
 
   @override
-  String get friendshipAddFriendNoUsers => 'No users found.';
+  String get friendshipAddFriendNoUsers => 'لم يتم العثور على مستخدمين.';
 
   @override
-  String get friendshipAddFriendSearchPlaceholder => 'Search users...';
+  String get friendshipAddFriendSearchPlaceholder => 'ابحث عن المستخدمين...';
 
   @override
-  String get friendshipAddFriendSuccess => 'Friend request sent.';
+  String get friendshipAddFriendSuccess => 'تم إرسال طلب الصداقة.';
 
   @override
-  String get friendshipAddFriendSuggested => 'Suggested Users';
+  String get friendshipAddFriendSuggested => 'مستخدمون مقترحون';
 
   @override
-  String get friendshipAddFriendViewFriends => 'View Friends';
+  String get friendshipAddFriendViewFriends => 'عرض الأصدقاء';
 
   @override
-  String get friendshipAddFriendViewReceived => 'View Received Requests';
+  String get friendshipAddFriendViewReceived => 'عرض الطلبات الواردة';
 
   @override
-  String get friendshipAddFriendViewSent => 'View Sent Requests';
+  String get friendshipAddFriendViewSent => 'عرض الطلبات المرسلة';
 
   @override
-  String get friendshipBlock => 'Block';
+  String get friendshipBlock => 'حظر';
 
   @override
-  String get friendshipCancelRequest => 'Cancel Request';
+  String get friendshipCancelRequest => 'إلغاء الطلب';
 
   @override
-  String get friendshipConfirmBlock => 'Are you sure you want to block this user?';
+  String get friendshipConfirmBlock => 'هل تريد حظر هذا المستخدم؟';
 
   @override
-  String get friendshipConfirmUnblock => 'Do you want to unblock this user?';
+  String get friendshipConfirmUnblock => 'هل تريد إلغاء الحظر؟';
 
   @override
-  String get friendshipConfirmUnfriend => 'Are you sure you want to unfriend this user?';
+  String get friendshipConfirmUnfriend => 'هل تريد إزالة هذا الصديق؟';
 
   @override
-  String get friendshipErrorAlreadyFriends => 'You are already friends with this user.';
+  String get friendshipErrorAlreadyFriends => 'أنت بالفعل صديق لهذا المستخدم.';
 
   @override
-  String get friendshipErrorFailedAction => 'Action failed. Please try again.';
+  String get friendshipErrorFailedAction => 'فشلت العملية. حاول مجددًا.';
 
   @override
-  String get friendshipErrorNotFound => 'User not found.';
+  String get friendshipErrorNotFound => 'المستخدم غير موجود.';
 
   @override
-  String get friendshipErrorRequestExists => 'Friend request already sent.';
+  String get friendshipErrorRequestExists => 'تم إرسال طلب صداقة مسبقًا.';
 
   @override
-  String get friendshipFriendAdded => 'Friend added successfully.';
+  String get friendshipFriendAdded => 'تمت إضافة الصديق.';
 
   @override
-  String get friendshipFriendBlocked => 'User has been blocked.';
+  String get friendshipFriendBlocked => 'تم حظر المستخدم.';
 
   @override
-  String get friendshipFriendRemoved => 'Friend removed.';
+  String get friendshipFriendRemoved => 'تمت إزالة الصديق.';
 
   @override
-  String get friendshipFriendUnblocked => 'User has been unblocked.';
+  String get friendshipFriendUnblocked => 'تم إلغاء الحظر.';
 
   @override
-  String get friendshipMyFriends => 'My Friends';
+  String get friendshipMyFriends => 'أصدقائي';
 
   @override
-  String get friendshipNoFriends => 'You haven\'t added any friends yet.';
+  String get friendshipNoFriends => 'لم تقم بإضافة أصدقاء بعد.';
 
   @override
-  String get friendshipNoRequests => 'No friend requests found.';
+  String get friendshipNoRequests => 'لا توجد طلبات صداقة.';
 
   @override
-  String get friendshipReceivedRequests => 'Received Requests';
+  String get friendshipReceivedRequests => 'طلبات واردة';
 
   @override
-  String get friendshipReject => 'Reject';
+  String get friendshipReject => 'رفض';
 
   @override
-  String get friendshipRequestAccepted => 'Friend request accepted.';
+  String get friendshipRequestAccepted => 'تم قبول طلب الصداقة.';
 
   @override
-  String get friendshipRequestCancelled => 'Request cancelled.';
+  String get friendshipRequestCancelled => 'تم إلغاء الطلب.';
 
   @override
-  String get friendshipRequestRejected => 'Friend request rejected.';
+  String get friendshipRequestRejected => 'تم رفض طلب الصداقة.';
 
   @override
-  String get friendshipRequestSent => 'Friend request sent.';
+  String get friendshipRequestSent => 'تم إرسال طلب الصداقة.';
 
   @override
-  String get friendshipSendRequest => 'Send Friend Request';
+  String get friendshipSendRequest => 'إرسال طلب صداقة';
 
   @override
-  String get friendshipSentRequests => 'Sent Requests';
+  String get friendshipSentRequests => 'طلبات مرسلة';
 
   @override
-  String get friendshipTitle => 'Friend Requests';
+  String get friendshipTitle => 'طلبات الصداقة';
 
   @override
-  String get friendshipUnblock => 'Unblock';
+  String get friendshipUnblock => 'إلغاء الحظر';
 
   @override
-  String get friendshipUnfriend => 'Unfriend';
+  String get friendshipUnfriend => 'إلغاء الصداقة';
 
   @override
-  String get generalLoading => 'Loading...';
+  String get generalLoading => 'جارٍ التحميل...';
 
   @override
-  String get globalError => 'Something went wrong';
+  String get globalError => 'حدث خطأ ما';
 
   @override
-  String get globalSuccess => 'Success';
+  String get globalSuccess => 'تم بنجاح';
 
   @override
-  String get homeActivityCategories => ' Categories';
+  String get homeActivityCategories => ' الفئات';
 
   @override
-  String get homeCancelConfirm => 'Cancel this ticket?';
+  String get homeCancelConfirm => 'إلغاء هذه التذكرة؟';
 
   @override
-  String get homeCancelTitle => 'Confirmation';
+  String get homeCancelTitle => 'تأكيد';
 
   @override
-  String get homeExploreActivities => 'Explore Activities';
+  String get homeExploreActivities => 'استكشف الأنشطة';
 
   @override
-  String get homeExploreCategories => 'Explore Categories';
+  String get homeExploreCategories => 'استكشف الفئات';
 
   @override
-  String get homeExploreMessage => 'Find new experiences you’ll love';
+  String get homeExploreMessage => 'اكتشف تجارب جديدة ستحبها';
 
   @override
-  String get homeFindActivity => 'Find your favourite activity';
+  String get homeFindActivity => 'ابحث عن نشاطك المفضل';
 
   @override
-  String get homeInterestBasedTitle => 'The Activities that interest you';
+  String get homeInterestBasedTitle => 'الأنشطة التي تهمك';
 
   @override
-  String get homeLoadMore => 'Load More';
+  String get homeLoadMore => 'تحميل المزيد';
 
   @override
-  String get homeLoadingActivities => 'Loading activities...';
+  String get homeLoadingActivities => 'جارٍ تحميل الأنشطة...';
 
   @override
-  String get homeLoadingBookings => 'Loading your bookings...';
+  String get homeLoadingBookings => 'جارٍ تحميل حجوزاتك...';
 
   @override
-  String get homeLoadingInterestActivities => 'Loading interest-based activities...';
+  String get homeLoadingInterestActivities => 'جارٍ تحميل الأنشطة حسب الاهتمام...';
 
   @override
-  String get homeMoreActivities => 'More Activities';
+  String get homeMoreActivities => 'المزيد من الأنشطة';
 
   @override
-  String get homeNo => 'No';
+  String get homeNo => 'لا';
 
   @override
-  String get homeNoActivities => 'No activities found for this category.';
+  String get homeNoActivities => 'لا توجد أنشطة لهذه الفئة.';
 
   @override
-  String get homeSeeAll => 'See All';
+  String get homeSeeAll => 'عرض الكل';
 
   @override
-  String get homeSeeAllCategories => 'See All Categories';
+  String get homeSeeAllCategories => 'عرض كل الفئات';
 
   @override
-  String get homeShowAll => 'Show All';
+  String get homeShowAll => 'عرض الكل';
 
   @override
-  String get homeShowLess => 'Show Less';
+  String get homeShowLess => 'عرض أقل';
 
   @override
-  String get homeWelcome => 'Welcome!';
+  String get homeWelcome => 'أهلًا!';
 
   @override
-  String get homeYes => 'Yes';
+  String get homeYes => 'نعم';
 
   @override
-  String get homeYourBookings => 'Your Bookings Activities';
+  String get homeYourBookings => 'حجوزاتك';
 
   @override
-  String get insightsAction => 'Action';
+  String get insightsAction => 'الإجراء';
 
   @override
-  String get insightsItem => 'Item';
+  String get insightsItem => 'العنصر';
 
   @override
-  String get insightsName => 'Client Name';
+  String get insightsName => 'اسم العميل';
 
   @override
-  String get insightsPayment => 'Payment';
+  String get insightsPayment => 'الدفع';
 
   @override
-  String get interestContinue => 'Continue';
+  String get interestContinue => 'متابعة';
 
   @override
-  String get interestLoadError => 'Failed to load interests.';
+  String get interestLoadError => 'فشل تحميل الاهتمامات.';
 
   @override
-  String get interestSaveError => 'Failed to save interests.';
+  String get interestSaveError => 'فشل حفظ الاهتمامات.';
 
   @override
-  String get interestSelectOne => 'Please select an interest.';
+  String get interestSelectOne => 'يرجى اختيار اهتمام.';
 
   @override
-  String get interestSkip => 'Skip';
+  String get interestSkip => 'تخطي';
 
   @override
-  String get interestTitle => 'What are you into?';
+  String get interestTitle => 'ما الذي يهمك؟';
 
   @override
-  String get lastName => 'Last Name';
+  String get lastName => 'اسم العائلة';
 
   @override
-  String get loginBusiness => 'Business';
+  String get loginBusiness => 'نشاط تجاري';
 
   @override
-  String get loginCancel => 'Cancel';
+  String get loginCancel => 'إلغاء';
 
   @override
-  String get loginConfirmReactivate => 'Do you want to reactivate and continue using this account?';
+  String get loginConfirmReactivate => 'هل تريد إعادة تفعيل هذا الحساب والمتابعة؟';
 
   @override
-  String get loginContinue => 'Continue';
+  String get loginContinue => 'متابعة';
 
   @override
-  String get loginEmail => 'Email Address';
+  String get loginEmail => 'البريد الإلكتروني';
 
   @override
-  String get loginErrorFailed => 'Login failed';
+  String get loginErrorFailed => 'فشل تسجيل الدخول';
 
   @override
-  String get loginErrorGoogle => 'Google login failed';
+  String get loginErrorGoogle => 'فشل تسجيل الدخول عبر Google';
 
   @override
-  String get loginErrorRequired => 'All fields are required';
+  String get loginErrorRequired => 'جميع الحقول مطلوبة';
 
   @override
-  String get loginFacebookSignIn => 'Continue with Facebook';
+  String get loginFacebookSignIn => 'المتابعة عبر فيسبوك';
 
   @override
-  String get loginForgetPassword => 'Forgot your password?';
+  String get loginForgetPassword => 'هل نسيت كلمة المرور؟';
 
   @override
-  String get loginGoogleSignIn => 'Continue with Google';
+  String get loginGoogleSignIn => 'المتابعة عبر Google';
 
   @override
-  String get loginInstruction => 'Please log in with your email or phone number';
+  String get loginInstruction => 'يرجى تسجيل الدخول عبر البريد أو الهاتف';
 
   @override
-  String get loginLoading => 'Logging in...';
+  String get loginLoading => 'جارٍ تسجيل الدخول...';
 
   @override
-  String get loginLogin => 'Log In';
+  String get loginLogin => 'تسجيل الدخول';
 
   @override
-  String get loginNoAccount => 'Don\'t have an account?';
+  String get loginNoAccount => 'لا تملك حسابًا؟';
 
   @override
-  String get loginPassword => 'Password';
+  String get loginPassword => 'كلمة المرور';
 
   @override
-  String get loginPhone => 'Phone Number';
+  String get loginPhone => 'رقم الهاتف';
 
   @override
-  String get loginRegister => 'Register';
+  String get loginRegister => 'إنشاء حساب';
 
   @override
-  String get loginSuccessGoogle => 'Google login successful';
+  String get loginSuccessGoogle => 'تم تسجيل الدخول عبر Google';
 
   @override
-  String get loginSuccessLogin => 'Login successful';
+  String get loginSuccessLogin => 'تم تسجيل الدخول بنجاح';
 
   @override
-  String get loginTitle => 'Welcome Back';
+  String get loginTitle => 'مرحبًا بعودتك';
 
   @override
-  String get loginPhoneInvalid => 'Invalid phone number';
+  String get loginPhoneInvalid => 'رقم هاتف غير صالح';
 
   @override
-  String get loginUseEmailInstead => 'Use Email Instead';
+  String get loginUseEmailInstead => 'استخدم البريد بدلًا من ذلك';
 
   @override
-  String get loginUsePhoneInstead => 'Use Phone Instead';
+  String get loginUsePhoneInstead => 'استخدم الهاتف بدلًا من ذلك';
 
   @override
-  String get loginUser => 'User';
+  String get loginUser => 'مستخدم';
 
   @override
-  String get loginInactiveTitle => 'Account inactive';
+  String get loginInactiveTitle => 'الحساب غير نشط';
 
   @override
-  String get loginInactiveMessage => 'This account is inactive.Would you like to reactivate it?';
+  String get loginInactiveMessage => 'هذا الحساب غير نشط. هل ترغب في إعادة تفعيله؟';
 
   @override
-  String get loginWarningInactive => 'This account was previously inactive and has been reactivated. Please review your settings.';
+  String get loginWarningInactive => 'كان هذا الحساب غير نشط وتمت إعادة تفعيله. يرجى مراجعة إعداداتك.';
 
   @override
-  String get markAsPaid => 'Mark as Paid';
+  String get markAsPaid => 'وضع علامة مدفوع';
 
   @override
-  String get markAsPaidConfirmation => 'Are you sure you want to mark this booking as paid?';
+  String get markAsPaidConfirmation => 'هل تريد وضع علامة مدفوع على هذا الحجز؟';
 
   @override
-  String get myPostsConfirmDelete => 'Are you sure you want to delete this post?';
+  String get myPostsConfirmDelete => 'هل تريد حذف هذا المنشور؟';
 
   @override
-  String get myPostsDelete => 'Delete';
+  String get myPostsDelete => 'حذف';
 
   @override
-  String get myPostsEmpty => 'No posts found.';
+  String get myPostsEmpty => 'لا توجد منشورات.';
 
   @override
-  String get myPostsSuccessDelete => 'Post deleted successfully';
+  String get myPostsSuccessDelete => 'تم حذف المنشور بنجاح';
 
   @override
-  String get no => 'No';
+  String get no => 'لا';
 
   @override
-  String get noAvailableUsers => 'No users available to assign.';
+  String get noAvailableUsers => 'لا يوجد مستخدمون لإسنادهم.';
 
   @override
-  String get noBookings => 'No bookings found.';
+  String get noBookings => 'لا توجد حجوزات.';
 
   @override
-  String get notPaid => 'Not Paid';
+  String get notPaid => 'غير مدفوع';
 
   @override
-  String get notificationDeleteError => 'Delete notification error:';
+  String get notificationDeleteError => 'خطأ حذف الإشعار:';
 
   @override
-  String get notificationEmpty => 'No notifications available.';
+  String get notificationEmpty => 'لا توجد إشعارات.';
 
   @override
-  String get notificationFetchError => 'Error fetching notifications:';
+  String get notificationFetchError => 'خطأ في جلب الإشعارات:';
 
   @override
-  String get noScreenForNotification => ' No screen linked ';
+  String get noScreenForNotification => ' لا توجد شاشة مرتبطة ';
 
   @override
-  String get deletedSuccessfully => 'notification deleted successfully';
+  String get deletedSuccessfully => 'تم حذف الإشعار بنجاح';
 
   @override
-  String get markedAsRead => ' mark as read';
+  String get markedAsRead => ' تم تعليمها كمقروءة';
 
   @override
-  String get notificationMarkReadError => 'Failed to mark as read:';
+  String get notificationMarkReadError => 'فشل وضع علامة مقروء:';
 
   @override
-  String get onboardingAlreadyHaveAccount => 'Already have an account?';
+  String get onboardingAlreadyHaveAccount => 'لديك حساب؟ تسجيل الدخول';
 
   @override
-  String get onboardingCreateAccount => 'Create Account';
+  String get onboardingCreateAccount => 'إنشاء حساب';
 
   @override
-  String get onboardingGetStarted => 'Get Started';
+  String get onboardingGetStarted => 'ابدأ';
 
   @override
-  String get onboardingSignIn => 'Sign In';
+  String get onboardingSignIn => 'تسجيل الدخول';
 
   @override
-  String get onboardingSubtitle => 'Discover passions, Connect with others, Grow your skills.';
+  String get onboardingSubtitle => 'اكتشف الشغف، تواصل مع الآخرين، وطوّر مهاراتك.';
 
   @override
-  String get onboardingTitle => 'Your gateway to exciting hobbies';
+  String get onboardingTitle => 'بوابتك إلى هوايات ممتعة';
 
   @override
-  String get changeTheme => 'Change Theme';
+  String get changeTheme => 'تغيير السمة';
 
   @override
-  String get selectLanguage => 'Select Language';
+  String get selectLanguage => 'اختر اللغة';
 
   @override
   String get onbSkip => 'تخطي';
@@ -1384,10 +1384,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get onbTitle1 => 'اكتشف الأنشطة';
 
   @override
-  String get onbSubtitle1 => 'ابحث عن الهوايات والفعاليات القريبة منك.';
+  String get onbSubtitle1 => 'اعثر على الهوايات والفعاليات بالقرب منك.';
 
   @override
-  String get onbTitle2 => 'احجز بثوانٍ';
+  String get onbTitle2 => 'احجز في ثوانٍ';
 
   @override
   String get onbSubtitle2 => 'حجز بسيط وآمن وسريع.';
@@ -1396,990 +1396,990 @@ class AppLocalizationsAr extends AppLocalizations {
   String get onbTitle3 => 'انضم للمجتمع';
 
   @override
-  String get onbSubtitle3 => 'تواصل مع أشخاص يشاركونك الاهتمامات.';
+  String get onbSubtitle3 => 'تواصل مع من يشاركونك الشغف.';
 
   @override
-  String get paid => 'Paid';
+  String get paid => 'مدفوع';
 
   @override
-  String get paymentConfirmation => 'Confirm Booking';
+  String get paymentConfirmation => 'تأكيد الحجز';
 
   @override
-  String get privacyP1 => 'We respect your privacy and are committed to protecting your personal information.';
+  String get privacyP1 => 'نحترم خصوصيتك ونلتزم بحماية معلوماتك الشخصية.';
 
   @override
-  String get privacyP2 => 'When you use our app, we may collect some basic information to improve your experience. This could include things like your name, email, and how you use the app.';
+  String get privacyP2 => 'عند استخدام التطبيق قد نجمع معلومات أساسية لتحسين تجربتك، مثل الاسم والبريد وطريقة الاستخدام.';
 
   @override
-  String get privacyP3 => 'We only use this information to make the app work better for you. We do not sell your information.';
+  String get privacyP3 => 'نستخدم هذه المعلومات لتحسين التطبيق فقط. لا نبيع معلوماتك.';
 
   @override
-  String get privacyP4 => 'Your data is stored safely, and you can contact us anytime if you have questions or concerns.';
+  String get privacyP4 => 'تُخزن بياناتك بأمان ويمكنك التواصل معنا في أي وقت.';
 
   @override
-  String get privacyP5 => 'By using our app, you agree to this privacy policy. We may update it in the future, and we’ll let you know if anything important changes.';
+  String get privacyP5 => 'باستخدامك التطبيق فأنت توافق على سياسة الخصوصية. قد نحدّثها مستقبلًا وسنبلغك بالتغييرات المهمة.';
 
   @override
-  String get privacyTitle => 'Privacy Policy';
+  String get privacyTitle => 'سياسة الخصوصية';
 
   @override
-  String get privacyUpdated => 'Last updated: May 2025';
+  String get privacyUpdated => 'آخر تحديث: مايو 2025';
 
   @override
-  String get profileCalendar => 'My Calendar';
+  String get profileCalendar => 'تقويمي';
 
   @override
-  String get profileConfirmDelete => 'Are you sure you want to permanently delete your account?';
+  String get profileConfirmDelete => 'هل تريد حذف حسابك نهائيًا؟';
 
   @override
-  String get profileConfirmInactive => 'Confirm password to deactivate your account';
+  String get profileConfirmInactive => 'أكّد كلمة المرور لتعطيل الحساب';
 
   @override
-  String get profileDeleteAccount => 'Delete Account';
+  String get profileDeleteAccount => 'حذف الحساب';
 
   @override
-  String get profileEditProfile => 'Edit Profile';
+  String get profileEditProfile => 'تعديل الملف';
 
   @override
-  String get profileEnterValidEmail => 'Please enter a valid email.';
+  String get profileEnterValidEmail => 'يرجى إدخال بريد صالح.';
 
   @override
-  String get profileError => 'Something went wrong.';
+  String get profileError => 'حدث خطأ ما.';
 
   @override
-  String get profileErrorSendingInvite => 'Failed to send invite.';
+  String get profileErrorSendingInvite => 'فشل إرسال الدعوة.';
 
   @override
-  String get profileGoogleNoPasswordNeeded => 'You signed in with Google. No password required.';
+  String get profileGoogleNoPasswordNeeded => 'سجلت عبر Google. لا حاجة لكلمة مرور.';
 
   @override
-  String get profileGuest => 'Guest';
+  String get profileGuest => 'ضيف';
 
   @override
-  String get profileInactiveInfo => 'Are you sure you want to deactivate your account? After 30 days, it will be permanently deleted and you won\'t be able to log in again.';
+  String get profileInactiveInfo => 'هل تريد تعطيل حسابك؟ بعد 30 يومًا سيتم حذفه نهائيًا ولن تتمكن من تسجيل الدخول.';
 
   @override
-  String get profileInviteManager => 'Invite Manager';
+  String get profileInviteManager => 'دعوة مدير';
 
   @override
-  String get profileLanguage => 'Language';
+  String get profileLanguage => 'اللغة';
 
   @override
-  String get profileLogoutConfirm => 'Are you sure you want to logout?';
+  String get profileLogoutConfirm => 'هل تريد تسجيل الخروج؟';
 
   @override
-  String get profileMakePrivate => 'Make Profile Private';
+  String get profileMakePrivate => 'جعل الملف خاصًا';
 
   @override
-  String get profileMakePublic => 'Make Profile Public';
+  String get profileMakePublic => 'جعل الملف عامًا';
 
   @override
-  String get profileManageAccount => 'Manage Account';
+  String get profileManageAccount => 'إدارة الحساب';
 
   @override
-  String get profileManagerEmail => 'Manager Email';
+  String get profileManagerEmail => 'بريد المدير';
 
   @override
-  String get profileMotto => 'Live your hobby!';
+  String get profileMotto => 'عِش هوايتك!';
 
   @override
-  String get profileMyInterests => 'My Interests';
+  String get profileMyInterests => 'اهتماماتي';
 
   @override
-  String get profileNotifications => 'Notifications';
+  String get profileNotifications => 'الإشعارات';
 
   @override
-  String get profilePrivacyPolicy => 'Privacy Policy';
+  String get profilePrivacyPolicy => 'سياسة الخصوصية';
 
   @override
-  String get profilePrivate => 'Private Profile';
+  String get profilePrivate => 'ملف خاص';
 
   @override
-  String get profilePublic => 'Public Profile';
+  String get profilePublic => 'ملف عام';
 
   @override
-  String get profileSetActive => 'Set Account to Active';
+  String get profileSetActive => 'تفعيل الحساب';
 
   @override
-  String get profileSetInactive => 'Set Account to Inactive';
+  String get profileSetInactive => 'تعطيل الحساب';
 
   @override
-  String get profilebusinessAnalytics => 'Analytics';
+  String get profilebusinessAnalytics => 'التحليلات';
 
   @override
-  String get profilebusinessArabic => 'Arabic';
+  String get profilebusinessArabic => 'العربية';
 
   @override
-  String get profilebusinessCancel => 'Cancel';
+  String get profilebusinessCancel => 'إلغاء';
 
   @override
-  String get profilebusinessConfirmLogout => 'Are you sure you want to logout?';
+  String get profilebusinessConfirmLogout => 'هل تريد تسجيل الخروج؟';
 
   @override
-  String get profilebusinessConnectStripe => 'Connect Stripe Account';
+  String get profilebusinessConnectStripe => 'ربط حساب سترايب';
 
   @override
-  String get profilebusinessConnecting => 'Connecting...';
+  String get profilebusinessConnecting => 'جارٍ الربط...';
 
   @override
-  String get profilebusinessEditBusinessInfo => 'Edit Business Info';
+  String get profilebusinessEditBusinessInfo => 'تعديل معلومات النشاط';
 
   @override
-  String get profilebusinessEnglish => 'English';
+  String get profilebusinessEnglish => 'الإنجليزية';
 
   @override
-  String get profilebusinessFrench => 'Français';
+  String get profilebusinessFrench => 'الفرنسية';
 
   @override
-  String get profilebusinessGuest => 'Business';
+  String get profilebusinessGuest => 'نشاط تجاري';
 
   @override
-  String get profilebusinessLanguage => 'Language';
+  String get profilebusinessLanguage => 'اللغة';
 
   @override
-  String get profilebusinessLogout => 'Logout';
+  String get profilebusinessLogout => 'تسجيل الخروج';
 
   @override
-  String get profilebusinessMyActivities => 'My Activities';
+  String get profilebusinessMyActivities => 'أنشطتي';
 
   @override
-  String get profilebusinessPickLogo => 'Business logo';
+  String get profilebusinessPickLogo => 'شعار النشاط';
 
   @override
-  String get profilebusinessPickLogoHint => 'Take a photo or choose from gallery';
+  String get profilebusinessPickLogoHint => 'التقاط صورة أو اختيار من المعرض';
 
   @override
-  String get profilebusinessPrivacyPolicy => 'Privacy Policy';
+  String get profilebusinessPrivacyPolicy => 'سياسة الخصوصية';
 
   @override
-  String get profilebusinessResumeStripe => 'Resume Stripe Onboarding';
+  String get profilebusinessResumeStripe => 'متابعة إعداد سترايب';
 
   @override
-  String get profilebusinessStripeConnected => 'Stripe account connected';
+  String get profilebusinessStripeConnected => 'تم ربط حساب سترايب';
 
   @override
-  String get profilebusinessStripeNotConnected => 'No Stripe account connected';
+  String get profilebusinessStripeNotConnected => 'لا يوجد حساب سترايب مرتبط';
 
   @override
-  String get profilebusinessTagline => 'Let’s grow your business with HobbySphere..';
+  String get profilebusinessTagline => 'لننمو بعملك مع HobbySphere..';
 
   @override
-  String get reactivate => 'Reactivate';
+  String get reactivate => 'إعادة تفعيل';
 
   @override
-  String get registerAddProfilePhoto => 'Tap to choose profile photo';
+  String get registerAddProfilePhoto => 'اضغط لاختيار صورة الملف';
 
   @override
-  String get registerBusiness => 'Business';
+  String get registerBusiness => 'نشاط تجاري';
 
   @override
-  String get registerBusinessName => 'Business Name';
+  String get registerBusinessName => 'اسم النشاط التجاري';
 
   @override
-  String get registerCompleteButtonsContinue => 'Continue';
+  String get registerCompleteButtonsContinue => 'متابعة';
 
   @override
-  String get registerCompleteButtonsFinish => 'Finish';
+  String get registerCompleteButtonsFinish => 'إنهاء';
 
   @override
-  String get registerCompleteButtonsSeeAll => 'See All';
+  String get registerCompleteButtonsSeeAll => 'عرض الكل';
 
   @override
-  String get registerCompleteButtonsSeeLess => 'See Less';
+  String get registerCompleteButtonsSeeLess => 'عرض أقل';
 
   @override
-  String get registerCompleteButtonsSubmitting => 'Submitting...';
+  String get registerCompleteButtonsSubmitting => 'جارٍ الإرسال...';
 
   @override
-  String get registerCompleteErrorsBusinessNameRequired => 'Business name is required.';
+  String get registerCompleteErrorsBusinessNameRequired => 'اسم النشاط مطلوب.';
 
   @override
-  String get registerCompleteErrorsDescriptionRequired => 'Description is required.';
+  String get registerCompleteErrorsDescriptionRequired => 'الوصف مطلوب.';
 
   @override
-  String get registerCompleteErrorsFirstNameRequired => 'First name is required.';
+  String get registerCompleteErrorsFirstNameRequired => 'الاسم الأول مطلوب.';
 
   @override
-  String get registerCompleteErrorsGeneric => 'Something went wrong';
+  String get registerCompleteErrorsGeneric => 'حدث خطأ ما';
 
   @override
-  String get registerCompleteErrorsLastNameRequired => 'Last name is required.';
+  String get registerCompleteErrorsLastNameRequired => 'اسم العائلة مطلوب.';
 
   @override
-  String get registerCompleteErrorsUsernameRequired => 'Username is required.';
+  String get registerCompleteErrorsUsernameRequired => 'اسم المستخدم مطلوب.';
 
   @override
-  String get registerCompleteStep1BusinessName => 'Business Name';
+  String get registerCompleteStep1BusinessName => 'اسم النشاط التجاري';
 
   @override
-  String get registerCompleteStep1FirstName => 'First Name';
+  String get registerCompleteStep1FirstName => 'الاسم الأول';
 
   @override
-  String get registerCompleteStep1FirstNameQuestion => 'What\'s your name?';
+  String get registerCompleteStep1FirstNameQuestion => 'ما اسمك؟';
 
   @override
-  String get registerCompleteStep1LastName => 'Last Name';
+  String get registerCompleteStep1LastName => 'اسم العائلة';
 
   @override
-  String get registerCompleteStep2BusinessDescription => 'Business Description';
+  String get registerCompleteStep2BusinessDescription => 'وصف النشاط التجاري';
 
   @override
-  String get registerCompleteStep2ChooseUsername => 'Choose a username';
+  String get registerCompleteStep2ChooseUsername => 'اختر اسم مستخدم';
 
   @override
-  String get registerCompleteStep2Description => 'Description';
+  String get registerCompleteStep2Description => 'الوصف';
 
   @override
-  String get registerCompleteStep2DescriptionHint1 => '• Describe your business clearly';
+  String get registerCompleteStep2DescriptionHint1 => '• صفْ نشاطك بوضوح';
 
   @override
-  String get registerCompleteStep2DescriptionHint2 => '• Keep it short and relevant (max ~250 chars)';
+  String get registerCompleteStep2DescriptionHint2 => '• اجعله موجزًا وملائمًا (حد ~250 حرفًا)';
 
   @override
-  String get registerCompleteStep2Username => 'Username';
+  String get registerCompleteStep2Username => 'اسم المستخدم';
 
   @override
-  String get registerCompleteStep2UsernameHint1 => '• Must be unique';
+  String get registerCompleteStep2UsernameHint1 => '• يجب أن يكون فريدًا';
 
   @override
-  String get registerCompleteStep2UsernameHint2 => '• No spaces or symbols';
+  String get registerCompleteStep2UsernameHint2 => '• دون مسافات أو رموز';
 
   @override
-  String get registerCompleteStep2UsernameHint3 => '• Between 3–15 characters';
+  String get registerCompleteStep2UsernameHint3 => '• بين 3–15 حرفًا';
 
   @override
-  String get registerCompleteStep2WebsiteUrl => 'Website URL (optional)';
+  String get registerCompleteStep2WebsiteUrl => 'رابط الموقع (اختياري)';
 
   @override
-  String get registerCompleteStep3BusinessLogo => 'business logo';
+  String get registerCompleteStep3BusinessLogo => 'شعار النشاط';
 
   @override
-  String get registerCompleteStep3ProfileImage => 'profile image';
+  String get registerCompleteStep3ProfileImage => 'صورة الملف';
 
   @override
-  String get registerCompleteStep3PublicProfile => 'Public Profile';
+  String get registerCompleteStep3PublicProfile => 'ملف عام';
 
   @override
-  String get registerCompleteStep3TapToChooseBanner => 'Tap to choose business banner';
+  String get registerCompleteStep3TapToChooseBanner => 'اضغط لاختيار بانر النشاط';
 
   @override
   String registerCompleteStep3TapToChooseLogo(String type) {
-    return 'Tap to choose $type';
+    return 'اضغط لاختيار $type';
   }
 
   @override
-  String get registerConfirmPassword => 'Confirm Password';
+  String get registerConfirmPassword => 'تأكيد كلمة المرور';
 
   @override
-  String get registerDescription => 'Description';
+  String get registerDescription => 'الوصف';
 
   @override
-  String get registerEmail => 'Email';
+  String get registerEmail => 'البريد الإلكتروني';
 
   @override
-  String get registerErrorBusinessInfo => 'Business information is missing.';
+  String get registerErrorBusinessInfo => 'معلومات النشاط التجاري مفقودة.';
 
   @override
-  String get registerErrorFailed => 'Registration failed';
+  String get registerErrorFailed => 'فشل التسجيل';
 
   @override
-  String get registerErrorLength => 'Password must be at least 8 characters.';
+  String get registerErrorLength => 'يجب ألا تقل كلمة المرور عن 8 أحرف.';
 
   @override
-  String get registerErrorMatch => 'Passwords do not match.';
+  String get registerErrorMatch => 'كلمتا المرور غير متطابقتين.';
 
   @override
-  String get registerErrorRequired => 'Email and password are required.';
+  String get registerErrorRequired => 'البريد وكلمة المرور مطلوبان.';
 
   @override
-  String get registerErrorSymbol => 'Password must include at least one symbol.';
+  String get registerErrorSymbol => 'يجب أن تتضمن كلمة المرور رمزًا واحدًا على الأقل.';
 
   @override
-  String get registerErrorUserInfo => 'User information is missing.';
+  String get registerErrorUserInfo => 'معلومات المستخدم مفقودة.';
 
   @override
-  String get registerFirstName => 'First Name';
+  String get registerFirstName => 'الاسم الأول';
 
   @override
-  String get registerLastName => 'Last Name';
+  String get registerLastName => 'اسم العائلة';
 
   @override
-  String get registerPassword => 'Password';
+  String get registerPassword => 'كلمة المرور';
 
   @override
-  String get registerPhoneNumber => 'Phone Number';
+  String get registerPhoneNumber => 'رقم الهاتف';
 
   @override
-  String get registerPublicProfile => 'Make my profile public';
+  String get registerPublicProfile => 'اجعل ملفي عامًا';
 
   @override
-  String get registerSelectBanner => 'Tap to choose business banner';
+  String get registerSelectBanner => 'اضغط لاختيار بانر النشاط';
 
   @override
-  String get registerSelectLogo => 'Tap to choose business logo';
+  String get registerSelectLogo => 'اضغط لاختيار شعار النشاط';
 
   @override
-  String get registerSendCode => 'Send Verification Code';
+  String get registerSendCode => 'إرسال رمز التحقق';
 
   @override
-  String get registerSuccessBusiness => 'Business registered successfully!';
+  String get registerSuccessBusiness => 'تم تسجيل النشاط التجاري!';
 
   @override
-  String get registerSuccessUser => 'User registered successfully!';
+  String get registerSuccessUser => 'تم تسجيل المستخدم!';
 
   @override
-  String get registerTitle => 'Create Account';
+  String get registerTitle => 'إنشاء حساب';
 
   @override
-  String get registerUser => 'User';
+  String get registerUser => 'مستخدم';
 
   @override
-  String get registerUsername => 'Username';
+  String get registerUsername => 'اسم المستخدم';
 
   @override
-  String get registerWebsite => 'Website';
+  String get registerWebsite => 'الموقع';
 
   @override
-  String get resetPasswordButton => 'Reset Password';
+  String get resetPasswordButton => 'إعادة تعيين كلمة المرور';
 
   @override
-  String get resetPasswordConfirm => 'Confirm Password';
+  String get resetPasswordConfirm => 'تأكيد كلمة المرور';
 
   @override
-  String get resetPasswordError => 'Something went wrong.';
+  String get resetPasswordError => 'حدث خطأ ما.';
 
   @override
-  String get resetPasswordFail => 'Failed to reset password.';
+  String get resetPasswordFail => 'فشل إعادة تعيين كلمة المرور.';
 
   @override
-  String get resetPasswordFillFields => 'Please fill all fields.';
+  String get resetPasswordFillFields => 'يرجى تعبئة كل الحقول.';
 
   @override
-  String get resetPasswordMismatch => 'Passwords do not match.';
+  String get resetPasswordMismatch => 'كلمتا المرور غير متطابقتين.';
 
   @override
-  String get resetPasswordNew => 'New Password';
+  String get resetPasswordNew => 'كلمة مرور جديدة';
 
   @override
-  String get resetPasswordSuccess => 'Password reset successfully!';
+  String get resetPasswordSuccess => 'تمت إعادة تعيين كلمة المرور!';
 
   @override
-  String get resetPasswordTitle => 'Reset Password';
+  String get resetPasswordTitle => 'إعادة تعيين كلمة المرور';
 
   @override
-  String get resetPasswordUpdating => 'Updating...';
+  String get resetPasswordUpdating => 'جارٍ التحديث...';
 
   @override
-  String get reviewAllReviews => 'Reviews';
+  String get reviewAllReviews => 'المراجعات';
 
   @override
-  String get reviewError => 'Failed to submit review';
+  String get reviewError => 'فشل إرسال المراجعة';
 
   @override
-  String get reviewMissingData => 'Please enter feedback before submitting.';
+  String get reviewMissingData => 'أدخل ملاحظاتك قبل الإرسال.';
 
   @override
-  String get reviewPlaceholder => 'Write your experience...';
+  String get reviewPlaceholder => 'اكتب تجربتك...';
 
   @override
-  String get reviewRating => 'Rating';
+  String get reviewRating => 'التقييم';
 
   @override
-  String get reviewSubmit => 'Submit Review';
+  String get reviewSubmit => 'إرسال المراجعة';
 
   @override
-  String get reviewSubmitting => 'Submitting...';
+  String get reviewSubmitting => 'جارٍ الإرسال...';
 
   @override
-  String get reviewSuccess => 'Review submitted';
+  String get reviewSuccess => 'تم إرسال المراجعة';
 
   @override
-  String get reviewTitle => 'Add Your Review';
+  String get reviewTitle => 'أضف مراجعتك';
 
   @override
-  String get reviewYourFeedback => 'Your Feedback';
+  String get reviewYourFeedback => 'ملاحظاتك';
 
   @override
-  String get reviewsNoReviews => 'No reviews found.';
+  String get reviewsNoReviews => 'لا توجد مراجعات.';
 
   @override
-  String get reviewsTitle => 'Customer Reviews';
+  String get reviewsTitle => 'مراجعات العملاء';
 
   @override
-  String get searchPlaceholder => 'Search';
+  String get searchPlaceholder => 'بحث';
 
   @override
-  String get selectMethodAlreadyHaveAccount => 'Already have an account?';
+  String get selectMethodAlreadyHaveAccount => 'لديك حساب؟';
 
   @override
-  String get selectMethodContinue => 'Continue';
+  String get selectMethodContinue => 'متابعة';
 
   @override
-  String get selectMethodContinueWithEmail => 'Continue with Email';
+  String get selectMethodContinueWithEmail => 'المتابعة بالبريد';
 
   @override
-  String get selectMethodContinueWithFacebook => 'Continue with Facebook';
+  String get selectMethodContinueWithFacebook => 'المتابعة عبر فيسبوك';
 
   @override
-  String get selectMethodContinueWithGoogle => 'Continue with Google';
+  String get selectMethodContinueWithGoogle => 'المتابعة عبر Google';
 
   @override
-  String get selectMethodCreatePassword => 'Create password';
+  String get selectMethodCreatePassword => 'إنشاء كلمة مرور';
 
   @override
-  String get selectMethodEnterPassword => 'Enter password';
+  String get selectMethodEnterPassword => 'أدخل كلمة المرور';
 
   @override
-  String get selectMethodLoading => 'Loading...';
+  String get selectMethodLoading => 'جارٍ التحميل...';
 
   @override
-  String get selectMethodLogin => 'Log in';
+  String get selectMethodLogin => 'تسجيل الدخول';
 
   @override
-  String get selectMethodOr => 'or';
+  String get selectMethodOr => 'أو';
 
   @override
-  String get selectMethodPasswordRulesRule1 => '8 characters (20 max)';
+  String get selectMethodPasswordRulesRule1 => '8 أحرف (بحد أقصى 20)';
 
   @override
-  String get selectMethodPasswordRulesRule2 => '1 letter, 1 number, 1 special character (# ? ! @)';
+  String get selectMethodPasswordRulesRule2 => 'حرف ورقم ورمز خاص (# ? ! @)';
 
   @override
-  String get selectMethodPasswordRulesRule3 => 'Strong password';
+  String get selectMethodPasswordRulesRule3 => 'كلمة مرور قوية';
 
   @override
-  String get selectMethodPhonePlaceholder => 'Phone number';
+  String get selectMethodPhonePlaceholder => 'رقم الهاتف';
 
   @override
-  String get selectMethodRoleBusiness => 'Business';
+  String get selectMethodRoleBusiness => 'نشاط تجاري';
 
   @override
-  String get selectMethodRoleUser => 'User';
+  String get selectMethodRoleUser => 'مستخدم';
 
   @override
-  String get selectMethodSaveInfo => 'Save login info on your devices to log in automatically next time.';
+  String get selectMethodSaveInfo => 'احفظ معلومات الدخول لتسجيل الدخول تلقائيًا لاحقًا.';
 
   @override
-  String get selectMethodSignUp => 'Sign Up';
+  String get selectMethodSignUp => 'إنشاء حساب';
 
   @override
-  String get selectMethodTitle => 'Sign up';
+  String get selectMethodTitle => 'إنشاء حساب';
 
   @override
-  String get singleChatAccessDeniedMsg => 'You are not friends with this user.';
+  String get singleChatAccessDeniedMsg => 'لست صديقًا لهذا المستخدم.';
 
   @override
-  String get singleChatAccessDeniedTitle => 'Access Denied';
+  String get singleChatAccessDeniedTitle => 'الوصول مرفوض';
 
   @override
-  String get singleChatBlock => 'Block';
+  String get singleChatBlock => 'حظر';
 
   @override
-  String get singleChatBlockConfirm => 'Are you sure you want to block this user?';
+  String get singleChatBlockConfirm => 'هل تريد حظر هذا المستخدم؟';
 
   @override
-  String get singleChatBlockTitle => 'Block User';
+  String get singleChatBlockTitle => 'حظر المستخدم';
 
   @override
-  String get singleChatBlockedByThem => 'This user has blocked you. You can\'t send messages.';
+  String get singleChatBlockedByThem => 'قام هذا المستخدم بحظرك. لا يمكنك إرسال رسائل.';
 
   @override
-  String get singleChatCancel => 'Cancel';
+  String get singleChatCancel => 'إلغاء';
 
   @override
-  String get singleChatDelete => 'Delete';
+  String get singleChatDelete => 'حذف';
 
   @override
-  String get singleChatDeleteConfirm => 'Are you sure you want to delete the selected messages?';
+  String get singleChatDeleteConfirm => 'هل تريد حذف الرسائل المحددة؟';
 
   @override
-  String get singleChatDeleteTitle => 'Delete Messages';
+  String get singleChatDeleteTitle => 'حذف الرسائل';
 
   @override
-  String get singleChatErrorFetching => 'Could not fetch messages.';
+  String get singleChatErrorFetching => 'تعذر جلب الرسائل.';
 
   @override
-  String get singleChatErrorTitle => 'Error';
+  String get singleChatErrorTitle => 'خطأ';
 
   @override
-  String get singleChatInputPlaceholder => 'Type a message...';
+  String get singleChatInputPlaceholder => 'اكتب رسالة...';
 
   @override
-  String get singleChatUnblock => 'Unblock';
+  String get singleChatUnblock => 'إلغاء الحظر';
 
   @override
-  String get singleChatUnblockConfirm => 'Are you sure you want to unblock this user?';
+  String get singleChatUnblockConfirm => 'هل تريد إلغاء حظر هذا المستخدم؟';
 
   @override
-  String get singleChatUnblockTitle => 'Unblock User';
+  String get singleChatUnblockTitle => 'إلغاء حظر المستخدم';
 
   @override
-  String get singleChatYouBlocked => 'You have blocked this user. Unblock to continue chatting.';
+  String get singleChatYouBlocked => 'لقد قمت بحظر هذا المستخدم. ألغِ الحظر للمتابعة.';
 
   @override
-  String get socialAddPost => 'Post';
+  String get socialAddPost => 'منشور';
 
   @override
-  String get socialChat => 'Chat';
+  String get socialChat => 'دردشة';
 
   @override
-  String get socialEmpty => 'No posts available.';
+  String get socialEmpty => 'لا توجد منشورات.';
 
   @override
-  String get socialError => 'An unexpected error occurred';
+  String get socialError => 'حدث خطأ غير متوقع';
 
   @override
-  String get socialNotifications => 'Alerts';
+  String get socialNotifications => 'التنبيهات';
 
   @override
-  String get socialMyPosts => 'My Posts';
+  String get socialMyPosts => 'منشوراتي';
 
   @override
-  String get myPostsTitle => 'My Posts';
+  String get myPostsTitle => 'منشوراتي';
 
   @override
-  String get deletePostTitle => 'Delete post?';
+  String get deletePostTitle => 'حذف المنشور؟';
 
   @override
-  String get deletePostConfirm => 'This action cannot be undone.';
+  String get deletePostConfirm => 'لا يمكن التراجع عن هذا الإجراء.';
 
   @override
-  String get deletePostSuccess => 'Post deleted';
+  String get deletePostSuccess => 'تم حذف المنشور';
 
   @override
-  String get deletePostFailed => 'Failed to delete';
+  String get deletePostFailed => 'فشل الحذف';
 
   @override
-  String get socialSearchFriend => 'Search ';
+  String get socialSearchFriend => 'بحث ';
 
   @override
   String get socialTitle => 'HobbySphere';
 
   @override
-  String get stripeError => 'Error';
+  String get stripeError => 'خطأ';
 
   @override
-  String get stripePay50 => 'Pay \$50';
+  String get stripePay50 => 'ادفع \$50';
 
   @override
-  String get stripePayNow => 'Proceed to Payment';
+  String get stripePayNow => 'المتابعة للدفع';
 
   @override
-  String get stripePaymentFailed => 'Payment Failed';
+  String get stripePaymentFailed => 'فشل الدفع';
 
   @override
-  String get stripeSuccessMessage => 'Payment completed!';
+  String get stripeSuccessMessage => 'اكتمل الدفع!';
 
   @override
-  String get stripeSuccessTitle => 'Success';
+  String get stripeSuccessTitle => 'نجاح';
 
   @override
-  String get tabExplore => 'Explore';
+  String get tabExplore => 'استكشاف';
 
   @override
-  String get tabHome => 'Home';
+  String get tabHome => 'الرئيسية';
 
   @override
-  String get tabProfile => 'Profile';
+  String get tabProfile => 'الملف الشخصي';
 
   @override
-  String get tabSocial => 'Community';
+  String get tabSocial => 'المجتمع';
 
   @override
-  String get tabTickets => 'Tickets';
+  String get tabTickets => 'التذاكر';
 
   @override
-  String get tabSettings => 'Settings';
+  String get tabSettings => 'الإعدادات';
 
   @override
-  String get tabnavigateActivities => 'Activities';
+  String get tabnavigateActivities => 'الأنشطة';
 
   @override
-  String get tabnavigateAnalytics => 'Analytics';
+  String get tabnavigateAnalytics => 'التحليلات';
 
   @override
-  String get tabnavigateBookings => 'Bookings';
+  String get tabnavigateBookings => 'الحجوزات';
 
   @override
-  String get tabnavigateHome => 'Home';
+  String get tabnavigateHome => 'الرئيسية';
 
   @override
-  String get tabActivities => 'Activities';
+  String get tabActivities => 'الأنشطة';
 
   @override
-  String get tabAnalytics => 'Analytics';
+  String get tabAnalytics => 'التحليلات';
 
   @override
-  String get tabBookings => 'Bookings';
+  String get tabBookings => 'الحجوزات';
 
   @override
-  String get tabnavigateProfile => 'Profile';
+  String get tabnavigateProfile => 'الملف';
 
   @override
-  String get ticketCancel => 'Cancel';
+  String get ticketCancel => 'إلغاء';
 
   @override
-  String get ticketCancelConfirm => 'Are you sure you want to cancel this ticket?';
+  String get ticketCancelConfirm => 'هل تريد إلغاء هذه التذكرة؟';
 
   @override
-  String get ticketCancelTitle => 'Cancel Ticket';
+  String get ticketCancelTitle => 'إلغاء التذكرة';
 
   @override
-  String get ticketConfirm => 'Confirm';
+  String get ticketConfirm => 'تأكيد';
 
   @override
-  String get ticketDelete => 'Delete';
+  String get ticketDelete => 'حذف';
 
   @override
-  String get ticketDeleteConfirm => 'Are you sure you want to permanently delete this canceled ticket?';
+  String get ticketDeleteConfirm => 'هل تريد حذف هذه التذكرة الملغاة نهائيًا؟';
 
   @override
-  String get ticketDeleteTitle => 'Delete Ticket';
+  String get ticketDeleteTitle => 'حذف التذكرة';
 
   @override
   String ticketEmpty(String status) {
-    return 'No tickets in $status.';
+    return 'لا توجد تذاكر في $status.';
   }
 
   @override
-  String get ticketLocation => 'Location';
+  String get ticketLocation => 'الموقع';
 
   @override
-  String get ticketReturnConfirm => 'Do you want to move this ticket back to Pending?';
+  String get ticketReturnConfirm => 'هل تريد إرجاع التذكرة إلى قيد الانتظار؟';
 
   @override
-  String get ticketReturnTitle => 'Return to Pending';
+  String get ticketReturnTitle => 'إرجاع إلى الانتظار';
 
   @override
-  String get ticketReturnToPending => 'Return to Pending';
+  String get ticketReturnToPending => 'إرجاع إلى قيد الانتظار';
 
   @override
-  String get ticketScreenTitle => 'Tickets';
+  String get ticketScreenTitle => 'التذاكر';
 
   @override
-  String get ticketStatusCanceled => 'Canceled';
+  String get ticketStatusCanceled => 'ملغاة';
 
   @override
-  String get ticketStatusCompleted => 'Completed';
+  String get ticketStatusCompleted => 'مكتملة';
 
   @override
-  String get ticketStatusPending => 'Pending';
+  String get ticketStatusPending => 'قيد الانتظار';
 
   @override
-  String get ticketTime => 'Time';
+  String get ticketTime => 'الوقت';
 
   @override
-  String get ticketsTitle => 'Tickets';
+  String get ticketsTitle => 'التذاكر';
 
   @override
-  String get ticketsEmptyPending => 'No pending tickets.';
+  String get ticketsEmptyPending => 'لا توجد تذاكر معلّقة.';
 
   @override
-  String get ticketsEmptyCompleted => 'No completed tickets.';
+  String get ticketsEmptyCompleted => 'لا توجد تذاكر مكتملة.';
 
   @override
-  String get ticketsEmptyCanceled => 'No canceled tickets.';
+  String get ticketsEmptyCanceled => 'لا توجد تذاكر ملغاة.';
 
   @override
-  String get ticketsEmptyGeneric => 'No tickets found.';
+  String get ticketsEmptyGeneric => 'لا توجد تذاكر.';
 
   @override
-  String get ticketsDelete => 'Delete';
+  String get ticketsDelete => 'حذف';
 
   @override
-  String get ticketsDeleteTitle => 'Delete ticket?';
+  String get ticketsDeleteTitle => 'حذف التذكرة؟';
 
   @override
-  String get ticketsDeleteConfirm => 'This will remove the canceled ticket.';
+  String get ticketsDeleteConfirm => 'سيتم حذف التذكرة الملغاة.';
 
   @override
-  String get ticketsCancelRequested => 'ticket cancel requests';
+  String get ticketsCancelRequested => 'طلبات إلغاء التذكرة';
 
   @override
-  String get theme => 'theme';
+  String get theme => 'السمة';
 
   @override
-  String get themeDark => 'Dark';
+  String get themeDark => 'داكن';
 
   @override
-  String get verifyCodeButton => 'Verify Code';
+  String get verifyCodeButton => 'تحقق من الرمز';
 
   @override
-  String get verifyCodeFail => 'Failed to verify code.';
+  String get verifyCodeFail => 'فشل التحقق من الرمز.';
 
   @override
-  String get verifyCodeInvalid => 'Invalid code.';
+  String get verifyCodeInvalid => 'رمز غير صالح.';
 
   @override
-  String get verifyCodePlaceholder => 'Verification Code';
+  String get verifyCodePlaceholder => 'رمز التحقق';
 
   @override
-  String get verifyCodeRequired => 'Enter the verification code.';
+  String get verifyCodeRequired => 'أدخل رمز التحقق.';
 
   @override
-  String get verifyCodeSubtitle => 'We sent a code to your email';
+  String get verifyCodeSubtitle => 'أرسلنا رمزًا إلى بريدك';
 
   @override
-  String get verifyCodeTitle => 'Enter Code';
+  String get verifyCodeTitle => 'أدخل الرمز';
 
   @override
-  String get verifyCodeVerifying => 'Verifying...';
+  String get verifyCodeVerifying => 'جارٍ التحقق...';
 
   @override
-  String get verifyEnterCode => 'Enter the 6-digit verification code';
+  String get verifyEnterCode => 'أدخل رمز التحقق المؤلف من 6 أرقام';
 
   @override
-  String get verifyFullCodeError => 'Please enter the full 6-digit code.';
+  String get verifyFullCodeError => 'يرجى إدخال الرمز الكامل المكوّن من 6 أرقام.';
 
   @override
-  String get verifyInvalidCode => 'Invalid or expired code.';
+  String get verifyInvalidCode => 'رمز غير صالح أو منتهي.';
 
   @override
-  String get verifyResendBtn => 'Resend Code';
+  String get verifyResendBtn => 'إعادة إرسال الرمز';
 
   @override
-  String get verifyResendFailed => 'Failed to resend code.';
+  String get verifyResendFailed => 'فشل إعادة إرسال الرمز.';
 
   @override
-  String get verifyResent => 'Code resent. Please check your email or phone.';
+  String get verifyResent => 'تمت إعادة إرسال الرمز. تحقق من بريدك أو هاتفك.';
 
   @override
-  String get verifySuccessBusiness => 'Business account verified successfully!';
+  String get verifySuccessBusiness => 'تم توثيق حساب النشاط التجاري!';
 
   @override
-  String get verifySuccessUser => 'Account verified successfully!';
+  String get verifySuccessUser => 'تم توثيق الحساب بنجاح!';
 
   @override
-  String get verifyVerifyBtn => 'Verify';
+  String get verifyVerifyBtn => 'تحقق';
 
   @override
-  String get yes => 'Yes';
+  String get yes => 'نعم';
 
   @override
-  String get fieldTitle => 'Title';
+  String get fieldTitle => 'العنوان';
 
   @override
-  String get hintTitle => 'Activity title';
+  String get hintTitle => 'عنوان النشاط';
 
   @override
-  String get selectActivityType => 'Select Activity Type';
+  String get selectActivityType => 'اختر نوع النشاط';
 
   @override
-  String get fieldDescription => 'Description';
+  String get fieldDescription => 'الوصف';
 
   @override
-  String get hintDescription => 'Describe your activity';
+  String get hintDescription => 'صف نشاطك';
 
   @override
-  String get searchLocation => 'Search address';
+  String get searchLocation => 'ابحث عن العنوان';
 
   @override
-  String get getMyLocation => 'Get My Location';
+  String get getMyLocation => 'احصل على موقعي';
 
   @override
-  String get fieldMaxParticipants => 'Max Participants';
+  String get fieldMaxParticipants => 'الحد الأقصى للمشاركين';
 
   @override
-  String get hintMaxParticipants => 'Enter a number';
+  String get hintMaxParticipants => 'أدخل رقمًا';
 
   @override
-  String get fieldPrice => 'Price';
+  String get fieldPrice => 'السعر';
 
   @override
-  String get fieldStartDateTime => 'Start Date & Time';
+  String get fieldStartDateTime => 'تاريخ ووقت البدء';
 
   @override
-  String get fieldEndDateTime => 'End Date & Time';
+  String get fieldEndDateTime => 'تاريخ ووقت الانتهاء';
 
   @override
-  String get pickImage => 'Pick an Image';
+  String get pickImage => 'اختر صورة';
 
   @override
-  String get submit => 'Submit';
+  String get submit => 'إرسال';
 
   @override
-  String get errorAuthRequired => 'You must be logged in.';
+  String get errorAuthRequired => 'يجب تسجيل الدخول.';
 
   @override
-  String get bookingsMyBookings => 'My Bookings';
+  String get bookingsMyBookings => 'حجوزاتي';
 
   @override
-  String get bookingsByUser => 'Booked by';
+  String get bookingsByUser => 'حجز بواسطة';
 
   @override
-  String get bookingsStatus => 'Status';
+  String get bookingsStatus => 'الحالة';
 
   @override
-  String get bookingsPaid => 'Paid';
+  String get bookingsPaid => 'مدفوع';
 
   @override
-  String get bookingsReject => 'Reject';
+  String get bookingsReject => 'رفض';
 
   @override
-  String get bookingsUnreject => 'Unreject';
+  String get bookingsUnreject => 'إلغاء الرفض';
 
   @override
-  String get bookingsMarkPaid => 'Mark as Paid';
+  String get bookingsMarkPaid => 'وضع كمدفوع';
 
   @override
-  String get bookingsDetails => 'View Details';
+  String get bookingsDetails => 'عرض التفاصيل';
 
   @override
-  String get activitiesUnnamed => 'Unnamed Activity';
+  String get activitiesUnnamed => 'نشاط غير مسمى';
 
   @override
-  String get upcoming => 'Upcoming';
+  String get upcoming => 'قادمة';
 
   @override
-  String get terminated => 'Terminated';
+  String get terminated => 'منتهية';
 
   @override
-  String get editBusinessInfo => 'Edit Business Info';
+  String get editBusinessInfo => 'تعديل معلومات النشاط';
 
   @override
-  String get myActivities => 'My Activities';
+  String get myActivities => 'أنشطتي';
 
   @override
-  String get analytics => 'Analytics';
+  String get analytics => 'تحليلات';
 
   @override
-  String get notifications => 'Notifications';
+  String get notifications => 'إشعارات';
 
   @override
-  String get inviteManager => 'Invite Manager';
+  String get inviteManager => 'دعوة مدير';
 
   @override
-  String get privacyPolicy => 'Privacy Policy';
+  String get privacyPolicy => 'سياسة الخصوصية';
 
   @override
-  String get language => 'Language';
+  String get language => 'اللغة';
 
   @override
-  String get logout => 'Logout';
+  String get logout => 'تسجيل الخروج';
 
   @override
-  String get manageAccount => 'Manage Account';
+  String get manageAccount => 'إدارة الحساب';
 
   @override
-  String get toggleVisibility => 'Toggle Visibility';
+  String get toggleVisibility => 'تبديل الظهور';
 
   @override
-  String get setInactive => 'Set Account Inactive';
+  String get setInactive => 'تعطيل الحساب';
 
   @override
-  String get setActive => 'Reactivate Account';
+  String get setActive => 'إعادة تفعيل الحساب';
 
   @override
-  String get deleteBusiness => 'Delete Business';
+  String get deleteBusiness => 'حذف النشاط';
 
   @override
-  String get confirmPassword => 'Confirm Password';
+  String get confirmPassword => 'تأكيد كلمة المرور';
 
   @override
-  String get enterPassword => 'Please enter your password';
+  String get enterPassword => 'أدخل كلمة المرور';
 
   @override
-  String get statusUpdated => 'Status updated successfully';
+  String get statusUpdated => 'تم تحديث الحالة';
 
   @override
-  String get visibilityUpdated => 'Visibility updated successfully';
+  String get visibilityUpdated => 'تم تحديث الظهور';
 
   @override
-  String get businessDeleted => 'Business deleted successfully';
+  String get businessDeleted => 'تم حذف النشاط التجاري';
 
   @override
-  String get errorOccurred => 'An error occurred. Please try again.';
+  String get errorOccurred => 'حدث خطأ. حاول مجددًا.';
 
   @override
-  String get publicProfile => 'Public Profile';
+  String get publicProfile => 'ملف عام';
 
   @override
-  String get privateProfile => 'Private Profile';
+  String get privateProfile => 'ملف خاص';
 
   @override
-  String get businessGrowMessage => 'Let\'s grow your business with HobbySphere..';
+  String get businessGrowMessage => 'لننمو بعملك مع HobbySphere..';
 
   @override
-  String get stripeAccountConnected => 'Stripe account connected';
+  String get stripeAccountConnected => 'حساب سترايب متصل';
 
   @override
-  String get deleteAccount => 'Delete Account';
+  String get deleteAccount => 'حذف الحساب';
 
   @override
-  String get stripeAccountNotConnected => 'stripe Account not connected';
+  String get stripeAccountNotConnected => 'حساب سترايب غير متصل';
 
   @override
-  String get registerOnStripe => ' register on stripe account';
+  String get registerOnStripe => ' سجّل على حساب سترايب';
 
   @override
-  String get businessUsersTitle => 'Business Users';
+  String get businessUsersTitle => 'مستخدمو النشاط';
 
   @override
-  String get addUser => 'Add User';
+  String get addUser => 'إضافة مستخدم';
 
   @override
-  String get phoneNumber => 'Phone Number';
+  String get phoneNumber => 'رقم الهاتف';
 
   @override
-  String get provideEmailOrPhone => ' provide email or phoneNumber';
+  String get provideEmailOrPhone => ' أدخل البريد أو رقم الهاتف';
 
   @override
-  String get alreadyBooked => ' alreadyBooked';
+  String get alreadyBooked => ' محجوز مسبقًا';
 
   @override
-  String get save => 'save';
+  String get save => 'حفظ';
 
   @override
-  String get bookingsFiltersCancelRequested => 'cancel request';
+  String get bookingsFiltersCancelRequested => 'طلب إلغاء';
 
   @override
-  String get inviteManagerTitle => 'Invite Manager';
+  String get inviteManagerTitle => 'دعوة مدير';
 
   @override
-  String get inviteManagerInstruction => 'Enter the manager\'s email. We’ll send them an invitation.';
+  String get inviteManagerInstruction => 'أدخل بريد المدير. سنرسل له دعوة.';
 
   @override
-  String get managerEmailLabel => 'Manager Email';
+  String get managerEmailLabel => 'بريد المدير';
 
   @override
   String get managerEmailHint => 'name@example.com';
 
   @override
-  String get sendInvite => 'Send Invite';
+  String get sendInvite => 'إرسال الدعوة';
 
   @override
-  String get sending => 'Sending…';
+  String get sending => 'جارٍ الإرسال…';
 
   @override
-  String get invalidEmail => 'Please enter a valid email address';
+  String get invalidEmail => 'يرجى إدخال بريد صالح';
 
   @override
-  String get deactivateTitle => 'Are you sure you want to deactivate your account?';
+  String get deactivateTitle => 'هل تريد تعطيل حسابك؟';
 
   @override
-  String get deactivateWarning => 'After 30 days, it will be permanently deleted and you won\'t be able to log in again.';
+  String get deactivateWarning => 'بعد 30 يومًا سيتم حذفه نهائيًا ولن تتمكن من تسجيل الدخول.';
 
   @override
-  String get currentPasswordLabel => 'Current Password';
+  String get currentPasswordLabel => 'كلمة المرور الحالية';
 
   @override
-  String get fieldRequired => 'This field is required';
+  String get fieldRequired => 'هذا الحقل مطلوب';
 
   @override
-  String get bookingNotAvailable => 'This activity is not available for the selected participants.';
+  String get bookingNotAvailable => 'هذا النشاط غير متاح لعدد المشاركين المحدد.';
 
   @override
-  String get editInterestsTitle => 'Edit Your Interests';
+  String get editInterestsTitle => 'تعديل اهتماماتك';
 
   @override
-  String get interestSaved => 'Interests saved successfully';
+  String get interestSaved => 'تم حفظ الاهتمامات';
 
   @override
-  String get selected => 'selected';
+  String get selected => 'محدّد';
 
   @override
-  String get somethingWentWrong => 'Something went wrong';
+  String get somethingWentWrong => 'حدث خطأ ما';
 
   @override
-  String get retry => 'Retry';
+  String get retry => 'إعادة المحاولة';
 }

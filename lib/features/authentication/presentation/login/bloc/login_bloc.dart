@@ -6,6 +6,7 @@ import 'package:hobby_sphere/features/authentication/domain/usecases/login/login
 import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_user_phone.dart';
 import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_google.dart';
 import 'package:hobby_sphere/features/authentication/domain/usecases/login/reactivate_account.dart';
+
 import 'login_event.dart';
 import 'login_state.dart';
 
@@ -32,6 +33,8 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
           showReactivate: false,
           info: null,
           error: null,
+          needsOnboarding: false,
+          onboardUserId: 0,
         ),
       ),
     );
@@ -76,7 +79,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
 
     on<LoginSubmitted>(_onSubmit);
     on<LoginReactivateConfirmed>(_onReactivate);
-    on<LoginGooglePressed>(_onGoogle); // important: this event carries idToken
+    on<LoginGooglePressed>(_onGoogle);
   }
 
   Future<void> _onSubmit(LoginSubmitted e, Emitter<LoginState> emit) async {
@@ -86,6 +89,8 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         error: null,
         info: null,
         showReactivate: false,
+        needsOnboarding: false,
+        onboardUserId: 0,
       ),
     );
     final isUser = state.roleIndex == 0;
@@ -138,9 +143,18 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
   }
 
   Future<void> _onGoogle(LoginGooglePressed e, Emitter<LoginState> emit) async {
-    emit(state.copyWith(loading: true, error: null, info: null));
+    emit(
+      state.copyWith(
+        loading: true,
+        error: null,
+        info: null,
+        needsOnboarding: false,
+        onboardUserId: 0,
+      ),
+    );
     try {
-      final r = await loginGoogle(e.idToken); // pass the Google idToken
+      final r = await loginGoogle(e.idToken);
+
       if (r.wasInactive) {
         emit(
           state.copyWith(
@@ -151,18 +165,37 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
             info: r.message ?? 'Account inactive. Reactivate?',
           ),
         );
-      } else if (r.error?.isNotEmpty == true) {
+        return;
+      }
+
+      if (r.error?.isNotEmpty == true) {
         emit(state.copyWith(loading: false, error: r.error));
-      } else {
+        return;
+      }
+
+      // NEW USER via Google? → go to Interests Onboarding
+      if (r.isNewUser) {
         emit(
           state.copyWith(
             loading: false,
-            token: r.token,
-            businessId: r.businessId,
-            info: r.message ?? 'Google login successful',
+            token: r.token, // keep for subsequent calls
+            needsOnboarding: true, // flag for UI navigation
+            onboardUserId: r.userId, // to call /users/{id}/interests
+            info: r.message ?? 'Welcome! Let’s pick your interests.',
           ),
         );
+        return;
       }
+
+      // existing user → normal login
+      emit(
+        state.copyWith(
+          loading: false,
+          token: r.token,
+          businessId: r.businessId,
+          info: r.message ?? 'Google login successful',
+        ),
+      );
     } catch (err) {
       emit(
         state.copyWith(loading: false, error: 'Google sign-in failed: $err'),
