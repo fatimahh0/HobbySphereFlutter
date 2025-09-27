@@ -1,61 +1,85 @@
-// lib/shared/widgets/connection_banner.dart
-// Show banner only when OFFLINE. No banner while CONNECTING (no flicker).
+import 'package:flutter/material.dart'; // UI basics
+import 'package:flutter_bloc/flutter_bloc.dart'; // read cubit state
+import '../network/connection_cubit.dart'; // our cubit
+import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n strings
 
-import 'package:flutter/material.dart'; // UI
-import 'package:flutter_bloc/flutter_bloc.dart'; // bloc
-import '../network/connection_cubit.dart'; // cubit
-import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
-
+/// A thin banner that appears only when offline/connecting.
 class ConnectionBanner extends StatelessWidget {
-  const ConnectionBanner({super.key}); // const
+  // place banner at top of any screen or globally in App
+  const ConnectionBanner({super.key}); // const constructor
 
   @override
   Widget build(BuildContext context) {
+    // listen to cubit to know connection state
     return BlocBuilder<ConnectionCubit, ConnectionStateX>(
-      buildWhen: (p, n) => p != n, // rebuild only on change
       builder: (context, state) {
-        // ❗ only show when OFFLINE (hide for CONNECTED + CONNECTING)
-        if (state != ConnectionStateX.offline) {
+        // if connected => render nothing (zero height)
+        if (state == ConnectionStateX.connected) {
           return const SizedBox.shrink(); // hide
         }
 
-        // theme + i18n
-        final cs = Theme.of(context).colorScheme; // colors
-        final t = AppLocalizations.of(context)!; // texts
+        // get theme colors
+        final cs = Theme.of(context).colorScheme; // color scheme
+        final t = AppLocalizations.of(context)!; // localized strings
+
+        // choose background color per state
+        final bg = state == ConnectionStateX.offline
+            ? cs
+                  .errorContainer // more alerting color
+            : cs.surfaceContainerHighest; // neutral while connecting
+
+        // choose text per state
+        final text = state == ConnectionStateX.offline
+            ? t
+                  .connectionOffline // "Not connected"
+            : t.connectionConnecting; // "Connecting..."
 
         return Material(
-          color: cs.errorContainer, // alert background
-          elevation: 3, // subtle shadow
+          // material to apply color/elevation
+          color: bg, // background color
+          elevation: 2, // subtle shadow
           child: SafeArea(
-            bottom: false, // top only
+            // keep under status bar
+            bottom: false, // only top safe area
             child: Container(
-              height: 44, // comfy height
-              padding: const EdgeInsets.symmetric(horizontal: 12), // inner pad
+              height: 40, // slim bar
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+              ), // left/right padding
               child: Row(
                 children: [
-                  Icon(
-                    Icons.wifi_off_rounded,
-                    size: 20,
-                    color: cs.onErrorContainer,
-                  ), // icon
-                  const SizedBox(width: 10), // gap
+                  if (state == ConnectionStateX.connecting)
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ), // small spinner
+                  if (state == ConnectionStateX.connecting)
+                    const SizedBox(width: 8), // gap after spinner
                   Expanded(
                     child: Text(
-                      t.connectionOffline, // "Not connected"
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis, // one line
+                      text, // localized label
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: cs.onErrorContainer, // readable text
-                        fontWeight: FontWeight.w700, // strong
+                        color: cs.onSurface, // readable text color
+                        fontWeight: FontWeight.w600, // semi-bold
                       ),
+                      maxLines: 1, // single line
+                      overflow: TextOverflow.ellipsis, // no wrap
                     ),
                   ),
-                  FilledButton.tonal(
-                    onPressed: () => context
-                        .read<ConnectionCubit>()
-                        .retryNow(), // re-check now
-                    child: Text(t.connectionTryAgain), // "Try again"
-                  ),
+                  if (state == ConnectionStateX.offline)
+                    TextButton(
+                      onPressed: () => context
+                          .read<ConnectionCubit>()
+                          .retryNow(), // force re-check
+                      child: Text(
+                        t.connectionTryAgain, // "Try again"
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: cs.primary, // themed accent
+                          fontWeight: FontWeight.w700, // bold
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

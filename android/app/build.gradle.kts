@@ -1,5 +1,4 @@
 // android/app/build.gradle.kts
-
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -24,7 +23,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
@@ -39,15 +37,17 @@ android {
 flutter {
     source = "../.."
 }
-
 dependencies {
-    // Material/AppCompat required by Stripe
+    // Stripe needs these (keep)
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.multidex:multidex:2.0.1")
 
-    // Jetpack Compose (Stripe's PaymentSheet uses Compose internally)
-    implementation(platform("androidx.compose:compose-bom:2024.06.00")) // BOM controls versions below
-    implementation("androidx.compose.ui:ui")
+    // 🔧 Force a consistent Compose version for everything (including Stripe)
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+    implementation("androidx.compose.ui:ui")              // runtime UI
     implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.runtime:runtime")
+    // (No need to add material3/activity-compose, etc., since you don't use them)
 }
+
