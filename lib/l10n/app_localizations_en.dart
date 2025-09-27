@@ -2387,6 +2387,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get getStarted => 'Get Started';
 
   @override
+  String get connectionConnecting => 'Connecting…';
+
+  @override
+  String get connectionOffline => 'Not connected';
+
+  @override
+  String get connectionTryAgain => 'Try again';
+
+  @override
+  String get splashNoConnectionTitle => 'No internet connection';
+
+  @override
+  String get splashNoConnectionDesc => 'Please check your Wi-Fi or mobile data and try again.';
+
+  @override
   String get interestSaved => 'Interests saved successfully';
 
   @override

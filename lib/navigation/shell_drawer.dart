@@ -1,15 +1,15 @@
 // ===== Flutter 3.35.x =====
-// ShellDrawer — drawer navigation for user & business roles.
-// Final: Clean AppBar (menu icon only), full drawer with scrollbar.
+// ShellDrawer — guest-aware drawer navigation (user + business).
+// Guest: token == '' → only Home/Explore open; others show NotLoggedInGate.
 
-import 'dart:convert' show base64Url, jsonDecode, utf8; // << parse JWT
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:convert' show base64Url, jsonDecode, utf8; // parse JWT
+import 'package:flutter/material.dart'; // Flutter UI
+import 'package:flutter/services.dart'; // Haptics + sys UI
+import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC
 
-import 'package:hobby_sphere/app/router/router.dart';
-import 'package:hobby_sphere/core/constants/app_role.dart';
-import 'package:hobby_sphere/core/network/globals.dart' as g;
+import 'package:hobby_sphere/app/router/router.dart'; // routes
+import 'package:hobby_sphere/core/constants/app_role.dart'; // role enum
+import 'package:hobby_sphere/core/network/globals.dart' as g; // base url
 
 // ==== Business Activity ====
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
@@ -69,11 +69,12 @@ import 'package:hobby_sphere/features/activities/common/domain/usecases/get_curr
 
 // ==== User Screens ====
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
-import 'package:hobby_sphere/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart';
+import 'package:hobby_sphere/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart'
+    show ExploreScreen;
 import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/screens/community_screen.dart';
 import 'package:hobby_sphere/features/activities/user/tickets/presentation/screens/user_tickets_screen.dart';
 
-// ==== User Home DI (services/repos/usecases) ====
+// ==== User Home DI ====
 import 'package:hobby_sphere/features/activities/user/userHome/data/services/home_service.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/data/repositories/home_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_interest_based_items.dart';
@@ -87,7 +88,7 @@ import 'package:hobby_sphere/features/activities/common/data/services/items_serv
 import 'package:hobby_sphere/features/activities/common/data/repositories/items_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_items_by_type.dart';
 
-// ==== User Profile feature (alias service to avoid collisions) ====
+// ==== User Profile feature (alias) ====
 import 'package:hobby_sphere/features/activities/user/userProfile/data/services/user_profile_service.dart'
     as upsvc;
 import 'package:hobby_sphere/features/activities/user/userProfile/data/repositories/user_profile_repository_impl.dart';
@@ -98,173 +99,206 @@ import 'package:hobby_sphere/features/activities/user/userProfile/presentation/b
 import 'package:hobby_sphere/features/activities/user/userProfile/presentation/bloc/user_profile_event.dart';
 import 'package:hobby_sphere/features/activities/user/userProfile/presentation/screens/user_profile_screen.dart';
 
+// ==== Guest Gate ====
+import 'package:hobby_sphere/shared/widgets/not_logged_in_gate.dart';
+
 // ==== Localization ====
-import 'package:hobby_sphere/l10n/app_localizations.dart';
+import 'package:hobby_sphere/l10n/app_localizations.dart'; // l10n
 
 class ShellDrawer extends StatefulWidget {
-  final AppRole role;
-  final String token;
-  final int businessId;
-  final void Function(Locale) onChangeLocale;
-  final VoidCallback onToggleTheme;
-  final int bookingsBadge;
-  final int ticketsBadge;
+  final AppRole role; // role
+  final String token; // jwt ('' => guest)
+  final int businessId; // business id
+  final void Function(Locale) onChangeLocale; // i18n
+  final VoidCallback onToggleTheme; // theme
+  final int bookingsBadge; // biz badge
+  final int ticketsBadge; // user badge
 
   const ShellDrawer({
     super.key,
     required this.role,
     required this.token,
     required this.businessId,
-    this.bookingsBadge = 0,
-    this.ticketsBadge = 0,
     required this.onChangeLocale,
     required this.onToggleTheme,
+    this.bookingsBadge = 0,
+    this.ticketsBadge = 0,
   });
 
   @override
-  State<ShellDrawer> createState() => _ShellDrawerState();
+  State<ShellDrawer> createState() => _ShellDrawerState(); // state
 }
 
 class _ShellDrawerState extends State<ShellDrawer> {
-  int _index = 0;
+  int _index = 0; // selected tab
 
+  // quick guest flag
+  bool get _isGuest => widget.token.trim().isEmpty; // guest if empty
+
+  // server root without /api
   String _serverRoot() {
-    final base = (g.appServerRoot ?? '');
-    return base.replaceFirst(RegExp(r'/api/?$'), '');
+    final base = (g.appServerRoot ?? ''); // base
+    return base.replaceFirst(RegExp(r'/api/?$'), ''); // strip
   }
 
+  // decode jwt payload safely
   Map<String, dynamic>? _jwtPayload(String token) {
     try {
-      final parts = token.split('.');
-      if (parts.length != 3) return null;
+      final parts = token.split('.'); // header.payload.sig
+      if (parts.length != 3) return null; // invalid
       final decoded = utf8.decode(
         base64Url.decode(base64Url.normalize(parts[1])),
-      );
-      final obj = jsonDecode(decoded);
-      return (obj is Map<String, dynamic>) ? obj : null;
+      ); // decode
+      final obj = jsonDecode(decoded); // json
+      return (obj is Map<String, dynamic>) ? obj : null; // map
     } catch (_) {
-      return null;
+      return null; // error
     }
   }
 
+  // extract id
   int? _extractUserId(String token) {
-    try {
-      final parts = token.split('.');
-      if (parts.length != 3) return null;
-      final payload = jsonDecode(
-        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
-      );
-      final raw = payload['id'] ?? payload['userId'];
-      if (raw is num) return raw.toInt();
-      return int.tryParse('$raw');
-    } catch (_) {
-      return null;
-    }
+    final p = _jwtPayload(token); // payload
+    if (p == null) return null; // none
+    final raw = p['id'] ?? p['userId']; // keys
+    if (raw is num) return raw.toInt(); // number
+    return int.tryParse('$raw'); // string
   }
 
+  // extract names
   String? _extractFirstName(String token) {
-    final p = _jwtPayload(token);
-    if (p == null) return null;
-    final fn = (p['firstName'] ?? p['given_name'])?.toString();
-    if (fn != null && fn.trim().isNotEmpty) return fn.trim();
-
-    final name = p['name']?.toString();
+    final p = _jwtPayload(token); // payload
+    if (p == null) return null; // none
+    final fn = (p['firstName'] ?? p['given_name'])?.toString(); // keys
+    if (fn != null && fn.trim().isNotEmpty) return fn.trim(); // value
+    final name = p['name']?.toString(); // fallback
     if (name != null && name.trim().isNotEmpty) {
-      final parts = name.trim().split(RegExp(r'\s+'));
-      if (parts.isNotEmpty) return parts.first;
+      final parts = name.trim().split(RegExp(r'\s+')); // split
+      if (parts.isNotEmpty) return parts.first; // first
     }
-    return null;
+    return null; // none
   }
 
   String? _extractLastName(String token) {
-    final p = _jwtPayload(token);
-    if (p == null) return null;
-    final ln = (p['lastName'] ?? p['family_name'])?.toString();
-    if (ln != null && ln.trim().isNotEmpty) return ln.trim();
-
-    final name = p['name']?.toString();
+    final p = _jwtPayload(token); // payload
+    if (p == null) return null; // none
+    final ln = (p['lastName'] ?? p['family_name'])?.toString(); // keys
+    if (ln != null && ln.trim().isNotEmpty) return ln.trim(); // value
+    final name = p['name']?.toString(); // fallback
     if (name != null && name.trim().isNotEmpty) {
-      final parts = name.trim().split(RegExp(r'\s+'));
-      if (parts.length > 1) {
-        return parts.sublist(1).join(' ');
-      }
+      final parts = name.trim().split(RegExp(r'\s+')); // split
+      if (parts.length > 1) return parts.sublist(1).join(' '); // rest
     }
-    return null;
+    return null; // none
   }
 
-  // ---- DI for User Home feature ----
-  late final _homeRepo = HomeRepositoryImpl(HomeService());
-  late final _getInterest = GetInterestBasedItems(_homeRepo);
-  late final _getUpcoming = GetUpcomingGuestItems(_homeRepo);
+  // ---- DI for User Home / Explore ----
+  late final _homeRepo = HomeRepositoryImpl(HomeService()); // repo
+  late final _getInterest = GetInterestBasedItems(_homeRepo); // UC
+  late final _getUpcoming = GetUpcomingGuestItems(_homeRepo); // UC
   late final _getItemTypes = GetItemTypes(
     ItemTypeRepositoryImpl(ItemTypesService()),
-  );
+  ); // UC
   late final _getItemsByType = GetItemsByType(
     ItemsRepositoryImpl(ItemsService()),
-  );
+  ); // UC
 
-  late final int _userId = _extractUserId(widget.token) ?? 0;
-  late final String? _firstName = _extractFirstName(widget.token);
-  late final String? _lastName = _extractLastName(widget.token);
+  // parsed identity (safe if guest)
+  late final int _userId = _extractUserId(widget.token) ?? 0; // id or 0
+  late final String? _firstName = _extractFirstName(widget.token); // fn
+  late final String? _lastName = _extractLastName(widget.token); // ln
 
-  // ===== User Profile page (service -> repo -> usecases -> bloc -> screen) =====
+  // ===== Build user profile page (service -> repo -> UCs -> bloc -> screen) =====
   Widget _buildUserProfilePage() {
-    final service = upsvc.UserProfileService();
-    final repo = UserProfileRepositoryImpl(service);
-    final getUser = GetUserProfile(repo);
-    final toggleVis = ToggleUserVisibility(repo);
-    final setStatus = UpdateUserStatus(repo);
+    final service = upsvc.UserProfileService(); // svc
+    final repo = UserProfileRepositoryImpl(service); // repo
+    final getUser = GetUserProfile(repo); // uc
+    final toggleVis = ToggleUserVisibility(repo); // uc
+    final setStatus = UpdateUserStatus(repo); // uc
 
     return MultiRepositoryProvider(
-      providers: [RepositoryProvider.value(value: setStatus)],
+      providers: [RepositoryProvider.value(value: setStatus)], // expose UC
       child: BlocProvider(
         create: (_) => UserProfileBloc(
+          // bloc
           getUser: getUser,
           toggleVisibility: toggleVis,
           updateStatus: setStatus,
-        )..add(LoadUserProfile(widget.token, _userId)),
+        )..add(LoadUserProfile(widget.token, _userId)), // initial load
         child: UserProfileScreen(
-          token: widget.token,
-          userId: _userId,
-          onChangeLocale: widget.onChangeLocale,
+          token: widget.token, // token
+          userId: _userId, // id
+          onChangeLocale: widget.onChangeLocale, // i18n
         ),
       ),
     );
   }
 
-  // ===== User pages =====
+  // ===== USER PAGES (guest-aware) =====
   late final List<Widget> _userPages = <Widget>[
+    // 0) Home — your UserHomeScreen already handles guest safely (no unread cubit)
     UserHomeScreen(
-      firstName: _firstName,
-      lastName: _lastName,
-      token: widget.token,
-      userId: _userId,
-      getInterestBased: _getInterest,
-      getUpcomingGuest: _getUpcoming,
-      getItemTypes: _getItemTypes,
-      getItemsByType: _getItemsByType,
+      firstName: _isGuest ? null : _firstName, // hide if guest
+      lastName: _isGuest ? null : _lastName, // hide if guest
+      token: widget.token, // '' in guest
+      userId: _isGuest ? 0 : _userId, // 0 in guest
+      getInterestBased: _getInterest, // UC
+      getUpcomingGuest: _getUpcoming, // UC
+      getItemTypes: _getItemTypes, // UC
+      getItemsByType: _getItemsByType, // UC
     ),
+
+    // 1) Explore — open for guest
     ExploreScreen(
-      token: widget.token,
-      getItemTypes: _getItemTypes,
-      getItemsByType: _getItemsByType,
-      getUpcomingGuest: _getUpcoming,
-      getCurrencyCode: () async => (await GetCurrentCurrency(
-        CurrencyRepositoryImpl(CurrencyService()),
-      )(widget.token)).code,
-      imageBaseUrl: _serverRoot(),
+      token: widget.token, // '' in guest
+      getItemTypes: _getItemTypes, // UC
+      getItemsByType: _getItemsByType, // UC
+      getUpcomingGuest: _getUpcoming, // UC
+      // currency getter wrapped in try/catch to avoid auth crash in guest
+      getCurrencyCode: () async {
+        try {
+          final uc = GetCurrentCurrency(
+            CurrencyRepositoryImpl(CurrencyService()),
+          );
+          return (await uc(widget.token)).code; // code
+        } catch (_) {
+          return null; // fallback null
+        }
+      },
+      imageBaseUrl: _serverRoot(), // absolute base
     ),
-    CommunityScreen(
-      token: widget.token,
-      imageBaseUrl: _serverRoot(),
-      userId: _userId,
-    ),
-    UserTicketsScreen(token: widget.token),
-    _buildUserProfilePage(), // ✅ added profile page so menu index 4 is valid
+
+    // 2) Community — gate for guest
+    _isGuest
+        ? NotLoggedInGate(
+            onLogin: () => Navigator.pushNamed(context, Routes.login),
+            onRegister: () => Navigator.pushNamed(context, Routes.register),
+          )
+        : CommunityScreen(
+            token: widget.token, // token
+            userId: _userId, // id
+            imageBaseUrl: _serverRoot(), // base
+          ),
+
+    // 3) Tickets — gate for guest
+    _isGuest
+        ? NotLoggedInGate(
+            onLogin: () => Navigator.pushNamed(context, Routes.login),
+            onRegister: () => Navigator.pushNamed(context, Routes.register),
+          )
+        : UserTicketsScreen(token: widget.token), // tickets
+    // 4) Profile — gate for guest
+    _isGuest
+        ? NotLoggedInGate(
+            onLogin: () => Navigator.pushNamed(context, Routes.login),
+            onRegister: () => Navigator.pushNamed(context, Routes.register),
+          )
+        : _buildUserProfilePage(), // profile
   ];
 
-  // ===== Business pages =====
+  // ===== BUSINESS PAGES (same as your latest) =====
   late final List<Widget> _businessPages = <Widget>[
+    // 0) Business Home with notifications
     MultiBlocProvider(
       providers: [
         BlocProvider(
@@ -308,6 +342,8 @@ class _ShellDrawerState extends State<ShellDrawer> {
         },
       ),
     ),
+
+    // 1) Bookings
     BlocProvider(
       create: (ctx) => BusinessBookingBloc(
         getBookings: GetBusinessBookings(
@@ -319,6 +355,8 @@ class _ShellDrawerState extends State<ShellDrawer> {
       )..add(BusinessBookingBootstrap()),
       child: const BusinessBookingScreen(),
     ),
+
+    // 2) Analytics
     BlocProvider(
       create: (ctx) =>
           BusinessAnalyticsBloc(
@@ -336,6 +374,8 @@ class _ShellDrawerState extends State<ShellDrawer> {
         businessId: widget.businessId,
       ),
     ),
+
+    // 3) Activities
     BlocProvider(
       create: (ctx) {
         final repo = BusinessActivityRepositoryImpl(BusinessActivityService());
@@ -354,6 +394,8 @@ class _ShellDrawerState extends State<ShellDrawer> {
         businessId: widget.businessId,
       ),
     ),
+
+    // 4) Profile
     BlocProvider(
       create: (ctx) {
         final businessRepo = BusinessRepositoryImpl(BusinessService());
@@ -374,11 +416,11 @@ class _ShellDrawerState extends State<ShellDrawer> {
     ),
   ];
 
-  // ===== Menus =====
+  // ===== Drawer menu models (labels + icons + pages + optional badges) =====
   List<({String title, IconData icon, Widget page, int? badge})> _businessMenu(
     BuildContext context,
   ) {
-    final t = AppLocalizations.of(context)!;
+    final t = AppLocalizations.of(context)!; // l10n
     return [
       (
         title: t.tabHome,
@@ -416,7 +458,7 @@ class _ShellDrawerState extends State<ShellDrawer> {
   List<({String title, IconData icon, Widget page, int? badge})> _userMenu(
     BuildContext context,
   ) {
-    final t = AppLocalizations.of(context)!;
+    final t = AppLocalizations.of(context)!; // l10n
     return [
       (
         title: t.tabHome,
@@ -440,7 +482,9 @@ class _ShellDrawerState extends State<ShellDrawer> {
         title: t.tabTickets,
         icon: Icons.confirmation_number_outlined,
         page: _userPages[3],
-        badge: widget.ticketsBadge > 0 ? widget.ticketsBadge : null,
+        badge: _isGuest
+            ? null
+            : (widget.ticketsBadge > 0 ? widget.ticketsBadge : null),
       ),
       (
         title: t.tabProfile,
@@ -453,6 +497,7 @@ class _ShellDrawerState extends State<ShellDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    // set system nav bar color to surface for drawer
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
         systemNavigationBarColor: Theme.of(context).colorScheme.surface,
@@ -461,18 +506,23 @@ class _ShellDrawerState extends State<ShellDrawer> {
       ),
     );
 
-    final scheme = Theme.of(context).colorScheme;
-    final menu = widget.role == AppRole.business
+    final scheme = Theme.of(context).colorScheme; // colors
+    final menu =
+        widget.role ==
+            AppRole
+                .business // choose menu
         ? _businessMenu(context)
         : _userMenu(context);
-    _index = _index.clamp(0, menu.length - 1);
+
+    _index = _index.clamp(0, menu.length - 1); // clamp index
 
     return Scaffold(
-      drawerScrimColor: Colors.black.withOpacity(0.35),
+      drawerScrimColor: Colors.black.withOpacity(0.35), // dim bg
       drawer: Drawer(
-        width: 304,
-        backgroundColor: scheme.surface,
+        width: 304, // drawer width
+        backgroundColor: scheme.surface, // bg color
         shape: const RoundedRectangleBorder(
+          // rounded edge
           borderRadius: BorderRadius.only(
             topRight: Radius.circular(24),
             bottomRight: Radius.circular(24),
@@ -480,38 +530,40 @@ class _ShellDrawerState extends State<ShellDrawer> {
         ),
         child: SafeArea(
           child: _DrawerContent(
-            items: menu,
-            index: _index,
+            // list builder
+            items: menu, // items
+            index: _index, // selected
             onTap: (i) {
-              Navigator.pop(context);
-              if (i == _index) return;
-              HapticFeedback.selectionClick();
-              setState(() => _index = i);
+              Navigator.pop(context); // close drawer
+              if (i == _index) return; // ignore same
+              HapticFeedback.selectionClick(); // haptic
+              setState(() => _index = i); // change page
             },
             iconBaseColor: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.88)
-                : Colors.black.withOpacity(0.72),
-            activeColor: scheme.primary,
+                ? Colors.white.withOpacity(0.88) // dark color
+                : Colors.black.withOpacity(0.72), // light color
+            activeColor: scheme.primary, // active color
           ),
         ),
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // ✅ Menu icon only
+            // simple top bar (menu icon only)
             Align(
               alignment: Alignment.centerLeft,
               child: Builder(
                 builder: (ctx) => IconButton(
-                  icon: const Icon(Icons.menu),
-                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+                  icon: const Icon(Icons.menu), // menu icon
+                  onPressed: () => Scaffold.of(ctx).openDrawer(), // open drawer
                 ),
               ),
             ),
             Expanded(
               child: IndexedStack(
-                index: _index,
-                children: menu.map((m) => m.page).toList(),
+                // keep state
+                index: _index, // active
+                children: menu.map((m) => m.page).toList(), // pages
               ),
             ),
           ],
@@ -521,12 +573,14 @@ class _ShellDrawerState extends State<ShellDrawer> {
   }
 }
 
+// ===== Drawer content =====
 class _DrawerContent extends StatelessWidget {
-  final List<({String title, IconData icon, Widget page, int? badge})> items;
-  final int index;
-  final ValueChanged<int> onTap;
-  final Color iconBaseColor;
-  final Color activeColor;
+  final List<({String title, IconData icon, Widget page, int? badge})>
+  items; // items
+  final int index; // selected
+  final ValueChanged<int> onTap; // tap callback
+  final Color iconBaseColor; // base icon
+  final Color activeColor; // active color
 
   const _DrawerContent({
     required this.items,
@@ -539,40 +593,41 @@ class _DrawerContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scrollbar(
-      thumbVisibility: true,
-      radius: const Radius.circular(12),
-      thickness: 4,
+      thumbVisibility: true, // always visible
+      radius: const Radius.circular(12), // rounded thumb
+      thickness: 4, // width
       child: ListView(
-        padding: EdgeInsets.zero,
+        padding: EdgeInsets.zero, // no extra padding
         children: [
-          const Divider(height: 1),
+          const Divider(height: 1), // top line
           ...List.generate(items.length, (i) {
-            final it = items[i];
+            final it = items[i]; // item
             return _AnimatedDrawerTile(
-              icon: it.icon,
-              label: it.title,
-              selected: i == index,
-              onTap: () => onTap(i),
-              iconBaseColor: iconBaseColor,
-              activeColor: activeColor,
-              badge: it.badge,
+              icon: it.icon, // icon
+              label: it.title, // title
+              selected: i == index, // is selected
+              onTap: () => onTap(i), // choose
+              iconBaseColor: iconBaseColor, // color
+              activeColor: activeColor, // active color
+              badge: it.badge, // optional badge
             );
           }),
-          const Divider(height: 1),
+          const Divider(height: 1), // bottom line
         ],
       ),
     );
   }
 }
 
+// ===== Drawer tile with tiny animation =====
 class _AnimatedDrawerTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final Color iconBaseColor;
-  final Color activeColor;
-  final int? badge;
+  final IconData icon; // icon
+  final String label; // label
+  final bool selected; // selected?
+  final VoidCallback onTap; // tap
+  final Color iconBaseColor; // base icon color
+  final Color activeColor; // active color
+  final int? badge; // optional badge
 
   const _AnimatedDrawerTile({
     required this.icon,
@@ -586,46 +641,58 @@ class _AnimatedDrawerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const duration = Duration(milliseconds: 220);
+    const duration = Duration(milliseconds: 220); // anim speed
 
     return InkWell(
-      onTap: onTap,
+      onTap: onTap, // select
       child: TweenAnimationBuilder<double>(
-        duration: duration,
-        curve: Curves.easeOutCubic,
-        tween: Tween<double>(begin: 0, end: selected ? 1 : 0),
+        duration: duration, // timing
+        curve: Curves.easeOutCubic, // easing
+        tween: Tween<double>(begin: 0, end: selected ? 1 : 0), // 0..1
         builder: (context, t, _) {
-          final Color ic = Color.lerp(iconBaseColor, activeColor, t)!;
-          final Color textColor = Color.lerp(
-            Theme.of(context).colorScheme.onSurface,
+          final Color ic = Color.lerp(
+            iconBaseColor,
             activeColor,
             t,
+          )!; // icon color
+          final Color textColor = Color.lerp(
+            Theme.of(context).colorScheme.onSurface, // base text
+            activeColor, // active text
+            t, // mix
           )!;
 
           return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            margin: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 6,
+            ), // outer
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ), // inner
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              color: activeColor.withOpacity(0.08 * t),
+              borderRadius: BorderRadius.circular(14), // rounded
+              color: activeColor.withOpacity(0.08 * t), // active tint
             ),
             child: Row(
               children: [
-                Icon(icon, color: ic),
-                const SizedBox(width: 12),
+                Icon(icon, color: ic), // icon
+                const SizedBox(width: 12), // gap
                 Expanded(
                   child: Text(
-                    label,
+                    label, // title
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: textColor,
-                      fontWeight: t > 0 ? FontWeight.w600 : FontWeight.w500,
+                      color: textColor, // color
+                      fontWeight: t > 0
+                          ? FontWeight.w600
+                          : FontWeight.w500, // weight
                     ),
                   ),
                 ),
-                if (badge != null && badge! > 0)
+                if (badge != null && badge! > 0) // show badge if any
                   Badge(
                     label: Text(
-                      badge! > 99 ? '99+' : '$badge',
+                      badge! > 99 ? '99+' : '$badge', // cap 99+
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,

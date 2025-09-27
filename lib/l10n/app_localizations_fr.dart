@@ -2387,6 +2387,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get getStarted => 'Get Started';
 
   @override
+  String get connectionConnecting => 'Connexion…';
+
+  @override
+  String get connectionOffline => 'Hors ligne';
+
+  @override
+  String get connectionTryAgain => 'Réessayer';
+
+  @override
+  String get splashNoConnectionTitle => 'Pas de connexion Internet';
+
+  @override
+  String get splashNoConnectionDesc => 'Veuillez vérifier le Wi-Fi ou les données mobiles puis réessayer.';
+
+  @override
   String get interestSaved => 'Centres d’intérêt enregistrés avec succès';
 
   @override

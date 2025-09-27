@@ -74,6 +74,8 @@ dependencies:
   web_socket_channel: ^3.0.1
   ionicons: ^0.2.2
   flutter_stripe: ^10.0.0
+  connectivity_plus: ^6.0.5       # check Wi-Fi/Cell status
+
  
 
 

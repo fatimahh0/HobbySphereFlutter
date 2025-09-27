@@ -802,6 +802,12 @@
   "login": "Login",
   "register": "Register",
   "getStarted": "Get Started",
+   "connectionConnecting": "Connecting…",
+  "connectionOffline": "Not connected",
+  "connectionTryAgain": "Try again",
+  "splashNoConnectionTitle": "No internet connection",
+  "splashNoConnectionDesc": "Please check your Wi-Fi or mobile data and try again.",
+  
   
   "@editInterestsTitle": { "description": "AppBar title for edit interests screen" },
 

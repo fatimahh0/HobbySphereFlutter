@@ -114,7 +114,7 @@ class _BusinessHomeView extends StatelessWidget {
       children: [
         WelcomeSection(
           token: context.read<BusinessHomeBloc>().token,
-         onOpenNotifications: () async {
+          onOpenNotifications: () async {
             await Navigator.pushNamed(
               context,
               Routes.businessNotifications,

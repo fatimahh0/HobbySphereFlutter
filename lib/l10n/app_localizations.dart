@@ -4825,6 +4825,36 @@ abstract class AppLocalizations {
   /// **'Get Started'**
   String get getStarted;
 
+  /// No description provided for @connectionConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting…'**
+  String get connectionConnecting;
+
+  /// No description provided for @connectionOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected'**
+  String get connectionOffline;
+
+  /// No description provided for @connectionTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get connectionTryAgain;
+
+  /// No description provided for @splashNoConnectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection'**
+  String get splashNoConnectionTitle;
+
+  /// No description provided for @splashNoConnectionDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check your Wi-Fi or mobile data and try again.'**
+  String get splashNoConnectionDesc;
+
   /// Toast after saving interests
   ///
   /// In en, this message translates to:

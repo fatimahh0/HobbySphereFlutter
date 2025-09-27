@@ -2387,6 +2387,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get getStarted => 'Get Started';
 
   @override
+  String get connectionConnecting => 'جارٍ الاتصال…';
+
+  @override
+  String get connectionOffline => 'لا يوجد اتصال';
+
+  @override
+  String get connectionTryAgain => 'أعد المحاولة';
+
+  @override
+  String get splashNoConnectionTitle => 'لا يوجد اتصال بالإنترنت';
+
+  @override
+  String get splashNoConnectionDesc => 'يرجى التحقق من الواي فاي أو بيانات الهاتف ثم أعد المحاولة.';
+
+  @override
   String get interestSaved => 'تم حفظ الاهتمامات';
 
   @override

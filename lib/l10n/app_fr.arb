@@ -786,6 +786,11 @@
   "fieldRequired": "Ce champ est requis",
   "bookingNotAvailable": "Cette activité n’est pas disponible pour le nombre de participants sélectionné.",
   "editInterestsTitle": "Modifier vos centres d’intérêt",
+   "connectionConnecting": "Connexion…",
+  "connectionOffline": "Hors ligne",
+  "connectionTryAgain": "Réessayer",
+  "splashNoConnectionTitle": "Pas de connexion Internet",
+  "splashNoConnectionDesc": "Veuillez vérifier le Wi-Fi ou les données mobiles puis réessayer.",
   "@editInterestsTitle": {
     "description": "Titre de l’AppBar pour l’écran d’édition des intérêts"
   },

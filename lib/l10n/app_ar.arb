@@ -794,6 +794,11 @@
   "@somethingWentWrong": { "description": "عنوان خطأ عام في بطاقة الخطأ" },
   "retry": "إعادة المحاولة",
   "@retry": { "description": "زر لإعادة المحاولة بعد الفشل" },
+  "connectionConnecting": "جارٍ الاتصال…",
+  "connectionOffline": "لا يوجد اتصال",
+  "connectionTryAgain": "أعد المحاولة",
+  "splashNoConnectionTitle": "لا يوجد اتصال بالإنترنت",
+  "splashNoConnectionDesc": "يرجى التحقق من الواي فاي أو بيانات الهاتف ثم أعد المحاولة.",
   "@bookingMaxParticipants": {
     "description": "إظهار الحد الأقصى للمشاركين في نشاط",
     "placeholders": {
