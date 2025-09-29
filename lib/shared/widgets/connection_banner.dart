@@ -1,81 +1,84 @@
-import 'package:flutter/material.dart'; // UI basics
-import 'package:flutter_bloc/flutter_bloc.dart'; // read cubit state
-import '../network/connection_cubit.dart'; // our cubit
-import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n strings
+// Flutter 3.35.x
+// connection_banner.dart — thin top banner showing connection status
 
-/// A thin banner that appears only when offline/connecting.
+import 'package:flutter/material.dart'; // UI
+import 'package:flutter_bloc/flutter_bloc.dart'; // BlocBuilder
+import '../network/connection_cubit.dart'; // states + cubit
+import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
+
 class ConnectionBanner extends StatelessWidget {
-  // place banner at top of any screen or globally in App
-  const ConnectionBanner({super.key}); // const constructor
+  const ConnectionBanner({super.key}); // const ctor
 
   @override
   Widget build(BuildContext context) {
-    // listen to cubit to know connection state
     return BlocBuilder<ConnectionCubit, ConnectionStateX>(
       builder: (context, state) {
-        // if connected => render nothing (zero height)
         if (state == ConnectionStateX.connected) {
-          return const SizedBox.shrink(); // hide
+          return const SizedBox.shrink(); // hide when connected
         }
 
-        // get theme colors
-        final cs = Theme.of(context).colorScheme; // color scheme
-        final t = AppLocalizations.of(context)!; // localized strings
+        final cs = Theme.of(context).colorScheme; // colors
+        final t = AppLocalizations.of(context)!; // strings
 
-        // choose background color per state
-        final bg = state == ConnectionStateX.offline
+        // background by state
+        final bg = (state == ConnectionStateX.offline)
             ? cs
-                  .errorContainer // more alerting color
-            : cs.surfaceContainerHighest; // neutral while connecting
+                  .errorContainer // red-ish for offline
+            : cs.surfaceContainerHighest; // neutral for connecting/serverDown
 
-        // choose text per state
-        final text = state == ConnectionStateX.offline
-            ? t
-                  .connectionOffline // "Not connected"
-            : t.connectionConnecting; // "Connecting..."
+        // text by state
+        final text = switch (state) {
+          ConnectionStateX.offline => t.connectionOffline, // "Not connected"
+          ConnectionStateX.serverDown =>
+            t.connectionServerDown, // "Server unavailable"
+          _ => t.connectionConnecting, // "Connecting…"
+        };
 
         return Material(
-          // material to apply color/elevation
-          color: bg, // background color
-          elevation: 2, // subtle shadow
+          color: bg, // banner bg
+          elevation: 2, // small shadow
           child: SafeArea(
-            // keep under status bar
-            bottom: false, // only top safe area
+            bottom: false, // top only
             child: Container(
               height: 40, // slim bar
               padding: const EdgeInsets.symmetric(
                 horizontal: 12,
-              ), // left/right padding
+              ), // side padding
               child: Row(
                 children: [
-                  if (state == ConnectionStateX.connecting)
+                  if (state == ConnectionStateX.connecting ||
+                      state == ConnectionStateX.serverDown)
                     const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ), // small spinner
-                  if (state == ConnectionStateX.connecting)
-                    const SizedBox(width: 8), // gap after spinner
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                      ), // spinner
+                    ),
+                  if (state == ConnectionStateX.connecting ||
+                      state == ConnectionStateX.serverDown)
+                    const SizedBox(width: 8), // gap
                   Expanded(
                     child: Text(
-                      text, // localized label
+                      text, // label
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: cs.onSurface, // readable text color
+                        color: cs.onSurface, // readable
                         fontWeight: FontWeight.w600, // semi-bold
                       ),
-                      maxLines: 1, // single line
-                      overflow: TextOverflow.ellipsis, // no wrap
+                      maxLines: 1, // one line
+                      overflow: TextOverflow.ellipsis, // truncate
                     ),
                   ),
-                  if (state == ConnectionStateX.offline)
+                  if (state == ConnectionStateX.offline ||
+                      state == ConnectionStateX.serverDown)
                     TextButton(
                       onPressed: () => context
                           .read<ConnectionCubit>()
-                          .retryNow(), // force re-check
+                          .retryNow(), // re-check
                       child: Text(
                         t.connectionTryAgain, // "Try again"
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: cs.primary, // themed accent
+                          color: cs.primary, // accent
                           fontWeight: FontWeight.w700, // bold
                         ),
                       ),

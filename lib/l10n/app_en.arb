@@ -807,8 +807,9 @@
   "connectionTryAgain": "Try again",
   "splashNoConnectionTitle": "No internet connection",
   "splashNoConnectionDesc": "Please check your Wi-Fi or mobile data and try again.",
-  
-  
+   "splashServerDownTitle": "Server is unavailable",
+  "splashServerDownDesc": "We’re online, but can’t reach the server right now. Please try again in a moment.",
+  "connectionServerDown": "Server unavailable",
   "@editInterestsTitle": { "description": "AppBar title for edit interests screen" },
 
 

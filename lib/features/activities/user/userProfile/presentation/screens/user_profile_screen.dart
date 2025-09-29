@@ -2,6 +2,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart'; // UI
 import 'package:flutter_bloc/flutter_bloc.dart'; // bloc
+import 'package:hobby_sphere/app/bootstrap/start_user_realtime.dart' as rt;
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 import 'package:hobby_sphere/features/activities/user/tickets/data/models/booking_model.dart';
 import 'package:hobby_sphere/features/activities/user/tickets/data/services/tickets_service.dart';
@@ -340,15 +341,11 @@ Future<void> _confirmLogout(BuildContext context, AppLocalizations tr) async {
   );
 
   if (confirmed == true) {
-    // if ok
-    final prefs = await SharedPreferences.getInstance(); // prefs
-    await prefs.clear(); // clear
+    await rt.stopUserRealtime(); // ✅ close WS cleanly
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // clear app data
     if (context.mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        // go login
-        Routes.login,
-        (_) => false,
-      );
+      Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (_) => false);
     }
   }
 }

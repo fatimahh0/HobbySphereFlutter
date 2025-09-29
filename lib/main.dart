@@ -45,7 +45,7 @@ Future<void> main() async {
       }
       g.appDio = apiClient.dio; // expose dio
       g.appServerRoot = cfg.serverRoot; // expose base
-      runApp(const App()); // start app
+     runApp(App(config: cfg)); // start app
     },
     (error, stack) {
       debugPrint('UNCAUGHT in main zone: $error\n$stack'); // safety

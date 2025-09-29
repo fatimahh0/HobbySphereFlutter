@@ -1,210 +1,177 @@
-// splash_page.dart — Flutter 3.35.x
-// Clean splash that waits for internet WITHOUT showing "Connecting...".
-// Shows an offline card only when there is no internet.
-// After online, it checks token/role, decides next route, and navigates once.
+// Flutter 3.35.x
+// splash_page.dart — waits until internet + server are reachable.
+// Shows Offline / Server Down cards, else logo. Navigates once when connected.
 
-import 'dart:convert' as convert; // base64Url + utf8 + json decode
-import 'package:flutter/material.dart'; // core UI
-import 'package:flutter_bloc/flutter_bloc.dart'; // for reading cubits
-import 'package:shared_preferences/shared_preferences.dart'; // simple local storage
+import 'dart:convert' as convert; // base64 + json
+import 'package:flutter/material.dart'; // UI
+import 'package:flutter_bloc/flutter_bloc.dart'; // read cubit
+import 'package:shared_preferences/shared_preferences.dart'; // prefs
 
-import 'package:hobby_sphere/core/constants/app_role.dart'; // enum AppRole
+import 'package:hobby_sphere/core/constants/app_role.dart'; // AppRole
 import 'package:hobby_sphere/l10n/app_localizations.dart'
     show AppLocalizations; // i18n
 import 'package:hobby_sphere/shared/theme/app_theme.dart'; // AppColors/AppTypography
 
-import 'package:hobby_sphere/services/token_store.dart'; // TokenStore (read/clear)
-import 'package:hobby_sphere/core/network/globals.dart'
-    as g; // global Dio client
-import 'package:hobby_sphere/core/business/business_context.dart'; // business id holder
+import 'package:hobby_sphere/services/token_store.dart'; // TokenStore
+import 'package:hobby_sphere/core/network/globals.dart' as g; // Dio
+import 'package:hobby_sphere/core/business/business_context.dart'; // business id
 import 'package:hobby_sphere/app/router/router.dart'
-    show ShellRouteArgs; // route args
+    show ShellRouteArgs; // args
 
-import 'package:hobby_sphere/shared/network/connection_cubit.dart'; // ConnectionCubit + states
-// import 'package:hobby_sphere/shared/bootstrap/bootstrap_cubit.dart'; // optional warm-up
+import 'package:hobby_sphere/shared/network/connection_cubit.dart'; // ConnectionCubit
 
 class SplashPage extends StatefulWidget {
-  const SplashPage({super.key}); // const constructor
+  const SplashPage({super.key}); // const
   @override
-  State<SplashPage> createState() => _SplashPageState(); // create state
+  State<SplashPage> createState() => _SplashPageState(); // state
 }
 
 class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
-  // === Animations (progress + pulsing bg) ===
-  late final AnimationController _progressCtrl; // progress controller
-  late final AnimationController _bgPulseCtrl; // background pulse controller
-  late final Animation<double> _progress; // eased 0..1
-
-  double _pageOpacity = 1.0; // fade out value when navigating
-  bool _navigated = false; // ensure we navigate only once
+  // animations
+  late final AnimationController _progressCtrl; // progress loop
+  late final AnimationController _bgPulseCtrl; // bg pulse
+  late final Animation<double> _progress; // 0..1
+  double _pageOpacity = 1.0; // fade out
+  bool _navigated = false; // single navigation guard
 
   @override
   void initState() {
-    super.initState(); // parent init
+    super.initState(); // base
 
-    // progress bar animation (3s)
+    // progress
     _progressCtrl = AnimationController(
-      vsync: this, // ticker provider
-      duration: const Duration(seconds: 3), // total duration
-    )..forward(); // start anim
-
-    // wrap with curve for smoother feel
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..forward(); // start
     _progress = CurvedAnimation(
-      parent: _progressCtrl, // base controller
-      curve: Curves.easeInOut, // nice curve
-    );
-
-    // pulsing background controller (infinite)
-    _bgPulseCtrl = AnimationController(
-      vsync: this, // ticker provider
-      duration: const Duration(milliseconds: 1800), // speed
-    )..repeat(reverse: true); // loop back and forth
-
-    // loop progress while waiting (only if not yet navigated)
-    _progressCtrl.addStatusListener((status) {
-      if (status == AnimationStatus.completed && !_navigated) {
-        _progressCtrl.forward(from: 0.0); // restart loop
+      parent: _progressCtrl,
+      curve: Curves.easeInOut,
+    ); // smooth
+    _progressCtrl.addStatusListener((s) {
+      if (s == AnimationStatus.completed && !_navigated) {
+        _progressCtrl.forward(from: 0.0); // loop
       }
     });
 
-    // kick main flow after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _decideAndNavigate(); // start the logic
-    });
+    // pulsing bg
+    _bgPulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true); // loop
+
+    // start the logic
+    WidgetsBinding.instance.addPostFrameCallback((_) => _decideAndNavigate());
   }
 
-  // ========== TOKEN HELPERS ==========
-
-  /// Decode JWT payload and check if 'exp' is in the past.
+  // ===== helpers: JWT expiry =====
   bool _isTokenExpired(String token) {
     try {
       final parts = token.split('.'); // header.payload.signature
-      if (parts.length != 3) return true; // invalid token => treat as expired
+      if (parts.length != 3) return true; // invalid
       final payloadStr = _b64UrlToUtf8(parts[1]); // decode payload
       final payload =
-          convert.json.decode(payloadStr) as Map<String, dynamic>; // to map
-      final exp = payload['exp'] as int?; // expiry (unix seconds)
-      if (exp == null) return true; // missing exp => expired
-      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000; // now (s)
-      return exp < now; // true if expired
+          convert.json.decode(payloadStr) as Map<String, dynamic>; // map
+      final exp = payload['exp'] as int?; // seconds
+      if (exp == null) return true; // missing
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000; // now(s)
+      return exp < now; // expired?
     } catch (_) {
-      return true; // any error => treat as expired
+      return true; // on error, treat expired
     }
   }
 
-  /// Base64url normalize + decode to utf8 string.
-  String _b64UrlToUtf8(String input) {
-    final norm = convert.base64Url.normalize(input); // fix padding
+  String _b64UrlToUtf8(String s) {
+    final norm = convert.base64Url.normalize(s); // pad
     final bytes = convert.base64Url.decode(norm); // bytes
-    return convert.utf8.decode(bytes); // utf8 string
+    return convert.utf8.decode(bytes); // string
   }
 
-  /// Attach bearer token to global Dio (for authenticated API calls).
   void _attachTokenToGlobalDio(String token) {
-    if (g.appDio == null) return; // guard if not ready yet
+    if (g.appDio == null) return; // guard
     g.appDio!.options.headers['Authorization'] = 'Bearer $token'; // header
   }
 
-  /// Ensure we have business id when role is business.
   Future<int> _resolveBusinessId(String token) async {
     _attachTokenToGlobalDio(token); // ensure header
-    final id = await BusinessContext.ensureId(); // fetch id (0 if none)
-    return id; // result
+    return BusinessContext.ensureId(); // 0 if none
   }
 
-  // ========== DECISION FLOW ==========
-
-  /// Decide the next route based on token/role/onboarding.
+  // ===== route decision =====
   Future<_RouteTarget> _computeNext() async {
     try {
-      final saved = await TokenStore.read(); // read saved token/role
-      final token = saved.token?.trim(); // token string
-      final roleStr = (saved.role ?? 'user').trim().toLowerCase(); // role
+      final saved = await TokenStore.read(); // token + role
+      final token = saved.token?.trim(); // string
+      final roleStr = (saved.role ?? 'user')
+          .trim()
+          .toLowerCase(); // default user
 
       if (token != null && token.isNotEmpty) {
-        // check expiry
         if (_isTokenExpired(token)) {
-          await TokenStore.clear(); // clear expired
+          await TokenStore.clear(); // remove expired
           return _RouteTarget(name: '/login'); // go login
         }
 
-        // set auth header
-        _attachTokenToGlobalDio(token); // add bearer
-
-        // resolve business id if needed
-        final businessId = await _resolveBusinessId(token); // get id
+        _attachTokenToGlobalDio(token); // bearer
+        final bizId = await _resolveBusinessId(token); // maybe 0
         final appRole = roleStr == 'business'
             ? AppRole.business
             : AppRole.user; // enum
 
-        // store business id for business role
-        if (appRole == AppRole.business && businessId > 0) {
-          await BusinessContext.set(businessId); // remember id
+        if (appRole == AppRole.business && bizId > 0) {
+          await BusinessContext.set(bizId); // cache id
         }
 
-        // go to main shell with args
         return _RouteTarget(
-          name: '/shell', // main route
+          name: '/shell', // home shell
           args: ShellRouteArgs(
-            role: appRole, // role
-            token: token, // jwt
-            businessId: businessId, // id or 0
-          ),
+            role: appRole,
+            token: token,
+            businessId: bizId,
+          ), // args
         );
       }
 
-      // no token => choose onboarding path
       final sp = await SharedPreferences.getInstance(); // prefs
-      final seen = sp.getBool('seen_onboarding') ?? false; // seen flag
+      final seen = sp.getBool('seen_onboarding') ?? false; // flag
       return _RouteTarget(
-        name: seen ? '/onboardingScreen' : '/onboarding', // route
-      );
+        name: seen ? '/onboardingScreen' : '/onboarding',
+      ); // next
     } catch (e) {
-      debugPrint('Splash decision error: $e'); // log error
+      debugPrint('Splash decision error: $e'); // log
       return _RouteTarget(name: '/onboarding'); // fallback
     }
   }
 
-  /// Wait until ConnectionCubit reports CONNECTED (blocks on Splash).
-  Future<void> _waitForInternet() async {
-    final cubit = context.read<ConnectionCubit>(); // connectivity cubit
-    if (cubit.state == ConnectionStateX.connected) {
-      return; // already online → proceed
-    }
-    // wait for the first CONNECTED emission
+  // ===== wait until fully connected =====
+  Future<void> _waitReady() async {
+    final cubit = context.read<ConnectionCubit>(); // read once
+    if (cubit.state == ConnectionStateX.connected) return; // already OK
     await cubit.stream.firstWhere(
       (s) => s == ConnectionStateX.connected,
-    ); // suspend
+    ); // wait
   }
 
-  /// Main flow: small delay → wait internet → (optional warm-up) → compute route → navigate.
+  // ===== main flow =====
   Future<void> _decideAndNavigate() async {
-    // tiny visual delay to let animations breathe
-    await Future<void>.delayed(const Duration(milliseconds: 600)); // ~0.6s
+    await Future<void>.delayed(
+      const Duration(milliseconds: 600),
+    ); // small pause
+    await _waitReady(); // block until internet+server OK
 
-    // wait until we are connected (no "Connecting..." UI is shown on splash)
-    await _waitForInternet(); // block here
+    final target = await _computeNext(); // decide route
 
-    // OPTIONAL: run warm-up (preload caches/images) before navigating
-    // try { await context.read<BootstrapCubit>().start(); } catch (_) {}
-
-    // compute where to go
-    final target = await _computeNext(); // decide
-
-    // ensure single navigation + widget still mounted
     if (!mounted || _navigated) return; // guard
-    _navigated = true; // lock navigation
+    _navigated = true; // lock
 
     try {
-      setState(() => _pageOpacity = 0.0); // start fade out
-      await Future.delayed(const Duration(milliseconds: 180)); // small fade
+      setState(() => _pageOpacity = 0.0); // fade out
+      await Future.delayed(const Duration(milliseconds: 180)); // short fade
       if (!mounted) return; // safety
 
-      // navigate and clear back stack
       Navigator.of(context).pushNamedAndRemoveUntil(
-        target.name, // route name
-        (r) => false, // remove all previous
-        arguments: target.args, // pass args
+        target.name,
+        (r) => false,
+        arguments: target.args, // navigate
       );
     } catch (e) {
       debugPrint('Splash navigation error: $e'); // log
@@ -217,107 +184,96 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _progressCtrl.dispose(); // dispose progress controller
-    _bgPulseCtrl.dispose(); // dispose pulse controller
-    super.dispose(); // parent dispose
+    _progressCtrl.dispose(); // cleanup
+    _bgPulseCtrl.dispose(); // cleanup
+    super.dispose(); // base
   }
 
-  // ========== UI HELPERS ==========
-
-  /// Lighten/darken a color by delta (HSL space).
+  // ===== small color helper =====
   Color _adjustLightness(Color c, double d) {
     final hsl = HSLColor.fromColor(c); // to HSL
     return hsl
         .withLightness((hsl.lightness + d).clamp(0.0, 1.0))
-        .toColor(); // back to Color
+        .toColor(); // back
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!; // localization strings
-    final primary = AppColors.primary; // main brand color
-    final lighter = _adjustLightness(primary, 0.14); // lighter shade
-    final darker = _adjustLightness(primary, -0.14); // darker shade
+    final l10n = AppLocalizations.of(context)!; // strings
+    final primary = AppColors.primary; // brand
+    final lighter = _adjustLightness(primary, 0.14); // lighter
+    final darker = _adjustLightness(primary, -0.14); // darker
 
-    // read connectivity to decide ONLY the offline card; treat CONNECTING like CONNECTED
-    final conn = context
-        .watch<ConnectionCubit>()
-        .state; // current connection state
+    final conn = context.watch<ConnectionCubit>().state; // connection state
 
-    // block back button on splash
     return WillPopScope(
-      onWillPop: () async => false, // no back on splash
+      onWillPop: () async => false, // disable back
       child: Scaffold(
-        backgroundColor: AppColors.background, // themed background
+        backgroundColor: AppColors.background, // bg
         body: AnimatedOpacity(
-          opacity: _pageOpacity, // fade when leaving
-          duration: const Duration(milliseconds: 240), // fade duration
+          opacity: _pageOpacity, // fade on leave
+          duration: const Duration(milliseconds: 240), // fade dur
           child: Stack(
-            fit: StackFit.expand, // full screen
+            fit: StackFit.expand, // full
             children: [
-              // pulsing gradient background
+              // pulsing gradient bg
               AnimatedBuilder(
-                animation: _bgPulseCtrl, // listen to pulse controller
+                animation: _bgPulseCtrl, // pulse driver
                 builder: (context, _) {
                   final t = _bgPulseCtrl.value; // 0..1
-                  final c1 = Color.lerp(primary, lighter, t)!; // blend 1
-                  final c2 = Color.lerp(primary, darker, 1 - t)!; // blend 2
-                  final begin = Alignment(-0.8 + t * 0.6, -0.9); // start align
-                  final end = Alignment(0.8 - t * 0.6, 0.9); // end align
+                  final c1 = Color.lerp(primary, lighter, t)!; // blend
+                  final c2 = Color.lerp(primary, darker, 1 - t)!; // blend
+                  final begin = Alignment(-0.8 + t * 0.6, -0.9); // start
+                  final end = Alignment(0.8 - t * 0.6, 0.9); // end
                   return Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        begin: begin, // gradient start
-                        end: end, // gradient end
-                        colors: [c1, c2], // colors
-                      ),
+                        begin: begin,
+                        end: end,
+                        colors: [c1, c2],
+                      ), // bg
                     ),
                   );
                 },
               ),
 
-              // center content
+              // center content: cards or logo
               Center(
                 child: Builder(
                   builder: (context) {
-                    // OFFLINE → show card with Try again
+                    // OFFLINE card
                     if (conn == ConnectionStateX.offline) {
-                      final cs = Theme.of(context).colorScheme; // M3 colors
+                      final cs = Theme.of(context).colorScheme; // colors
                       return Card(
-                        color: cs.errorContainer, // alert background
-                        margin: const EdgeInsets.all(24), // outer margin
+                        color: cs.errorContainer, // alert bg
+                        margin: const EdgeInsets.all(24), // margin
                         child: Padding(
-                          padding: const EdgeInsets.all(20), // inner padding
+                          padding: const EdgeInsets.all(20), // padding
                           child: Column(
-                            mainAxisSize: MainAxisSize.min, // wrap content
+                            mainAxisSize: MainAxisSize.min, // wrap
                             children: [
                               Text(
-                                l10n.splashNoConnectionTitle, // "No internet connection"
+                                l10n.splashNoConnectionTitle, // title
                                 style: AppTypography.textTheme.titleLarge
                                     ?.copyWith(
-                                      color:
-                                          cs.onErrorContainer, // readable text
-                                      fontWeight: FontWeight.w700, // bold
+                                      color: cs.onErrorContainer,
+                                      fontWeight: FontWeight.w700,
                                     ),
-                                textAlign: TextAlign.center, // center align
+                                textAlign: TextAlign.center, // center
                               ),
-                              const SizedBox(height: 8), // space
+                              const SizedBox(height: 8), // gap
                               Text(
-                                l10n.splashNoConnectionDesc, // "Please check Wi-Fi or data and try again."
+                                l10n.splashNoConnectionDesc, // desc
                                 style: AppTypography.textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: cs.onErrorContainer, // readable
-                                    ),
-                                textAlign: TextAlign.center, // center align
+                                    ?.copyWith(color: cs.onErrorContainer),
+                                textAlign: TextAlign.center, // center
                               ),
-                              const SizedBox(height: 16), // space
+                              const SizedBox(height: 16), // gap
                               FilledButton(
                                 onPressed: () => context
                                     .read<ConnectionCubit>()
-                                    .retryNow(), // force re-check
-                                child: Text(
-                                  l10n.connectionTryAgain,
-                                ), // "Try again"
+                                    .retryNow(), // re-check
+                                child: Text(l10n.connectionTryAgain), // button
                               ),
                             ],
                           ),
@@ -325,40 +281,80 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                       );
                     }
 
-                    // CONNECTING or CONNECTED → show your original logo/title (no "Connecting…" text)
+                    // SERVER DOWN card
+                    if (conn == ConnectionStateX.serverDown) {
+                      final cs = Theme.of(context).colorScheme; // colors
+                      return Card(
+                        color: cs.surfaceContainerHighest, // neutral bg
+                        margin: const EdgeInsets.all(24), // margin
+                        child: Padding(
+                          padding: const EdgeInsets.all(20), // padding
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min, // wrap
+                            children: [
+                              Text(
+                                l10n.splashServerDownTitle, // title
+                                style: AppTypography.textTheme.titleLarge
+                                    ?.copyWith(
+                                      color: cs.onSurface,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                textAlign: TextAlign.center, // center
+                              ),
+                              const SizedBox(height: 8), // gap
+                              Text(
+                                l10n.splashServerDownDesc, // desc
+                                style: AppTypography.textTheme.bodyMedium
+                                    ?.copyWith(color: cs.onSurface),
+                                textAlign: TextAlign.center, // center
+                              ),
+                              const SizedBox(height: 16), // gap
+                              FilledButton(
+                                onPressed: () => context
+                                    .read<ConnectionCubit>()
+                                    .retryNow(), // retry
+                                child: Text(l10n.connectionTryAgain), // button
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    // CONNECTING or brief CONNECTED → logo only
                     return Column(
-                      mainAxisSize: MainAxisSize.min, // compact column
+                      mainAxisSize: MainAxisSize.min, // compact
                       children: [
                         Container(
                           width: 112,
-                          height: 112, // circle size
+                          height: 112, // circle
                           decoration: BoxDecoration(
                             color: AppColors.onPrimary.withOpacity(
                               0.12,
                             ), // soft fill
-                            shape: BoxShape.circle, // circle shape
+                            shape: BoxShape.circle, // circle
                             border: Border.all(
                               color: AppColors.onPrimary.withOpacity(
                                 0.28,
                               ), // ring
-                              width: 1.4, // ring width
+                              width: 1.4, // width
                             ),
                           ),
                           child: Icon(
-                            Icons.sports_soccer, // placeholder icon
-                            size: 56, // icon size
-                            color: AppColors.onPrimary, // contrast on primary
+                            Icons.sports_soccer, // your logo/icon
+                            size: 56, // size
+                            color: AppColors.onPrimary, // contrast
                           ),
                         ),
-                        const SizedBox(height: 18), // spacing
+                        const SizedBox(height: 18), // gap
                         Text(
                           l10n.appTitle, // app name
                           textAlign: TextAlign.center, // center
                           style: AppTypography.textTheme.headlineSmall
                               ?.copyWith(
-                                color: AppColors.onPrimary, // readable
-                                fontWeight: FontWeight.w700, // bold
-                                letterSpacing: 0.4, // subtle tracking
+                                color: AppColors.onPrimary,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4,
                               ),
                         ),
                       ],
@@ -367,23 +363,23 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                 ),
               ),
 
-              // bottom progress % + bar (just visual, loops while waiting)
+              // bottom progress (visual only)
               Positioned(
                 left: 0,
                 right: 0,
-                bottom: 0, // stick to bottom
+                bottom: 0, // stick bottom
                 child: AnimatedBuilder(
-                  animation: _progress, // listen to progress
+                  animation: _progress, // listen
                   builder: (context, _) {
                     final percent = (_progress.value * 100).toInt(); // 0..100
                     return Column(
                       mainAxisSize: MainAxisSize.min, // compact
                       children: [
                         Text(
-                          "$percent%", // show %
+                          "$percent%", // percent
                           style: AppTypography.textTheme.bodyMedium?.copyWith(
-                            color: AppColors.onPrimary, // readable
-                            fontWeight: FontWeight.w600, // semi-bold
+                            color: AppColors.onPrimary,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         LinearProgressIndicator(
@@ -393,8 +389,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                             0.22,
                           ), // track
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.onPrimary, // bar color
-                          ),
+                            AppColors.onPrimary,
+                          ), // bar
                         ),
                       ],
                     );
@@ -409,9 +405,9 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   }
 }
 
-// simple route target holder
+// simple holder for route and args
 class _RouteTarget {
   final String name; // route name
-  final Object? args; // optional arguments
-  _RouteTarget({required this.name, this.args}); // constructor
+  final Object? args; // args
+  _RouteTarget({required this.name, this.args}); // ctor
 }

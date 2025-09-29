@@ -4855,6 +4855,24 @@ abstract class AppLocalizations {
   /// **'Please check your Wi-Fi or mobile data and try again.'**
   String get splashNoConnectionDesc;
 
+  /// No description provided for @splashServerDownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Server is unavailable'**
+  String get splashServerDownTitle;
+
+  /// No description provided for @splashServerDownDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'We’re online, but can’t reach the server right now. Please try again in a moment.'**
+  String get splashServerDownDesc;
+
+  /// No description provided for @connectionServerDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Server unavailable'**
+  String get connectionServerDown;
+
   /// Toast after saving interests
   ///
   /// In en, this message translates to:

@@ -1,125 +1,113 @@
-// app.dart — theme/locale prefs + classic Navigator 1.0 + global connection banner
+// lib/app.dart — accept ApiConfig and give ConnectionCubit a health URL
 
-import 'package:flutter/material.dart'; // core UI
-import 'package:shared_preferences/shared_preferences.dart'; // local prefs
-import 'package:flutter_bloc/flutter_bloc.dart'; // bloc provider/builder
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:hobby_sphere/l10n/app_localizations.dart'
-    show AppLocalizations; // i18n
-import 'package:hobby_sphere/shared/theme/app_theme.dart'
-    show AppTheme; // light/dark themes
+import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
+import 'package:hobby_sphere/shared/theme/app_theme.dart' show AppTheme;
+import 'router/router.dart';
 
-import 'router/router.dart'; // AppRouter + Routes + navigatorKey
+// ⬇️ use the cubit + banner
+import 'package:hobby_sphere/shared/network/connection_cubit.dart';
+import 'package:hobby_sphere/shared/widgets/connection_banner.dart';
 
-// === connection cubit & banner (add these files from previous step) ===
-import 'package:hobby_sphere/shared/network/connection_cubit.dart'; // Cubit for online/offline/connecting
-import 'package:hobby_sphere/shared/widgets/connection_banner.dart'; // Top banner widget
+// ⬇️ import ApiConfig to get serverRoot (from hostIp.json)
+import 'package:hobby_sphere/core/network/api_config.dart';
 
 class App extends StatefulWidget {
-  const App({super.key}); // const ctor
+  // ⬅️ NEW: take the config instance
+  final ApiConfig config; // has baseUrl + serverRoot
+  const App({super.key, required this.config}); // require it
+
   @override
-  State<App> createState() => _AppState(); // stateful app
+  State<App> createState() => _AppState();
 }
 
 class _AppState extends State<App> {
-  // keys to store theme + locale in SharedPreferences
-  static const _kThemeKey = 'themeMode'; // 'light' | 'dark'
-  static const _kLocaleKey = 'locale'; // 'en' | 'ar' | 'fr' ...
+  static const _kThemeKey = 'themeMode';
+  static const _kLocaleKey = 'locale';
 
-  // current theme + locale in memory
-  ThemeMode _themeMode = ThemeMode.light; // default light
-  Locale _locale = const Locale('en'); // default English
+  ThemeMode _themeMode = ThemeMode.light; // current theme
+  Locale _locale = const Locale('en'); // current locale
 
-  // router that knows how to generate routes
-  late final AppRouter _router; // initialized in initState
+  late final AppRouter _router; // classic Navigator 1.0 router
+
+  // ⬅️ NEW: build server health URL once (adjust the path if different)
+  late final String _serverProbeUrl =
+      '${widget.config.serverRoot}/actuator/health'; // e.g. http://192.168.1.3:8080/actuator/health
 
   @override
   void initState() {
-    super.initState(); // call parent
-    // create router and give it callbacks to change theme/locale
+    super.initState();
     _router = AppRouter(
-      onToggleTheme: _toggleTheme, // lets screens toggle theme
-      onChangeLocale: _changeLocale, // lets screens change locale
-      getCurrentLocale: () => _locale, // provide current locale
+      onToggleTheme: _toggleTheme,
+      onChangeLocale: _changeLocale,
+      getCurrentLocale: () => _locale,
     );
-    _restorePrefs(); // load saved theme/locale from SharedPreferences
+    _restorePrefs(); // load saved theme + locale
   }
 
   Future<void> _restorePrefs() async {
-    final sp = await SharedPreferences.getInstance(); // open prefs
-    final themeStr = sp.getString(_kThemeKey); // read theme string
-    final localeStr = sp.getString(_kLocaleKey); // read locale code
-
-    if (themeStr != null) {
-      _themeMode = themeStr == 'dark'
-          ? ThemeMode.dark
-          : ThemeMode.light; // apply theme
-    }
-    if (localeStr != null) {
-      _locale = Locale(localeStr); // apply locale
-    }
-    if (mounted) setState(() {}); // rebuild UI
+    final sp = await SharedPreferences.getInstance();
+    final t = sp.getString(_kThemeKey);
+    final l = sp.getString(_kLocaleKey);
+    if (t != null)
+      _themeMode = (t == 'dark') ? ThemeMode.dark : ThemeMode.light;
+    if (l != null) _locale = Locale(l);
+    if (mounted) setState(() {}); // rebuild
   }
 
   Future<void> _persistTheme(ThemeMode mode) async {
-    final sp = await SharedPreferences.getInstance(); // open prefs
-    await sp.setString(
-      _kThemeKey,
-      mode == ThemeMode.dark ? 'dark' : 'light',
-    ); // save theme string
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(_kThemeKey, mode == ThemeMode.dark ? 'dark' : 'light');
   }
 
   Future<void> _persistLocale(Locale locale) async {
-    final sp = await SharedPreferences.getInstance(); // open prefs
-    await sp.setString(_kLocaleKey, locale.languageCode); // save locale code
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(_kLocaleKey, locale.languageCode);
   }
 
   void _toggleTheme() {
-    // switch between light/dark
     setState(() {
       _themeMode = _themeMode == ThemeMode.light
           ? ThemeMode.dark
-          : ThemeMode.light; // flip mode
+          : ThemeMode.light;
     });
-    _persistTheme(_themeMode); // save to prefs
+    _persistTheme(_themeMode);
   }
 
   void _changeLocale(Locale locale) {
-    setState(() => _locale = locale); // update locale in state
-    _persistLocale(locale); // save to prefs
+    setState(() => _locale = locale);
+    _persistLocale(locale);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Provide ConnectionCubit once for the whole app
+    // ⬇️ Provide ConnectionCubit globally WITH the server health URL
     return BlocProvider(
-      create: (_) => ConnectionCubit(), // start monitoring connectivity
+      create: (_) => ConnectionCubit(serverProbeUrl: _serverProbeUrl),
       child: MaterialApp(
-        debugShowCheckedModeBanner: false, // hide debug banner
-        title: 'Hobby Sphere', // app title
-        navigatorKey: navigatorKey, // optional global key (from your router)
-        initialRoute: Routes.splash, // first screen route
-        onGenerateRoute: _router.onGenerateRoute, // classic Navigator 1.0
-        themeMode: _themeMode, // current theme mode
-        theme: AppTheme.light, // your light theme
-        darkTheme: AppTheme.dark, // your dark theme
-        locale: _locale, // current locale
-        localizationsDelegates:
-            AppLocalizations.localizationsDelegates, // i18n delegates
-        supportedLocales:
-            AppLocalizations.supportedLocales, // supported locales
-        // builder lets us wrap ALL pages with a global top banner that has theme + l10n context
+        debugShowCheckedModeBanner: false,
+        title: 'Hobby Sphere',
+        navigatorKey: navigatorKey,
+        initialRoute: Routes.splash,
+        onGenerateRoute: _router.onGenerateRoute,
+        themeMode: _themeMode,
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        locale: _locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) {
-          // child = the current routed page
           return Stack(
             children: [
-              if (child != null) child, // place actual page behind
+              if (child != null) child, // page behind
               const Positioned(
                 top: 0,
                 left: 0,
-                right: 0, // stick to top edge
-                child:
-                    ConnectionBanner(), // show connecting/offline banner globally
+                right: 0,
+                child: ConnectionBanner(), // global banner
               ),
             ],
           );

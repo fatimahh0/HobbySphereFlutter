@@ -1,37 +1,39 @@
-// Friend request item used in "Received" / "Sent" lists.
-import 'package:hobby_sphere/features/activities/user/social/domain/entities/user_min.dart';
+// 🤝 Friend request list item (used for Received/Sent tabs).
+import 'user_min.dart'; // compact user
 
 class FriendRequestItem {
-  final int requestId; // request id (needed to accept/reject)
-  final UserMin user; // other party compact user
-  final bool isIncoming; // true if you received it
+  final int requestId; // request id
+  final UserMin user; // other party
+  final bool isIncoming; // true if I received
 
   const FriendRequestItem({
-    required this.requestId,
-    required this.user,
-    required this.isIncoming,
+    required this.requestId, // id
+    required this.user, // user
+    required this.isIncoming, // dir
   });
 
-  // Build from map; backend can return different shapes,
-  // so we handle both common cases (Friendship or DTO).
   factory FriendRequestItem.fromMap(
     Map<String, dynamic> m, {
-    required bool incoming,
+    required bool incoming, // incoming?
   }) {
-    // try to find nested 'sender'/'receiver' user
     Map<String, dynamic>? u =
-        (incoming ? m['sender'] : m['receiver']) as Map<String, dynamic>?;
-    // or flat user fields like your /users/all
-    u ??= m['user'] as Map<String, dynamic>?;
-    // fallback: whole object is a user (if repo pre-flattened)
-    u ??= m;
+        (incoming ? m['sender'] : m['receiver'])
+            as Map<String, dynamic>?; // nested
+    u ??= m['user'] as Map<String, dynamic>?; // alt
+    u ??= m; // fallback (already user)
 
-    final reqId = (m['id'] ?? m['requestId'] ?? 0) as num;
+    final reqId = (m['id'] ?? m['requestId'] ?? 0) as num; // id
 
     return FriendRequestItem(
-      requestId: reqId.toInt(),
-      user: UserMin.fromMap(u),
-      isIncoming: incoming,
+      requestId: reqId.toInt(), // int
+      user: UserMin.fromMap(u), // map user
+      isIncoming: incoming, // flag
     );
   }
+
+@override
+  String toString() => 'FriendRequestItem(requestId: $requestId, user: $user, isIncoming: $isIncoming)';
 }
+
+
+  

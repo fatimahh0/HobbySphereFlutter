@@ -1,45 +1,60 @@
-// friendship_screen.dart
-// one hub with 3 tabs — now with a global search and initialTab
-
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hobby_sphere/features/activities/user/social/presentation/widgets/user_tile.dart';
-import 'package:hobby_sphere/shared/widgets/top_toast.dart';
-import 'package:hobby_sphere/l10n/app_localizations.dart';
-import '../bloc/friends/friends_bloc.dart';
-import '../bloc/friends/friends_event.dart';
-import '../bloc/friends/friends_state.dart';
+// 📋 Friendship hub: Received / Sent / Friends + realtime refresh.
+import 'package:flutter/material.dart'; // ui
+import 'package:flutter_bloc/flutter_bloc.dart'; // bloc
+import 'package:hobby_sphere/app/bootstrap/start_user_realtime.dart'
+    as rt; // realtime
+import 'package:hobby_sphere/core/realtime/user_realtime_bridge.dart'
+    show Remover; // remover
+import '../widgets/user_tile.dart'; // tile
+import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // toast
+import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
+import '../bloc/friends/friends_bloc.dart'; // bloc
+import '../bloc/friends/friends_event.dart'; // events
+import '../bloc/friends/friends_state.dart'; // state
 
 class FriendshipScreen extends StatefulWidget {
-  final int initialTab; // which tab to open
-  const FriendshipScreen({
-    super.key,
-    this.initialTab = 0,
-  }); // 0 rec, 1 sent, 2 friends
+  final int initialTab; // 0 rec / 1 sent / 2 friends
+  const FriendshipScreen({super.key, this.initialTab = 0}); // ctor
 
   @override
-  State<FriendshipScreen> createState() => _FriendshipScreenState();
+  State<FriendshipScreen> createState() => _FriendshipScreenState(); // state
 }
 
 class _FriendshipScreenState extends State<FriendshipScreen> {
-  late int tab; // current tab index
-  String q = ''; // global search text
+  late int tab; // current
+  String q = ''; // search
+  late final Remover _rmFrR; // realtime remover
 
   @override
   void initState() {
-    super.initState();
-    tab = widget.initialTab; // set initial tab
-    final b = context.read<FriendsBloc>(); // get bloc
-    b.add(const LoadReceived()); // load received
+    super.initState(); // start
+    tab = widget.initialTab; // set tab
+    final b = context.read<FriendsBloc>(); // bloc
+    b.add(const LoadReceived()); // load rec
     b.add(const LoadSent()); // load sent
     b.add(const LoadFriends()); // load friends
+
+    _rmFrR = rt.userBridge.onFriendshipUpdatedListen((_) {
+      // realtime
+      final bloc = context.read<FriendsBloc>(); // bloc
+      bloc.add(const LoadReceived()); // refresh rec
+      bloc.add(const LoadSent()); // refresh sent
+      bloc.add(const LoadFriends()); // refresh friends
+    });
   }
 
-  // filter helper that works for all three lists
+  @override
+  void dispose() {
+    _rmFrR(); // stop
+    super.dispose(); // end
+  }
+
   List<T> _filterByName<T>(List<T> src, String Function(T) getter) {
-    final s = q.trim().toLowerCase(); // normalize search
+    final s = q.trim().toLowerCase(); // norm
     if (s.isEmpty) return src; // no filter
-    return src.where((e) => getter(e).toLowerCase().contains(s)).toList();
+    return src
+        .where((e) => getter(e).toLowerCase().contains(s))
+        .toList(); // filtered
   }
 
   @override
@@ -48,64 +63,60 @@ class _FriendshipScreenState extends State<FriendshipScreen> {
     final cs = Theme.of(context).colorScheme; // colors
 
     return Scaffold(
-      appBar: AppBar(title: Text('')), // title
+      appBar: AppBar(title: Text('')), // clean
       body: SafeArea(
         child: Column(
           children: [
-            // 🔎 global search (works on all tabs)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), // space
               child: TextField(
-                onChanged: (v) => setState(() => q = v), // update search
+                onChanged: (v) => setState(() => q = v), // search
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search), // icon
-                  hintText: l10.friendshipAddFriendSearchPlaceholder,
-                  filled: true, // style
-                  fillColor: cs.surface, // bg
+                  hintText: l10.friendshipAddFriendSearchPlaceholder, // hint
+                  filled: true,
+                  fillColor: cs.surface, // style
                   border: OutlineInputBorder(
-                    // no border
                     borderRadius: BorderRadius.circular(28),
                     borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  ), // shape
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                  ), // height
                 ),
               ),
             ),
-
-            // tabs
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16), // space
               child: Row(
                 children: [
                   Expanded(
                     child: _Seg(
-                      label: l10.friendshipReceivedRequests, // received
+                      label: l10.friendshipReceivedRequests,
                       selected: tab == 0,
                       onTap: () => setState(() => tab = 0),
                     ),
-                  ),
-                  const SizedBox(width: 8),
+                  ), // rec
+                  const SizedBox(width: 8), // gap
                   Expanded(
                     child: _Seg(
-                      label: l10.friendshipSentRequests, // sent
+                      label: l10.friendshipSentRequests,
                       selected: tab == 1,
                       onTap: () => setState(() => tab = 1),
                     ),
-                  ),
-                  const SizedBox(width: 8),
+                  ), // sent
+                  const SizedBox(width: 8), // gap
                   Expanded(
                     child: _Seg(
-                      label: l10.friendshipMyFriends, // friends
+                      label: l10.friendshipMyFriends,
                       selected: tab == 2,
                       onTap: () => setState(() => tab = 2),
                     ),
-                  ),
+                  ), // friends
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-
-            // lists
+            const SizedBox(height: 8), // gap
             Expanded(
               child: BlocConsumer<FriendsBloc, FriendsState>(
                 listener: (ctx, st) {
@@ -114,7 +125,7 @@ class _FriendshipScreenState extends State<FriendshipScreen> {
                       context,
                       l10.friendshipErrorFailedAction,
                       type: ToastType.error,
-                    ); // show error toast
+                    ); // toast
                   }
                 },
                 builder: (ctx, st) {
@@ -122,56 +133,50 @@ class _FriendshipScreenState extends State<FriendshipScreen> {
                       st.isLoading &&
                       st.received.isEmpty &&
                       st.sent.isEmpty &&
-                      st.friends.isEmpty; // first load spinner
+                      st.friends.isEmpty; // first load
+                  if (loadingAll)
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    ); // spinner
 
-                  if (loadingAll) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  // pick + filter by current tab
                   if (tab == 0) {
                     final list = _filterByName(
                       st.received,
                       (r) => r.user.fullName,
-                    );
+                    ); // filter rec
                     if (list.isEmpty)
-                      return Center(child: Text(l10.friendshipNoRequests));
+                      return Center(
+                        child: Text(l10.friendshipNoRequests),
+                      ); // empty
                     return ListView.separated(
                       itemCount: list.length,
-                      separatorBuilder: (_, __) => const Divider(height: 0),
+                      separatorBuilder: (_, __) =>
+                          const Divider(height: 0), // divider
                       itemBuilder: (_, i) {
-                        final r = list[i]; // request row
+                        final r = list[i]; // row
                         return UserTile(
-                          user: r.user, // shows avatar
-                          subtitle: l10.friendTab_received,
+                          user: r.user, // avatar + name
+                          subtitle: l10.friendTab_received, // hint
                           trailing: Wrap(
-                            spacing: 6,
+                            spacing: 6, // gap
                             children: [
                               IconButton(
                                 icon: const Icon(Icons.check_circle_outline),
-                                color: cs.primary,
+                                color: cs.primary, // accept
                                 onPressed: () {
-                                  context.read<FriendsBloc>().add(
-                                    AcceptRequest(r.requestId),
-                                  ); // accept
-                                  context.read<FriendsBloc>().add(
-                                    const LoadFriends(),
-                                  ); // refresh friends
-                                  context.read<FriendsBloc>().add(
-                                    const LoadReceived(),
-                                  ); // refresh received
+                                  final b = context.read<FriendsBloc>(); // bloc
+                                  b.add(AcceptRequest(r.requestId)); // accept
+                                  b.add(const LoadFriends()); // refresh
+                                  b.add(const LoadReceived()); // refresh
                                 },
                               ),
                               IconButton(
                                 icon: const Icon(Icons.close_rounded),
-                                color: cs.error,
+                                color: cs.error, // reject
                                 onPressed: () {
-                                  context.read<FriendsBloc>().add(
-                                    RejectRequest(r.requestId),
-                                  ); // reject
-                                  context.read<FriendsBloc>().add(
-                                    const LoadReceived(),
-                                  ); // refresh received
+                                  final b = context.read<FriendsBloc>(); // bloc
+                                  b.add(RejectRequest(r.requestId)); // reject
+                                  b.add(const LoadReceived()); // refresh
                                 },
                               ),
                             ],
@@ -182,39 +187,35 @@ class _FriendshipScreenState extends State<FriendshipScreen> {
                   }
 
                   if (tab == 1) {
-                    final list = _filterByName(st.sent, (r) => r.user.fullName);
+                    final list = _filterByName(
+                      st.sent,
+                      (r) => r.user.fullName,
+                    ); // sent
                     if (list.isEmpty)
-                      return Center(child: Text(l10.friendshipNoRequests));
+                      return Center(
+                        child: Text(l10.friendshipNoRequests),
+                      ); // empty
                     return ListView.separated(
                       itemCount: list.length,
-                      separatorBuilder: (_, __) => const Divider(height: 0),
+                      separatorBuilder: (_, __) =>
+                          const Divider(height: 0), // divider
                       itemBuilder: (_, i) {
-                        final r = list[i];
+                        final r = list[i]; // row
                         return UserTile(
-                          user: r.user, // shows avatar
-                          subtitle: l10.friendTab_sent,
-                          // friendship_screen.dart (Sent Requests tab button)
+                          user: r.user, // avatar
+                          subtitle: l10.friendTab_sent, // hint
                           trailing: IconButton(
-                            icon: const Icon(
-                              Icons.cancel_outlined,
-                            ), // cancel icon
-                            color: cs.onSurfaceVariant, // neutral color
+                            icon: const Icon(Icons.cancel_outlined),
+                            color: cs.onSurfaceVariant, // cancel
                             onPressed: () {
-                              final bloc = context
-                                  .read<FriendsBloc>(); // get bloc
+                              final bloc = context.read<FriendsBloc>(); // bloc
                               bloc.add(
                                 RemoveSentLocal(r.requestId),
-                              ); // 1) instant remove
-                              showTopToast(
-                                // 2) toast now
-                                context,
-                                (l10.friendCancelled), // "Request cancelled."
-                                type: ToastType.success,
-                              );
+                              ); // optimistic remove
                               bloc.add(
                                 CancelRequest(r.requestId),
-                              ); // 3) call API
-                              bloc.add(const LoadSent()); // 4) optional refresh
+                              ); // server cancel (by requestId)
+                              bloc.add(const LoadSent()); // refresh
                             },
                           ),
                         );
@@ -222,36 +223,36 @@ class _FriendshipScreenState extends State<FriendshipScreen> {
                     );
                   }
 
-                  // tab == 2
-                  final list = _filterByName(st.friends, (u) => u.fullName);
+                  final list = _filterByName(
+                    st.friends,
+                    (u) => u.fullName,
+                  ); // friends
                   if (list.isEmpty)
-                    return Center(child: Text(l10.friendshipNoFriends));
+                    return Center(
+                      child: Text(l10.friendshipNoFriends),
+                    ); // empty
                   return ListView.separated(
                     itemCount: list.length,
-                    separatorBuilder: (_, __) => const Divider(height: 0),
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 0), // divider
                     itemBuilder: (_, i) {
-                      final u = list[i];
+                      final u = list[i]; // row
                       return UserTile(
-                        user: u, // shows avatar
-                        subtitle: l10.friendTabFriends,
+                        user: u, // avatar
+                        subtitle: l10.friendTabFriends, // hint
                         trailing: IconButton(
                           icon: const Icon(Icons.person_remove_alt_1_outlined),
-                          color: cs.onSurfaceVariant,
+                          color: cs.onSurfaceVariant, // unfriend
                           onPressed: () {
-                            context.read<FriendsBloc>().add(
-                              UnfriendUser(u.id),
-                            ); // unfriend
-                            context.read<FriendsBloc>().add(
-                              const LoadFriends(),
-                            ); // refresh
+                            final b = context.read<FriendsBloc>(); // bloc
+                            b.add(UnfriendUser(u.id)); // unfriend
+                            b.add(const LoadFriends()); // refresh
                           },
                         ),
-                        onTap: () {
-                          Navigator.of(context).pushNamed(
-                            '/community/chat',
-                            arguments: u,
-                          ); // open chat
-                        },
+                        onTap: () => Navigator.of(context).pushNamed(
+                          '/community/chat',
+                          arguments: u,
+                        ), // open chat
                       );
                     },
                   );
@@ -267,32 +268,31 @@ class _FriendshipScreenState extends State<FriendshipScreen> {
 
 class _Seg extends StatelessWidget {
   final String label; // text
-  final bool selected; // selected flag
+  final bool selected; // state
   final VoidCallback onTap; // tap
   const _Seg({
     required this.label,
     required this.selected,
     required this.onTap,
-  });
+  }); // ctor
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme; // theme colors
+    final cs = Theme.of(context).colorScheme; // colors
     return Material(
-      color: selected ? cs.primary : cs.surface, // bg by state
-      borderRadius: BorderRadius.circular(14), // rounded
+      color: selected ? cs.primary : cs.surface, // bg
+      borderRadius: BorderRadius.circular(14), // round
       child: InkWell(
-        borderRadius: BorderRadius.circular(14), // ripple radius
-        onTap: onTap, // switch tab
+        borderRadius: BorderRadius.circular(14), // ripple
+        onTap: onTap, // change
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10), // padding
+          padding: const EdgeInsets.symmetric(vertical: 10), // pad
           child: Center(
             child: Text(
-              // label
               label,
               style: TextStyle(color: selected ? cs.onPrimary : cs.onSurface),
             ),
-          ),
+          ), // text
         ),
       ),
     );

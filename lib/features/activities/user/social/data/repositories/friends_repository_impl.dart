@@ -1,51 +1,49 @@
-import 'package:hobby_sphere/features/activities/user/social/domain/entities/friend_request.dart';
-import 'package:hobby_sphere/features/activities/user/social/domain/entities/user_min.dart';
-import 'package:hobby_sphere/features/activities/user/social/domain/repositories/friends_repository.dart';
+// 🏗️ Friends repository → delegates to service.
+import '../../domain/repositories/friends_repository.dart'; // contract
+import '../../domain/entities/user_min.dart'; // entity
+import '../../domain/entities/friend_request.dart'; // entity
+import '../services/friends_service.dart'; // service
 
-
-import '../services/friends_service.dart';
-
-// Implementation → delegates to FriendsService
 class FriendsRepositoryImpl implements FriendsRepository {
-  final FriendsService s; // low-level service
-  FriendsRepositoryImpl(this.s);
+  final FriendsService s; // service
+  FriendsRepositoryImpl(this.s); // ctor
 
   @override
-  Future<void> accept(int requestId) => s.accept(requestId);
+  Future<void> accept(int requestId) => s.accept(requestId); // forward
 
   @override
-  Future<List<UserMin>> allUsers() => s.getAllUsers();
+  Future<List<UserMin>> allUsers() => s.getAllUsers(); // forward
 
   @override
-  Future<void> block(int userId) => s.block(userId);
+  Future<void> block(int userId) => s.block(userId); // forward
 
   @override
-  Future<void> cancelRequest(int friendId) => s.cancelFriend(friendId);
+  Future<void> cancelRequest(int friendId) => s.cancelFriend(friendId); // optional route
 
   @override
-  Future<List<UserMin>> friends() => s.getFriends();
+  Future<List<UserMin>> friends() => s.getFriends(); // forward
 
   @override
-  Future<List<FriendRequestItem>> received() => s.getPending();
+  Future<List<FriendRequestItem>> received() => s.getPending(); // forward
 
   @override
-  Future<void> reject(int requestId) => s.reject(requestId);
+  Future<void> reject(int requestId) => s.reject(requestId); // forward
 
   @override
-  Future<void> sendRequest(int friendId) => s.sendFriend(friendId);
+  Future<void> sendRequest(int friendId) => s.sendFriend(friendId); // forward
 
   @override
-  Future<List<FriendRequestItem>> sent() => s.getSent();
+  Future<List<FriendRequestItem>> sent() => s.getSent(); // forward
 
   @override
-  Future<List<UserMin>> suggestedUsers(int meId) => s.getSuggestedUsers(meId);
+  Future<List<UserMin>> suggestedUsers(int meId) => s.getSuggestedUsers(meId); // forward
 
   @override
-  Future<void> unfriend(int userId) => s.unfriend(userId);
+  Future<void> unfriend(int userId) => s.unfriend(userId); // forward
 
   @override
-  Future<void> unblock(int userId) => s.unblock(userId);
+  Future<void> unblock(int userId) => s.unblock(userId); // forward
 
-    @override
-  Future<void> cancelSent(int requestId) => s.cancelSentRequest(requestId);
+  @override
+  Future<void> cancelSent(int requestId) => s.cancelSentRequest(requestId); // used by Sent tab
 }

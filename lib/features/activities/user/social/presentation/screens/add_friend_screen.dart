@@ -1,16 +1,19 @@
-import 'package:flutter/material.dart'; // ui
-import 'package:flutter_bloc/flutter_bloc.dart'; // bloc
-import 'package:hobby_sphere/features/activities/user/social/domain/entities/user_min.dart'; // user
-import 'package:hobby_sphere/features/activities/user/social/presentation/bloc/friends/friends_bloc.dart'; // bloc
-import 'package:hobby_sphere/features/activities/user/social/presentation/bloc/friends/friends_event.dart'; // events
-import 'package:hobby_sphere/features/activities/user/social/presentation/bloc/friends/friends_state.dart'; // state
-import 'package:hobby_sphere/features/activities/user/social/presentation/widgets/user_tile.dart'; // row
-import 'package:hobby_sphere/features/activities/user/social/presentation/screens/friendship_screen.dart'; // screen
-import 'package:hobby_sphere/l10n/app_localizations.dart'; // l10n
-import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // toast
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/app/bootstrap/start_user_realtime.dart' as rt;
+import 'package:hobby_sphere/core/realtime/user_realtime_bridge.dart'
+    show Remover;
+import 'package:hobby_sphere/features/activities/user/social/domain/entities/user_min.dart';
+import 'package:hobby_sphere/features/activities/user/social/presentation/bloc/friends/friends_bloc.dart';
+import 'package:hobby_sphere/features/activities/user/social/presentation/bloc/friends/friends_event.dart';
+import 'package:hobby_sphere/features/activities/user/social/presentation/bloc/friends/friends_state.dart';
+import 'package:hobby_sphere/features/activities/user/social/presentation/widgets/user_tile.dart';
+import 'package:hobby_sphere/features/activities/user/social/presentation/screens/friendship_screen.dart';
+import 'package:hobby_sphere/l10n/app_localizations.dart';
+import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 
 class AddFriendScreen extends StatefulWidget {
-  final int meId; // current user id (to hide myself)
+  final int meId;
   const AddFriendScreen({super.key, required this.meId});
 
   @override
@@ -18,96 +21,102 @@ class AddFriendScreen extends StatefulWidget {
 }
 
 class _AddFriendScreenState extends State<AddFriendScreen> {
-  int tab = 0; // 0 all / 1 suggested
-  String query = ''; // search text
+  int tab = 0;
+  String query = '';
+  final Set<int> _optimisticHidden = <int>{};
 
-  // keep local ids to hide instantly after "Add" tap (optimistic)
-  final Set<int> _optimisticHidden = <int>{}; // temp hidden ids
+  late final Remover _rmFrUp;
 
   @override
   void initState() {
-    super.initState(); // life-cycle
-    final b = context.read<FriendsBloc>(); // get bloc
-    b.add(const LoadAllUsers()); // load "all" users
-    b.add(LoadSuggested(widget.meId)); // load "suggested"
-    b.add(const LoadSent()); // load "sent" to compute hides
+    super.initState();
+    final b = context.read<FriendsBloc>();
+    b.add(const LoadAllUsers());
+    b.add(LoadSuggested(widget.meId));
+    b.add(const LoadSent());
+
+    // realtime: any friendship update → resync lists
+    _rmFrUp = rt.userBridge.onFriendshipUpdatedListen((_) {
+      final bloc = context.read<FriendsBloc>();
+      bloc.add(const LoadAllUsers());
+      bloc.add(LoadSuggested(widget.meId));
+      bloc.add(const LoadSent());
+    });
   }
 
-  // filter by search (case-insensitive)
+  @override
+  void dispose() {
+    _rmFrUp();
+    super.dispose();
+  }
+
   List<UserMin> _byQuery(List<UserMin> list) {
-    final q = query.trim().toLowerCase(); // normalize
-    if (q.isEmpty) return list; // nothing to filter
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return list;
     return list.where((u) => u.fullName.toLowerCase().contains(q)).toList();
   }
 
-  // build a final list that excludes: me, friends, sent-to, received-from, and optimistic hidden
   List<UserMin> _candidates(FriendsState st, List<UserMin> source) {
-    // collect ids of relations
-    final me = widget.meId; // my id
-    final friendIds = st.friends.map((u) => u.id).toSet(); // current friends
-    final sentIds = st.sent.map((r) => r.user.id).toSet(); // already sent
-    final recvIds = st.received
-        .map((r) => r.user.id)
-        .toSet(); // pending incoming
-    final hide = {..._optimisticHidden}; // local optimistic hides
+    final me = widget.meId;
+    final friendIds = st.friends.map((u) => u.id).toSet();
+    final sentIds = st.sent.map((r) => r.user.id).toSet();
+    final recvIds = st.received.map((r) => r.user.id).toSet();
+    final hide = {..._optimisticHidden};
 
-    // keep only users not in any set above
     final clean = source.where((u) {
-      if (u.id == me) return false; // hide myself
-      if (friendIds.contains(u.id)) return false; // hide friends
-      if (sentIds.contains(u.id)) return false; // hide already sent
-      if (recvIds.contains(u.id)) return false; // hide already received
-      if (hide.contains(u.id)) return false; // hide local optimistic
-      return true; // show otherwise
+      if (u.id == me) return false;
+      if (friendIds.contains(u.id)) return false;
+      if (sentIds.contains(u.id)) return false;
+      if (recvIds.contains(u.id)) return false;
+      if (hide.contains(u.id)) return false;
+      return true;
     }).toList();
 
-    return _byQuery(clean); // apply search last
+    return _byQuery(clean);
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10 = AppLocalizations.of(context)!; // i18n
-    final cs = Theme.of(context).colorScheme; // theme colors
+    final l10 = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(''), // title text
+        title: Text(''),
         actions: [
           PopupMenuButton<int>(
-            // quick jump menu
             onSelected: (v) {
-              final bloc = context.read<FriendsBloc>(); // same bloc
+              final bloc = context.read<FriendsBloc>();
               Navigator.of(context)
                   .push(
                     MaterialPageRoute(
                       builder: (_) => BlocProvider.value(
-                        value: bloc, // reuse friends bloc
+                        value: bloc,
                         child: FriendshipScreen(
-                          initialTab: v == 0 ? 1 : (v == 1 ? 0 : 2), // map
+                          initialTab: v == 0 ? 1 : (v == 1 ? 0 : 2),
                         ),
                       ),
                     ),
                   )
                   .then((_) {
-                    // after returning, refresh lists
-                    bloc.add(const LoadAllUsers()); // refresh all
-                    bloc.add(LoadSuggested(widget.meId)); // refresh suggested
-                    bloc.add(const LoadSent()); // refresh sent
+                    bloc.add(const LoadAllUsers());
+                    bloc.add(LoadSuggested(widget.meId));
+                    bloc.add(const LoadSent());
                   });
             },
             itemBuilder: (_) => [
               PopupMenuItem(
                 value: 0,
                 child: Text(l10.friendshipAddFriendViewSent),
-              ), // go Sent
+              ),
               PopupMenuItem(
                 value: 1,
                 child: Text(l10.friendshipAddFriendViewReceived),
-              ), // go Received
+              ),
               PopupMenuItem(
                 value: 2,
                 child: Text(l10.friendshipAddFriendViewFriends),
-              ), // go Friends
+              ),
             ],
           ),
         ],
@@ -115,107 +124,85 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // search box
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), // inset
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: TextField(
-                onChanged: (v) => setState(() => query = v), // update search
+                onChanged: (v) => setState(() => query = v),
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search), // icon
-                  hintText: l10.friendshipAddFriendSearchPlaceholder, // hint
-                  filled: true, // filled style
-                  fillColor: cs.surface, // bg color
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: l10.friendshipAddFriendSearchPlaceholder,
+                  filled: true,
+                  fillColor: cs.surface,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(28), // round
-                    borderSide: BorderSide.none, // no border
+                    borderRadius: BorderRadius.circular(28),
+                    borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                  ), // height
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
             ),
-
-            // tabs for All / Suggested
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16), // inset
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
                   Expanded(
                     child: _Segment(
-                      label: l10.friendshipAddFriendAll, // label
-                      selected: tab == 0, // active?
-                      onTap: () => setState(() => tab = 0), // switch
+                      label: l10.friendshipAddFriendAll,
+                      selected: tab == 0,
+                      onTap: () => setState(() => tab = 0),
                     ),
                   ),
-                  const SizedBox(width: 10), // space
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _Segment(
-                      label: l10.friendshipAddFriendSuggested, // label
-                      selected: tab == 1, // active?
-                      onTap: () => setState(() => tab = 1), // switch
+                      label: l10.friendshipAddFriendSuggested,
+                      selected: tab == 1,
+                      onTap: () => setState(() => tab = 1),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 8), // gap
-            // lists body
+            const SizedBox(height: 8),
             Expanded(
               child: BlocBuilder<FriendsBloc, FriendsState>(
                 builder: (ctx, st) {
-                  final src = tab == 0 ? st.all : st.suggested; // choose source
-                  final list = _candidates(st, src); // cleaned + searched
+                  final src = tab == 0 ? st.all : st.suggested;
+                  final list = _candidates(st, src);
 
                   if (st.isLoading && list.isEmpty) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    ); // spinner
+                    return const Center(child: CircularProgressIndicator());
                   }
                   if (list.isEmpty) {
-                    return Center(
-                      child: Text(l10.friendshipAddFriendNoUsers),
-                    ); // empty
+                    return Center(child: Text(l10.friendshipAddFriendNoUsers));
                   }
 
                   return ListView.separated(
-                    itemCount: list.length, // rows count
-                    separatorBuilder: (_, __) =>
-                        const Divider(height: 0), // divider
+                    itemCount: list.length,
+                    separatorBuilder: (_, __) => const Divider(height: 0),
                     itemBuilder: (_, i) {
-                      final u = list[i]; // one user
-
-                      // tap handler to add (with optimistic hide)
+                      final u = list[i];
                       void _send() {
-                        // 1) optimistic: hide immediately
-                        setState(() => _optimisticHidden.add(u.id)); // hide now
-                        // 2) show success toast
+                        setState(() => _optimisticHidden.add(u.id));
                         showTopToast(
                           context,
                           l10.friendshipRequestSent,
                           type: ToastType.success,
                         );
-                        // 3) dispatch real send request
-                        final bloc = context.read<FriendsBloc>(); // bloc
-                        bloc.add(SendRequest(u.id)); // server call
-                        // 4) light re-sync (optional but safe)
-                        bloc.add(const LoadSent()); // refresh "sent"
-                        // 5) optionally refresh All/Suggested in background
-                        bloc.add(const LoadAllUsers()); // refresh "all"
-                        bloc.add(
-                          LoadSuggested(widget.meId),
-                        ); // refresh "suggested"
+                        final bloc = context.read<FriendsBloc>();
+                        bloc.add(SendRequest(u.id));
+                        bloc.add(const LoadSent());
+                        bloc.add(const LoadAllUsers());
+                        bloc.add(LoadSuggested(widget.meId));
                       }
 
                       return UserTile(
-                        user: u, // shows avatar + name
-                        subtitle: l10.friendshipAddFriendAvailable, // hint
+                        user: u,
+                        subtitle: l10.friendshipAddFriendAvailable,
                         trailing: IconButton(
-                          icon: const Icon(
-                            Icons.person_add_alt_1_rounded,
-                          ), // add icon
-                          color: cs.primary, // brand color
-                          onPressed: _send, // send flow
+                          icon: const Icon(Icons.person_add_alt_1_rounded),
+                          color: cs.primary,
+                          onPressed: _send,
                         ),
                       );
                     },
@@ -230,11 +217,10 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
   }
 }
 
-// small segmented button
 class _Segment extends StatelessWidget {
-  final String label; // text
-  final bool selected; // state
-  final VoidCallback onTap; // tap
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
   const _Segment({
     required this.label,
     required this.selected,
@@ -242,21 +228,19 @@ class _Segment extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme; // colors
+    final cs = Theme.of(context).colorScheme;
     return Material(
-      color: selected ? cs.primary : cs.surface, // bg by state
-      borderRadius: BorderRadius.circular(14), // rounded
+      color: selected ? cs.primary : cs.surface,
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14), // ripple radius
-        onTap: onTap, // switch
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10), // padding
+          padding: const EdgeInsets.symmetric(vertical: 10),
           child: Center(
             child: Text(
-              label, // text
-              style: TextStyle(
-                color: selected ? cs.onPrimary : cs.onSurface,
-              ), // color
+              label,
+              style: TextStyle(color: selected ? cs.onPrimary : cs.onSurface),
             ),
           ),
         ),

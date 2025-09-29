@@ -1,10 +1,11 @@
-// lib/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart
+///// lib/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart
 // Flutter 3.35.x — Explore page with ONE search field, category chips (only
-// non-empty types), dynamic currency (like Home), and l10n.
+// non-empty types), dynamic currency (like Home), l10n, and realtime refresh.
 
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/app/bootstrap/start_user_realtime.dart' as rt;
 
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
@@ -61,11 +62,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   late final Future<String?> _currencyFut;
 
+  // Keep exact refs so we can unbind safely
+  void Function(Map<String, dynamic>)? _onActivityCreated;
+  void Function(int, Map<String, dynamic>)? _onActivityUpdated;
+  void Function(int)? _onActivityDeleted;
+
   @override
   void initState() {
     super.initState();
 
-    // Keep blocs alive for the whole screen lifetime.
+    // blocs live for the whole screen lifetime.
     _typesBloc = TypesBloc(widget.getItemTypes)
       ..add(TypesLoadRequested(widget.token));
 
@@ -74,14 +80,39 @@ class _ExploreScreenState extends State<ExploreScreen> {
       getItemsByType: widget.getItemsByType,
     )..add(const ExploreItemsLoadAll());
 
-    // Compute currency future once; avoid ?. ?? analyzer warnings.
+    // Compute currency future once
     _currencyFut = (widget.getCurrencyCode == null)
         ? Future<String?>.value(widget.currencyFallback)
         : widget.getCurrencyCode!();
+
+    // ===== Realtime: Activities → refresh Explore list & types =====
+    void _refreshBoth() {
+      if (!mounted) return;
+      _itemsBloc.add(const ExploreItemsRefresh());
+      _typesBloc.add(TypesLoadRequested(widget.token));
+    }
+
+    _onActivityCreated = (full) => _refreshBoth();
+    _onActivityUpdated = (id, patch) => _refreshBoth();
+    _onActivityDeleted = (id) => _refreshBoth();
+
+    rt.userBridge.onActivityCreated = _onActivityCreated;
+    rt.userBridge.onActivityUpdated = _onActivityUpdated;
+    rt.userBridge.onActivityDeleted = _onActivityDeleted;
   }
 
   @override
   void dispose() {
+    // unbind only if still ours
+    if (rt.userBridge.onActivityCreated == _onActivityCreated) {
+      rt.userBridge.onActivityCreated = null;
+    }
+    if (rt.userBridge.onActivityUpdated == _onActivityUpdated) {
+      rt.userBridge.onActivityUpdated = null;
+    }
+    if (rt.userBridge.onActivityDeleted == _onActivityDeleted) {
+      rt.userBridge.onActivityDeleted = null;
+    }
     _typesBloc.close();
     _itemsBloc.close();
     super.dispose();

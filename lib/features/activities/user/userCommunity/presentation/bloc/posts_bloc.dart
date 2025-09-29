@@ -10,23 +10,18 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
 
   PostsBloc({required this.getPosts, required this.toggleLike})
     : super(const PostsState()) {
-   // inside on<LoadPosts>
     on<LoadPosts>((e, emit) async {
-      emit(state.copyWith(loading: true, error: null)); // show loader
+      emit(state.copyWith(loading: true, error: null));
       try {
-        final list = await getPosts(e.token); // fetch
-        emit(state.copyWith(posts: list, loading: false)); // show data
+        final list = await getPosts(e.token);
+        emit(state.copyWith(posts: list, loading: false));
       } catch (err) {
-        // keep existing posts; only lift the error flag (no empty screen surprise)
-        emit(
-          state.copyWith(loading: false, error: err.toString()),
-        ); // show error
+        emit(state.copyWith(loading: false, error: err.toString()));
       }
     });
 
-
     on<ToggleLikePressed>((e, emit) async {
-      // optimistic update
+      // optimistic
       final updated = state.posts.map((p) {
         if (p.id == e.postId) {
           final liked = !p.isLiked;
@@ -42,7 +37,7 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
       try {
         await toggleLike(e.token, e.postId);
       } catch (_) {
-        // revert on failure
+        // revert
         final reverted = state.posts.map((p) {
           if (p.id == e.postId) {
             final liked = !p.isLiked;

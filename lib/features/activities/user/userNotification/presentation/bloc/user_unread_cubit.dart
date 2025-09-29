@@ -1,16 +1,17 @@
+// lib/features/activities/user/userNotification/presentation/bloc/user_unread_cubit.dart
+// Flutter 3.35.x — Realtime unread count (guest-safe)
 
 import 'dart:async';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hobby_sphere/core/realtime/event_models.dart';
+
 import 'package:hobby_sphere/core/realtime/realtime_bus.dart';
+import 'package:hobby_sphere/core/realtime/event_models.dart';
 import 'package:hobby_sphere/features/activities/user/userNotification/domain/repositories/user_notification_repository.dart';
 
 class UserUnreadState {
   final int count;
   final bool loading;
   final String? error;
-
   const UserUnreadState({this.count = 0, this.loading = false, this.error});
 
   UserUnreadState copyWith({int? count, bool? loading, String? error}) {
@@ -24,7 +25,7 @@ class UserUnreadState {
 
 class UserUnreadNotificationsCubit extends Cubit<UserUnreadState> {
   final UserNotificationRepository repo;
-  final String token;
+  String token;
 
   StreamSubscription<RealtimeEvent>? _rt;
 
@@ -34,9 +35,14 @@ class UserUnreadNotificationsCubit extends Cubit<UserUnreadState> {
     bool enableRealtime = true,
   }) : super(const UserUnreadState()) {
     if (enableRealtime) {
-      _rt = RealtimeBus.I.stream.listen((e) {
+      _rt = RealtimeBus.I.stream.listen((e) async {
         if (e.domain == Domain.notification) {
-          refresh();
+          try {
+            final c = await repo.getUnreadCount(token);
+            emit(state.copyWith(count: c, loading: false, error: null));
+          } catch (_) {
+            /* keep last count */
+          }
         }
       });
     }
@@ -51,6 +57,8 @@ class UserUnreadNotificationsCubit extends Cubit<UserUnreadState> {
       emit(state.copyWith(loading: false, error: e.toString()));
     }
   }
+
+  void updateToken(String newToken) => token = newToken;
 
   @override
   Future<void> close() async {

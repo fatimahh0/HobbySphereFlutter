@@ -7,6 +7,9 @@ import 'package:flutter/material.dart'; // base UI
 import 'package:flutter/services.dart'; // PlatformException details
 import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC for state
 import 'package:google_sign_in/google_sign_in.dart'; // Google sign-in SDK
+// add near other imports
+import 'package:hobby_sphere/app/bootstrap/start_user_realtime.dart'
+    as rt; // realtime
 
 import 'package:hobby_sphere/app/router/router.dart'
     show ShellRouteArgs, Routes; // app routes + args
@@ -263,39 +266,44 @@ class _LoginViewState extends State<_LoginView> {
           }
 
           // --- show reactivate dialog once if needed ---
-          if (state.showReactivate && !_reactivateOpen) {
-            _reactivateOpen = true; // lock
-            final ok = await showDialog<bool>(
-              // open dialog
-              context: context, // ctx
-              barrierDismissible: false, // must choose
-              builder: (_) => AlertDialog(
-                // simple dialog
-                title: Text(t.loginInactiveTitle), // title i18n
-                content: Text(t.loginInactiveMessage), // body i18n
-                actions: [
-                  // buttons row
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false), // cancel
-                    child: Text(t.cancel), // label
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context, true), // ok
-                    child: Text(t.loginContinue), // label
-                  ),
-                ],
+          // --- after successful login (we have token) ---
+          if (state.token.isNotEmpty) {
+            g.appDio?.options.headers['Authorization'] =
+                'Bearer ${state.token}'; // set header
+            await TokenStore.save(
+              token: state.token,
+              role: state.roleIndex == 1 ? 'business' : 'user',
+            ); // persist
+            if (state.roleIndex == 1 && state.businessId > 0) {
+              await BusinessContext.set(state.businessId); // save biz id
+            }
+            // keep globals aligned (some parts read these)
+            g.token = state.token; // store jwt
+            // if you have appServerRoot set earlier, keep it; realtime needs httpBase w/o /api
+
+            // ✅ start realtime for USER role only (you said this socket is for user side)
+            if (state.roleIndex == 0) {
+              await rt.startUserRealtime(); // connect + listen
+            }
+
+            if (!mounted) return; // safety
+
+            final appRole = state.roleIndex == 1
+                ? AppRole.business
+                : AppRole.user; // role
+
+            // navigate as before
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              '/shell',
+              (r) => false,
+              arguments: ShellRouteArgs(
+                role: appRole,
+                token: state.token,
+                businessId: state.businessId,
               ),
             );
-            _reactivateOpen = false; // unlock
-            if (!mounted) return; // safety
-            context.read<LoginBloc>().add(
-              // send follow-up event
-              ok ==
-                      true // if user accepted
-                  ? LoginReactivateConfirmed() // reactivate
-                  : LoginReactivateDismissed(), // keep inactive
-            );
           }
+
 
           // --- after successful login (we have token) ---
           if (state.token.isNotEmpty) {

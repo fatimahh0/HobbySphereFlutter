@@ -1,6 +1,7 @@
-import '../entities/chat_message.dart';
-import '../entities/contact_count.dart';
-import '../repositories/chat_repository.dart';
+// 🎯 Chat use cases (tiny forwarders).
+import '../repositories/chat_repository.dart'; // repo
+import '../entities/chat_message.dart'; // entity
+import '../entities/contact_count.dart'; // entity
 
 class ConversationUC {
   final ChatRepository r;

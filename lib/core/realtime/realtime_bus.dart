@@ -1,16 +1,16 @@
 // Flutter 3.35.x
-// Broadcast stream so all BLoCs can listen to realtime events.
+// realtime_bus.dart — Broadcast bus so any screen can listen to realtime events.
 
-import 'dart:async'; // StreamController
-import 'event_models.dart'; // RealtimeEvent model
+import 'dart:async'; // StreamController, Stream
+import 'event_models.dart'; // RealtimeEvent type
 
 class RealtimeBus {
-  RealtimeBus._(); // private constructor
-  static final RealtimeBus I = RealtimeBus._(); // singleton instance
+  RealtimeBus._(); // private constructor (singleton pattern)
+  static final RealtimeBus I = RealtimeBus._(); // single shared instance
 
   final _ctrl = StreamController<RealtimeEvent>.broadcast(); // broadcast stream
 
-  Stream<RealtimeEvent> get stream => _ctrl.stream; // public stream to listen
-  void emit(RealtimeEvent e) => _ctrl.add(e); // push event to all listeners
-  void dispose() => _ctrl.close(); // close on app shutdown
+  Stream<RealtimeEvent> get stream => _ctrl.stream; // output stream to listen
+  void emit(RealtimeEvent e) => _ctrl.add(e); // push an event to listeners
+  Future<void> dispose() => _ctrl.close(); // close when app shuts down
 }

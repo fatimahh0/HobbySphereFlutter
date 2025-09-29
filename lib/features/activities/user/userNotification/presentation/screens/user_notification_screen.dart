@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:hobby_sphere/app/router/router.dart';
+import 'package:hobby_sphere/l10n/app_localizations.dart';
+import 'package:hobby_sphere/shared/theme/app_theme.dart';
+import 'package:hobby_sphere/shared/widgets/top_toast.dart';
+
 import 'package:hobby_sphere/features/activities/user/userNotification/data/repositories/user_notification_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/user/userNotification/data/services/user_notification_service.dart';
 import 'package:hobby_sphere/features/activities/user/userNotification/domain/entities/user_notification.dart';
@@ -9,10 +14,6 @@ import 'package:hobby_sphere/features/activities/user/userNotification/domain/us
 import '../bloc/user_notification_bloc.dart';
 import '../bloc/user_notification_event.dart';
 import '../bloc/user_notification_state.dart';
-
-import 'package:hobby_sphere/l10n/app_localizations.dart';
-import 'package:hobby_sphere/shared/theme/app_theme.dart';
-import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 
 class UserNotificationScreen extends StatelessWidget {
   final String token;
@@ -70,14 +71,19 @@ class UserNotificationScreen extends StatelessWidget {
                 ),
               );
             }
-            return ListView.separated(
-              padding: const EdgeInsets.all(12),
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemCount: state.notifications.length,
-              itemBuilder: (context, i) {
-                final n = state.notifications[i];
-                return _NotificationCard(notification: n, token: token);
-              },
+            return RefreshIndicator(
+              onRefresh: () async => context.read<UserNotificationBloc>().add(
+                LoadUserNotifications(),
+              ),
+              child: ListView.separated(
+                padding: const EdgeInsets.all(12),
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemCount: state.notifications.length,
+                itemBuilder: (context, i) {
+                  final n = state.notifications[i];
+                  return _NotificationCard(notification: n, token: token);
+                },
+              ),
             );
           },
         ),
@@ -142,26 +148,16 @@ class _NotificationCard extends StatelessWidget {
   void _handleNavigation(BuildContext context) {
     final nav = Navigator.of(context);
     switch (notification.typeCode) {
-      // Most user flows → Tickets/Bookings screen
       case 'BOOKING_CREATED':
       case 'BOOKING_CONFIRMED':
       case 'BOOKING_CANCELLED':
       case 'BOOKING_CANCELED':
       case 'BOOKING_REJECTED':
       case 'BOOKING_COMPLETED':
-        nav.pushNamed(
-          Routes.userTicketsCalendar, // your user bookings screen
-        );
+        nav.pushNamed(Routes.userTicketsCalendar);
         break;
-
-      /*  case 'NEW_MESSAGE':
-        nav.pushNamed(Routes.singleChat); // adjust to your chat route/args
-        break;
-
-      case 'ITEM_UPDATED':
-        nav.pushNamed(Routes.explore); // e.g., show updated item list
-        break;
- */
+      // case 'NEW_MESSAGE': nav.pushNamed(Routes.singleChat); break;
+      // case 'ITEM_UPDATED': nav.pushNamed(Routes.explore); break;
       default:
         showTopToast(
           context,

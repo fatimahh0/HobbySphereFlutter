@@ -2402,6 +2402,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get splashNoConnectionDesc => 'يرجى التحقق من الواي فاي أو بيانات الهاتف ثم أعد المحاولة.';
 
   @override
+  String get splashServerDownTitle => 'Server is unavailable';
+
+  @override
+  String get splashServerDownDesc => 'We’re online, but can’t reach the server right now. Please try again in a moment.';
+
+  @override
+  String get connectionServerDown => 'Server unavailable';
+
+  @override
   String get interestSaved => 'تم حفظ الاهتمامات';
 
   @override

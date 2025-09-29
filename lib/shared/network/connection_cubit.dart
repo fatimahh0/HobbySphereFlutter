@@ -1,107 +1,149 @@
-import 'dart:async'; // for StreamSubscription, Timer
-import 'dart:io'; // for InternetAddress.lookup to confirm actual internet
-import 'package:bloc/bloc.dart'; // base Cubit
-import 'package:connectivity_plus/connectivity_plus.dart'; // network status
+// Flutter 3.35.x
+// connection_cubit.dart — connectivity + server health
+// States:
+// - offline: no network
+// - connecting: checking internet/server
+// - serverDown: internet OK but backend not reachable
+// - connected: internet + backend reachable
 
-/// Simple enum to represent connection states.
-enum ConnectionStateX { connected, connecting, offline }
+import 'dart:async'; // Timer
+import 'dart:io'; // InternetAddress + HttpClient
+import 'package:bloc/bloc.dart'; // Cubit
+import 'package:connectivity_plus/connectivity_plus.dart'; // network changes
 
-/// Cubit holds and emits the current connection state.
+// enum with serverDown included
+enum ConnectionStateX { connected, connecting, offline, serverDown }
+
 class ConnectionCubit extends Cubit<ConnectionStateX> {
-  // listen to platform connectivity changes
-  final Connectivity _connectivity = Connectivity(); // plugin instance
-  StreamSubscription<List<ConnectivityResult>>? _sub; // stream subscription
-  Timer? _pollTimer; // small timer to re-check internet while connecting
+  final Connectivity _connectivity = Connectivity(); // plugin
+  StreamSubscription<List<ConnectivityResult>>? _sub; // listener
+  Timer? _pollTimer; // periodic check timer
 
-  ConnectionCubit() : super(ConnectionStateX.connecting) {
-    // start by checking now (app start)
-    _startMonitoring(); // begin listeners and first check
+  final String serverProbeUrl; // health endpoint to ping
+
+  ConnectionCubit({required this.serverProbeUrl})
+    : super(ConnectionStateX.connecting) {
+    _startMonitoring(); // start listening
   }
 
   void _startMonitoring() {
-    // subscribe to connectivity changes (wifi/cellular/none)
+    // listen to connectivity changes
     _sub = _connectivity.onConnectivityChanged.listen((results) async {
-      // normalize to a single result; plugin returns list on some platforms
       final result = results.isNotEmpty
           ? results.first
-          : ConnectivityResult.none;
+          : ConnectivityResult.none; // one result
 
-      // if no network at all => emit offline immediately
       if (result == ConnectivityResult.none) {
-        emit(ConnectionStateX.offline); // show offline banner
-        _cancelPoll(); // stop any polling timers
-        return; // exit here
+        emit(ConnectionStateX.offline); // no network
+        _cancelPoll(); // stop timers
+        return; // done
       }
 
-      // we have some network (wifi/cellular), but we still need real internet
-      emit(ConnectionStateX.connecting); // show "Connecting..." spinner
-      _cancelPoll(); // clear older polling
-      _verifyInternetLoop(); // begin periodic verification
+      emit(ConnectionStateX.connecting); // we have network → verify
+      _cancelPoll(); // clear old timer
+      _verifyLoop(); // start periodic probe
     });
 
-    // also do a first check at startup (in case no event fires)
-    _kickoffCheck(); // one-shot initial verification
+    _initialCheck(); // run once on startup
   }
 
-  Future<void> _kickoffCheck() async {
-    // check current platform connectivity
-    final res = await _connectivity.checkConnectivity(); // current status
+  Future<void> _initialCheck() async {
+    final res = await _connectivity.checkConnectivity(); // current network
     if (res == ConnectivityResult.none) {
-      emit(ConnectionStateX.offline); // offline at startup
-      return; // stop here
+      emit(ConnectionStateX.offline); // no network at start
+      return; // stop
     }
-    // try to resolve a domain to confirm real internet
-    emit(ConnectionStateX.connecting); // we are trying to confirm
-    final ok = await _hasInternet(); // DNS lookup check
-    emit(
-      ok ? ConnectionStateX.connected : ConnectionStateX.connecting,
-    ); // set state
-    if (!ok) _verifyInternetLoop(); // if still not sure, keep polling
+
+    emit(ConnectionStateX.connecting); // verify next
+    final s = await _verdict(); // compute state
+    emit(s); // update
+    if (s != ConnectionStateX.connected)
+      _verifyLoop(); // keep checking if not ready
   }
 
-  void _verifyInternetLoop() {
-    // poll every 2 seconds until we confirm internet
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (t) async {
-      final ok = await _hasInternet(); // test internet access
-      if (ok) {
-        emit(ConnectionStateX.connected); // hide banner
-        _cancelPoll(); // stop polling
-      } else {
-        emit(ConnectionStateX.connecting); // keep spinner on
-      }
+  void _verifyLoop() {
+    // check every 2 seconds until connected
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      final s = await _verdict(); // compute state
+      emit(s); // update UI
+      if (s == ConnectionStateX.connected) _cancelPoll(); // stop when OK
     });
+  }
+
+  Future<ConnectionStateX> _verdict() async {
+    final hasNet = await _hasInternet(); // DNS reachability
+    if (!hasNet) return ConnectionStateX.offline; // no internet
+
+    final ok = await _pingServer(serverProbeUrl); // backend health
+    return ok
+        ? ConnectionStateX.connected
+        : ConnectionStateX.serverDown; // decide
   }
 
   Future<bool> _hasInternet() async {
     try {
-      // quick DNS lookup to confirm actual internet
-      final result = await InternetAddress.lookup('example.com'); // fast host
-      // if we get non-empty with rawAddress => internet is fine
-      return result.isNotEmpty &&
-          result.first.rawAddress.isNotEmpty; // true/false
+      // simple DNS query to test internet quickly
+      final res = await InternetAddress.lookup(
+        'example.com',
+      ).timeout(const Duration(milliseconds: 700)); // short timeout
+      return res.isNotEmpty && res.first.rawAddress.isNotEmpty; // internet OK
     } catch (_) {
-      return false; // lookup failed => no internet
+      return false; // DNS failed
+    }
+  }
+
+  Future<bool> _pingServer(String url) async {
+    // tolerant probe:
+    // - try HEAD then GET
+    // - treat ANY HTTP status < 500 as reachable (200/3xx/401/403/404…)
+    final c = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 2); // fast fail
+    try {
+      final uri = Uri.parse(url); // parse URL
+
+      HttpClientRequest req; // request holder
+      try {
+        req = await c
+            .openUrl('HEAD', uri)
+            .timeout(const Duration(seconds: 2)); // try HEAD
+      } catch (_) {
+        req = await c
+            .getUrl(uri)
+            .timeout(const Duration(seconds: 2)); // fallback GET
+      }
+
+      req.headers.set(
+        HttpHeaders.acceptHeader,
+        'application/json',
+      ); // hint JSON
+
+      final resp = await req.close().timeout(
+        const Duration(seconds: 2),
+      ); // send
+      final code = resp.statusCode; // http code
+      return code > 0 && code < 500; // reachable if not a 5xx error
+    } catch (_) {
+      return false; // network or handshake error
+    } finally {
+      c.close(force: true); // cleanup
     }
   }
 
   void retryNow() {
-    // called by the "Try again" button to force a re-check
-    emit(ConnectionStateX.connecting); // show spinner immediately
-    _cancelPoll(); // reset polling
-    _verifyInternetLoop(); // try again
+    emit(ConnectionStateX.connecting); // show spinner
+    _cancelPoll(); // reset timer
+    _verifyLoop(); // re-check now
   }
 
   void _cancelPoll() {
-    // helper to stop timer if active
-    _pollTimer?.cancel(); // cancel
+    _pollTimer?.cancel(); // stop timer
     _pollTimer = null; // clear
   }
 
   @override
   Future<void> close() {
-    // cleanup all streams/timers
-    _cancelPoll(); // stop polling
-    _sub?.cancel(); // stop connectivity listener
-    return super.close(); // call parent
+    _cancelPoll(); // cleanup
+    _sub?.cancel(); // stop listener
+    return super.close(); // parent
   }
 }

@@ -2402,6 +2402,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get splashNoConnectionDesc => 'Veuillez vérifier le Wi-Fi ou les données mobiles puis réessayer.';
 
   @override
+  String get splashServerDownTitle => 'Server is unavailable';
+
+  @override
+  String get splashServerDownDesc => 'We’re online, but can’t reach the server right now. Please try again in a moment.';
+
+  @override
+  String get connectionServerDown => 'Server unavailable';
+
+  @override
   String get interestSaved => 'Centres d’intérêt enregistrés avec succès';
 
   @override
