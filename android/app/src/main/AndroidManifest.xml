@@ -3,6 +3,9 @@
 
   <uses-permission android:name="android.permission.INTERNET"/>
 
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+
   <application
       android:name="${applicationName}"
       android:label="hobby_sphere"
@@ -13,6 +16,10 @@
     <meta-data
         android:name="flutterEmbedding"
         android:value="2" />
+
+        <meta-data
+    android:name="com.google.android.geo.API_KEY"
+    android:value="${MAPS_API_KEY}" />
 
     <activity
         android:name="com.stripe.android.view.PaymentAuthWebViewActivity"
