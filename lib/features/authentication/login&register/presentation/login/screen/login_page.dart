@@ -16,27 +16,30 @@ import 'package:hobby_sphere/app/router/router.dart'
 import 'package:hobby_sphere/core/constants/app_role.dart'; // enum for app roles
 import 'package:hobby_sphere/core/network/globals.dart'
     as g; // shared Dio/global
+
+import 'package:hobby_sphere/features/authentication/forgotpassword/presentation/screens/forgot_password_page.dart';
 import 'package:hobby_sphere/services/token_store.dart'; // save token locally
 import 'package:hobby_sphere/core/business/business_context.dart'; // save biz id
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n texts
+import 'package:hobby_sphere/shared/widgets/phone_input.dart';
 
 import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // toast helper
 
-import 'package:hobby_sphere/features/authentication/data/services/auth_service.dart'; // HTTP service
-import 'package:hobby_sphere/features/authentication/data/repositories/auth_repository_impl.dart'; // repo impl
-import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_user_email.dart'; // UC
-import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_user_phone.dart'; // UC
-import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_business_email.dart'; // UC
-import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_business_phone.dart'; // UC
-import 'package:hobby_sphere/features/authentication/domain/usecases/login/login_google.dart'; // UC
-import 'package:hobby_sphere/features/authentication/domain/usecases/login/reactivate_account.dart'; // UC
+import 'package:hobby_sphere/features/authentication/login&register/data/services/auth_service.dart'; // HTTP service
+import 'package:hobby_sphere/features/authentication/login&register/data/repositories/auth_repository_impl.dart'; // repo impl
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/login/login_user_email.dart'; // UC
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/login/login_user_phone.dart'; // UC
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/login/login_business_email.dart'; // UC
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/login/login_business_phone.dart'; // UC
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/login/login_google.dart'; // UC
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/login/reactivate_account.dart'; // UC
 
 import '../bloc/login_bloc.dart'; // bloc
 import '../bloc/login_event.dart'; // events
 import '../bloc/login_state.dart'; // state
 
 import '../widgets/role_selector.dart'; // role switcher UI
-import '../../../../../shared/widgets/phone_input.dart'; // phone field
+
 import '../widgets/email_input.dart'; // email field
 import '../widgets/password_input.dart'; // password field
 import '../widgets/primary_actions.dart'; // login/forgot buttons
@@ -304,7 +307,6 @@ class _LoginViewState extends State<_LoginView> {
             );
           }
 
-
           // --- after successful login (we have token) ---
           if (state.token.isNotEmpty) {
             g.appDio?.options.headers['Authorization'] =
@@ -426,12 +428,19 @@ class _LoginViewState extends State<_LoginView> {
                           );
                           bloc.add(LoginSubmitted()); // submit
                         },
-                        onForgot: () => showTopToast(
-                          // forgot press
-                          context,
-                          'coming soon', // placeholder
-                          type: ToastType.info, // info
-                        ),
+                        onForgot: () {
+                          // read current role index from bloc (0 = user, 1 = business)
+                          final isBusiness =
+                              context.read<LoginBloc>().state.roleIndex ==
+                              1; // role
+                          // navigate to forgot page with role preselected
+                          Navigator.of(context).pushNamed(
+                            Routes.forgot, // route name
+                            arguments: ForgotPasswordArgs(
+                              isBusiness: isBusiness,
+                            ), // pass role
+                          ); // push
+                        },
                       ),
 
                       // --- Google Sign-In (users only) ---

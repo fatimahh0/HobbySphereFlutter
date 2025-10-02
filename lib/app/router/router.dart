@@ -1,4 +1,3 @@
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,6 +17,23 @@ import 'package:hobby_sphere/features/activities/Business/businessNotification/d
 import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/screens/business_notification_screen.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart'
+    as bprof_repo;
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart'
+    as bprof_svc;
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/delete_business.dart'
+    as bprof_uc;
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/get_business_by_id.dart'
+    as bprof_uc;
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_visibility.dart'
+    as bprof_uc;
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart'
+    as bprof_uc;
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart'
+    as bprof_uc;
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_bloc.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
 import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
@@ -81,9 +97,9 @@ import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/g
     show GetInterestBasedItems;
 import 'package:hobby_sphere/features/activities/user/userHome/domain/usecases/get_upcoming_guest_items.dart';
 import 'package:hobby_sphere/features/activities/user/userNotification/presentation/screens/user_notification_screen.dart';
-import 'package:hobby_sphere/features/authentication/data/repositories/interests_repository_impl.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/get_activity_types.dart';
-import 'package:hobby_sphere/features/authentication/presentation/login/screen/login_page.dart';
+
+import 'package:hobby_sphere/features/authentication/forgotpassword/presentation/screens/forgot_password_page.dart';
+import 'package:hobby_sphere/features/authentication/login&register/data/repositories/interests_repository_impl.dart';
 
 // ---------- User ----------
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
@@ -92,8 +108,10 @@ import 'package:hobby_sphere/features/activities/user/userHome/presentation/scre
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
 import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/edit_item_page.dart';
 import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/screen/create_item_page.dart';
-import 'package:hobby_sphere/features/authentication/presentation/register/screens/register_email_page.dart';
-import 'package:hobby_sphere/features/authentication/presentation/register/screens/register_page.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart';
+import 'package:hobby_sphere/features/authentication/login&register/presentation/login/screen/login_page.dart';
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/screens/register_email_page.dart';
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/screens/register_page.dart';
 
 // ---------- Business Bookings ----------
 import '../../features/activities/Business/businessBooking/data/repositories/business_booking_repository_impl.dart';
@@ -133,7 +151,7 @@ import 'package:hobby_sphere/features/activities/common/data/repositories/curren
 import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
 import 'package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart';
 
-import '../../features/authentication/data/services/registration_service.dart';
+import '../../features/authentication/login&register/data/services/registration_service.dart';
 
 /// Named routes
 abstract class Routes {
@@ -155,6 +173,7 @@ abstract class Routes {
   static const businessActivities = '/business/activities';
   static const privacyPolicy = '/privacy-policy';
   static const editBusiness = '/business/edit';
+  static const businessProfile = '/business/profile';
   static const businessNotifications = '/business/notifications';
   static const reopenItem = '/business/reopenitem';
   static const businessActivityDetails = '/business/activity/details';
@@ -172,6 +191,7 @@ abstract class Routes {
   static const addFriend = '/community/add-friend'; // placeholder
   static const myPosts = '/community/myposts'; // placeholder
   static const friendship = '/community/chat'; // placeholder
+  static const forgot = '/forgot';
 }
 
 // ===== Route Args =====
@@ -211,6 +231,16 @@ class MyPostsRouteArgs {
     required this.token, // required token
     required this.userId, // required id
     this.imageBaseUrl, // optional base url
+  });
+}
+
+// Put with the other *RouteArgs classes
+class BusinessProfileRouteArgs {
+  final String token; // bearer JWT for API
+  final int businessId; // current business id
+  const BusinessProfileRouteArgs({
+    required this.token, // pass token
+    required this.businessId, // pass id
   });
 }
 
@@ -368,8 +398,6 @@ class UserNotificationsRouteArgs {
   const UserNotificationsRouteArgs({required this.token});
 }
 
-
-
 /// Global navigator key (for programmatic navigation)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -415,6 +443,14 @@ class AppRouter {
           );
         }
 
+      case Routes.forgot:
+        {
+          // read typed args if provided (optional)
+          final fpArgs = args is ForgotPasswordArgs ? args : null; // cast args
+          // open page with DI included inside the page (already in the file)
+          return _page(ForgotPasswordPage(args: fpArgs), settings); // go
+        }
+
       case Routes.registerEmail:
         {
           final dio = g.appDio ?? Dio();
@@ -442,6 +478,64 @@ class AppRouter {
             token: data.token,
           ),
         );
+
+      // Inside AppRouter.onGenerateRoute's switch(name)
+      case Routes.businessProfile: // open business profile screen
+        {
+          // 1) Safely read typed args
+          final data = args is BusinessProfileRouteArgs ? args : null; // cast
+          if (data == null) {
+            // 2) Guard if missing args
+            return _error(
+              'Missing BusinessProfileRouteArgs (token + businessId).',
+            );
+          }
+
+          // 3) Build DI: service -> repository -> use cases -> bloc
+          return MaterialPageRoute(
+            settings: settings, // keep settings
+            builder: (_) {
+              // Service (HTTP)
+              final svc =
+                  bprof_svc.BusinessService(); // service for profile APIs
+
+              // Repository (wraps service)
+              final repo = bprof_repo.BusinessRepositoryImpl(svc); // repo
+
+              // Use cases (profile stack)
+              final getOne = bprof_uc.GetBusinessById(repo); // load profile
+              final toggleVis = bprof_uc.UpdateBusinessVisibility(
+                repo,
+              ); // toggle visibility
+              final updateStatus = bprof_uc.UpdateBusinessStatus(
+                repo,
+              ); // set active/inactive
+              final deleteBiz = bprof_uc.DeleteBusiness(repo); // delete account
+              final checkStripe = bprof_uc.CheckStripeStatus(
+                repo,
+              ); // check Stripe
+
+              // 4) Provide Bloc + dispatch initial load
+              return BlocProvider(
+                create: (_) =>
+                    BusinessProfileBloc(
+                      getBusinessById: getOne, // inject
+                      updateBusinessVisibility: toggleVis, // inject
+                      updateBusinessStatus: updateStatus, // inject
+                      deleteBusiness: deleteBiz, // inject
+                      checkStripeStatus: checkStripe, // inject
+                    )..add(
+                      LoadBusinessProfile(data.token, data.businessId),
+                    ), // fire initial load
+                child: BusinessProfileScreen(
+                  token: data.token, // pass token to screen
+                  businessId: data.businessId, // pass id to screen
+                  onChangeLocale: onChangeLocale, // reuse router callback
+                ),
+              );
+            },
+          );
+        }
 
       case Routes.login:
         return _page(const LoginPage(), settings);
@@ -713,7 +807,7 @@ class AppRouter {
           );
         }
 
-     case Routes.friendship:
+      case Routes.friendship:
         {
           final baseUrl = g.appServerRoot ?? ''; // API base
 
@@ -771,7 +865,9 @@ class AppRouter {
                     ),
                   ),
                 ],
-                child: ConversationScreen(peer: peer as UserMin), // open dialog screen
+                child: ConversationScreen(
+                  peer: peer as UserMin,
+                ), // open dialog screen
               ),
             );
           }

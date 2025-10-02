@@ -10,27 +10,44 @@ import 'package:google_maps_flutter/google_maps_flutter.dart'; // Map lat/lng
 import 'package:hobby_sphere/core/network/globals.dart'
     as g; // serverRootNoApi()
 
+// Create Activity stack (repo + usecase)
 import 'package:hobby_sphere/features/activities/Business/createActivity/data/repositories/create_item_repository_impl.dart'; // Repo impl
 import 'package:hobby_sphere/features/activities/Business/createActivity/domain/usecases/create_item.dart'; // Use case
+
+// Lookups (currency + item types)
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart'; // Currency
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart'; // Types
+
+// i18n
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
 
+// Common widgets
 import 'package:hobby_sphere/shared/widgets/app_button.dart'; // App button
 import 'package:hobby_sphere/shared/widgets/app_text_field.dart'; // App text field
 
 // ✅ Top Toast import (your widget)
 import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // showTopToast / ToastType
 
+// Create Activity service
 import '../../../createActivity/data/services/create_item_service.dart'; // Service
 
+// Create Activity bloc
 import '../../../createActivity/presentation/bloc/create_item_bloc.dart'; // Bloc
 import '../../../createActivity/presentation/bloc/create_item_event.dart'; // Events
 import '../../../createActivity/presentation/bloc/create_item_state.dart'; // State
 
+// Map picker
 import '../../../createActivity/presentation/widgets/map_location_picker.dart'; // Map picker
 
+// Old item entity
 import '../../domain/entities/business_activity.dart'; // Old item entity
+
+// ✅ Stripe check (Business Profile domain)
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart'; // UC
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart'
+    as bprof_svc; // Service for business profile
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart'
+    as bprof_repo; // Repo for business profile
 
 class ReopenItemPage extends StatelessWidget {
   final int businessId; // Business id
@@ -48,8 +65,18 @@ class ReopenItemPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final repo = CreateItemRepositoryImpl(CreateItemService()); // Build repo
-    final createUsecase = CreateItem(repo); // Build use case
+    // Build create repo + use case (create activity stack)
+    final createRepo = CreateItemRepositoryImpl(
+      CreateItemService(),
+    ); // Create repo
+    final createUsecase = CreateItem(createRepo); // Create UC
+
+    // ✅ Build business profile stack just to check Stripe status
+    final bService = bprof_svc.BusinessService(); // Business profile service
+    final bRepo = bprof_repo.BusinessRepositoryImpl(
+      bService,
+    ); // Business profile repo
+    final checkStripe = CheckStripeStatus(bRepo); // Stripe check UC
 
     // Provide Bloc and bootstrap lists
     return BlocProvider(
@@ -57,8 +84,9 @@ class ReopenItemPage extends StatelessWidget {
         createItem: createUsecase, // Inject create use case
         getItemTypes: getItemTypes, // Inject types
         getCurrentCurrency: getCurrentCurrency, // Inject currency
+        checkStripeStatus: checkStripe, // ✅ Inject Stripe check
         businessId: businessId, // Business scope
-      )..add(CreateItemBootstrap()), // Load types/currency
+      )..add(CreateItemBootstrap()), // Load types/currency + stripe flag
       child: _ReopenItemView(oldItem: oldItem), // UI
     );
   }
@@ -283,8 +311,7 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
                           isExpanded: true, // Full width
                           value: state.itemTypeId, // Selected type
                           hint: Text(loc.createActivitySelectType), // Hint
-                          items: state
-                              .types // Options
+                          items: state.types
                               .map(
                                 (t) => DropdownMenuItem<int>(
                                   value: t.id, // Value

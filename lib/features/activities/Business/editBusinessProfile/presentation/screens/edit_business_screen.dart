@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:intl_phone_field/country_picker_dialog.dart';
@@ -117,11 +118,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
                 },
               ),
               IconButton(
-                icon: const Icon(
-                  Icons.delete,
-                  size: 32,
-                  color: AppColors.error,
-                ),
+                icon: Icon(Icons.delete, size: 32, color: AppColors.error),
                 onPressed: () {
                   Navigator.pop(ctx);
                   if (isLogo) {

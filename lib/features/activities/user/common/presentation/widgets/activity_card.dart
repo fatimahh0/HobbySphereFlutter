@@ -4,6 +4,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/shared/utils/currency_utils.dart';
@@ -178,7 +179,7 @@ class ActivityCard extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.calendar_today_outlined,
                 size: 11,
                 color: AppColors.muted,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
+import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 
@@ -176,7 +177,7 @@ class InterestSection extends StatelessWidget {
                             onPressed: onShowAll,
                             child: Text(
                               showAllLabel ?? t.homeSeeAll,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w700,
                               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hobby_sphere/features/activities/user/tickets/domain/entities/booking_entity.dart';
+import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';

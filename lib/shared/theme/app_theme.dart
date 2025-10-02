@@ -1,25 +1,12 @@
-import 'package:flutter/material.dart';
+// Keep your AppTheme shape the same, but expose ThemeData as getters.
+// This way, when Palette updates, AppTheme picks new values automatically.
 
-// ========== COLORS ==========
-class AppColors {
-  static const primary = Color.fromARGB(255, 18, 148, 65); // brand green color
-  static const onPrimary = Colors.white; // text/icon on primary color
-  static const background = Color(0xFFF7F7F7); // app background
-  static const text = Color(0xFF0F172A); // main text color (dark)
-  static const muted = Color(0xFF64748B); // secondary text (gray)
-  static const error = Color(0xFFDC2626); // error red
-  static const white = Color(0xFFF7F7F7);
-
-  // ==== New semantic colors ====
-  static const pending = Color(0xFFF59E0B); // amber/orange
-  static const completed = Color(0xFF16A34A); // green
-  static const rejected = Color(0xFFDC2626); // red
-  static const canceled = Color(0xFF6B7280); // gray
-  static const paid = Color(0xFF2563EB); // blue
-}
+import 'package:flutter/material.dart'; // ThemeData, TextTheme
+import 'app_colors.dart'; // runtime AppColors
 
 // ========== TYPOGRAPHY ==========
 class AppTypography {
+  // same as before
   static const textTheme = TextTheme(
     headlineSmall: TextStyle(
       fontSize: 20,
@@ -42,46 +29,74 @@ class AppTypography {
 
 // ========== THEME ==========
 class AppTheme {
-  // Light theme
-  static final ThemeData light = ThemeData(
-    useMaterial3: true, // use Material 3 design
+  // Light theme → getter (so values update after backend apply)
+  static ThemeData get light => ThemeData(
+    useMaterial3: true, // Material 3
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      primary: AppColors.primary,
-      onPrimary: AppColors.onPrimary,
-      background: AppColors.background,
-      error: AppColors.error,
+      seedColor: AppColors.primary, // runtime brand
+      primary: AppColors.primary, // runtime brand
+      onPrimary: AppColors.onPrimary, // runtime contrast
+      background: AppColors.background, // runtime bg
+      error: AppColors.error, // runtime error
     ),
-    scaffoldBackgroundColor: AppColors.background,
-    textTheme: AppTypography.textTheme,
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.white,
-      foregroundColor: AppColors.text,
-      elevation: 0,
-      centerTitle: true,
+    scaffoldBackgroundColor: AppColors.background, // runtime bg
+    textTheme: AppTypography.textTheme.apply(
+      bodyColor: AppColors.text, // runtime body
+      displayColor: AppColors.text, // runtime headings
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: AppColors.white, // runtime surface/white
+      foregroundColor: AppColors.text, // runtime text
+      elevation: 0, // flat
+      centerTitle: true, // centered title
+    ),
+    dividerColor: AppColors.border, // runtime border
+   
+    inputDecorationTheme: InputDecorationTheme(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12), // radius
+        borderSide: BorderSide(color: AppColors.border), // runtime border
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12), // radius
+        borderSide: BorderSide(color: AppColors.border), // runtime border
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12), // radius
+        borderSide: BorderSide(
+          color: AppColors.primary,
+          width: 1.6,
+        ), // runtime focus
+      ),
+      labelStyle: TextStyle(color: AppColors.muted), // runtime label
+      hintStyle: TextStyle(
+        color: AppColors.muted.withOpacity(0.8),
+      ), // runtime hint
+      fillColor: AppColors.white, // runtime fill
+      filled: true, // enable fill
     ),
   );
 
-  // Dark theme
-  static final ThemeData dark = ThemeData(
-    useMaterial3: true,
+  // Dark theme → same as before (simple). You can keep static values here.
+  static ThemeData get dark => ThemeData(
+    useMaterial3: true, // Material 3
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      brightness: Brightness.dark, // tells Flutter this is dark
-      primary: AppColors.primary,
-      onPrimary: AppColors.onPrimary,
-      error: AppColors.error,
+      seedColor: AppColors.primary, // runtime if desired
+      brightness: Brightness.dark, // dark scheme
+      primary: AppColors.primary, // brand
+      onPrimary: AppColors.onPrimary, // contrast
+      error: AppColors.error, // error
     ),
-    scaffoldBackgroundColor: Colors.black, // dark background
+    scaffoldBackgroundColor: Colors.black, // dark bg
     textTheme: AppTypography.textTheme.apply(
-      bodyColor: Colors.white, // text white in dark
-      displayColor: Colors.white,
+      bodyColor: Colors.white, // white text
+      displayColor: Colors.white, // white headings
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.black,
-      foregroundColor: Colors.white,
-      elevation: 0,
-      centerTitle: true,
+      backgroundColor: Colors.black, // dark app bar
+      foregroundColor: Colors.white, // white text
+      elevation: 0, // flat
+      centerTitle: true, // centered
     ),
   );
 }

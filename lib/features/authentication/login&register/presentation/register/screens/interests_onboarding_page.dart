@@ -2,15 +2,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 
-import 'package:hobby_sphere/features/authentication/data/services/registration_service.dart';
-import 'package:hobby_sphere/features/authentication/data/repositories/registration_repository_impl.dart';
-import 'package:hobby_sphere/features/authentication/data/repositories/interests_repository_impl.dart';
+import 'package:hobby_sphere/features/authentication/login&register/data/services/registration_service.dart';
+import 'package:hobby_sphere/features/authentication/login&register/data/repositories/registration_repository_impl.dart';
+import 'package:hobby_sphere/features/authentication/login&register/data/repositories/interests_repository_impl.dart';
 
-import 'package:hobby_sphere/features/authentication/domain/entities/activity_type.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/get_activity_types.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/add_user_interests.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/entities/activity_type.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/add_user_interests.dart';
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/widgets/interests_grid.dart';
 
-import 'package:hobby_sphere/features/authentication/presentation/register/widgets/interests_grid.dart';
+
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 import 'package:hobby_sphere/shared/widgets/app_button.dart';
 

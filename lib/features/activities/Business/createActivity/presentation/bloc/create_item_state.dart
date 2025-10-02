@@ -1,129 +1,152 @@
-// ===== lib/features/activities/Business/createActivity/presentation/bloc/create_item_state.dart =====
-// Flutter 3.35.x
-import 'dart:io'; // File
-import 'package:equatable/equatable.dart'; // For easy ==
+// ===== Flutter 3.35.x =====
+// CreateItemState — uses your real domain models (ItemType, Currency)
+// so Bloc/UI can pass List<ItemType> without casting.
 
-import 'package:hobby_sphere/features/activities/common/domain/entities/item_type.dart'; // Types entity
-import 'package:hobby_sphere/features/activities/common/domain/entities/currency.dart'; // Currency entity
+import 'dart:io';
+import 'package:equatable/equatable.dart';
+
+// ⬇️ Use your actual entities returned by the use cases:
+import 'package:hobby_sphere/features/activities/common/domain/entities/item_type.dart';
+import 'package:hobby_sphere/features/activities/common/domain/entities/currency.dart';
 
 class CreateItemState extends Equatable {
-  final bool loading; // Busy flag
-  final String? error; // Error message
-  final String? success; // Success message
+  // ===== identity =====
+  final int? businessId; // business id
 
-  final String name; // Name
-  final int? itemTypeId; // Type id
-  final String description; // Description
+  // ===== form fields =====
+  final String name; // activity name
+  final int? itemTypeId; // selected type id
+  final String description; // description
+  final String address; // address
+  final double? lat; // latitude
+  final double? lng; // longitude
+  final int? maxParticipants; // capacity
+  final double? price; // price
+  final DateTime? start; // start time
+  final DateTime? end; // end time
+  final File? image; // picked image file
+  final String? imageUrl; // retained image url
 
-  final String address; // Address
-  final double? lat; // Latitude
-  final double? lng; // Longitude
+  // ===== lookups (REAL MODELS) =====
+  final List<ItemType> types; // item types
+  final Currency? currency; // current currency
 
-  final int? maxParticipants; // Capacity
-  final double? price; // Price
+  // ===== ui =====
+  final bool loading; // loading flag
+  final String? error; // error text
+  final String? success; // success text
 
-  final DateTime? start; // Start date-time
-  final DateTime? end; // End date-time
-
-  final File? image; // Picked file
-  final String? imageUrl; // Retained image URL
-
-  final List<ItemType> types; // Types dropdown
-  final Currency? currency; // Currency
-
-  final int? businessId; // Business id
-  final String status; // Status (default ACTIVE)
+  // ===== stripe =====
+  final bool stripeConnected; // connected to Stripe?
 
   const CreateItemState({
-    this.loading = false, // Default not busy
-    this.error, // No error by default
-    this.success, // No success by default
-    this.name = '', // Empty name
-    this.itemTypeId, // No type yet
-    this.description = '', // Empty description
-    this.address = '', // Empty address
-    this.lat, // No lat
-    this.lng, // No lng
-    this.maxParticipants, // No capacity
-    this.price, // No price
-    this.start, // No start
-    this.end, // No end
-    this.image, // No file
-    this.imageUrl, // No URL
-    this.types = const [], // Empty types
-    this.currency, // No currency
-    this.businessId, // Injected later
-    this.status = 'ACTIVE', // Default ACTIVE
+    // identity
+    this.businessId,
+
+    // form
+    this.name = '',
+    this.itemTypeId,
+    this.description = '',
+    this.address = '',
+    this.lat,
+    this.lng,
+    this.maxParticipants,
+    this.price,
+    this.start,
+    this.end,
+    this.image,
+    this.imageUrl,
+
+    // lookups
+    this.types = const [],
+    this.currency,
+
+    // ui
+    this.loading = false,
+    this.error,
+    this.success,
+
+    // stripe
+    this.stripeConnected = false,
   });
 
-  bool get ready => // Form validation
-      name.trim().isNotEmpty && // Has name
-      itemTypeId != null && // Has type
-      description.trim().isNotEmpty && // Has description
-      address.trim().isNotEmpty && // Has address
-      lat != null && // Has lat
-      lng != null && // Has lng
-      (maxParticipants ?? 0) > 0 && // Has capacity > 0
-      (price ?? -1) >= 0 && // Has price >= 0
-      start != null && // Has start
-      end != null && // Has end
-      (businessId ?? 0) > 0 && // ✅ must be > 0 (not just non-null)
-      (image != null || imageUrl?.isNotEmpty == true);
+  // basic "ready" validation (Stripe checked separately)
+  bool get ready {
+    final okBasics =
+        name.trim().isNotEmpty &&
+        itemTypeId != null &&
+        description.trim().isNotEmpty;
+    final okLoc = address.trim().isNotEmpty && lat != null && lng != null;
+    final okMeta =
+        maxParticipants != null && maxParticipants! > 0 && price != null;
+    final okDates = start != null && end != null;
+    return okBasics && okLoc && okMeta && okDates;
+  }
+
   CreateItemState copyWith({
-    bool? loading, // Optional new loading
-    String? error, // Optional new error (null clears)
-    String? success, // Optional new success (null clears)
-    String? name, // Optional new name
-    int? itemTypeId, // Optional new type
-    String? description, // Optional new description
-    String? address, // Optional new address
-    double? lat, // Optional new lat
-    double? lng, // Optional new lng
-    int? maxParticipants, // Optional new capacity
-    double? price, // Optional new price
-    DateTime? start, // Optional new start
-    DateTime? end, // Optional new end
-    File? image, // Optional new file
-    List<ItemType>? types, // Optional new types
-    Currency? currency, // Optional new currency
-    int? businessId, // Optional new business id
-    String? status, // Optional new status
-    String? imageUrl, // Optional new URL
+    int? businessId,
+    String? name,
+    int? itemTypeId,
+    String? description,
+    String? address,
+    double? lat,
+    double? lng,
+    int? maxParticipants,
+    double? price,
+    DateTime? start,
+    DateTime? end,
+    File? image,
+    String? imageUrl,
+    List<ItemType>? types, // ⬅️ now List<ItemType>
+    Currency? currency, // ⬅️ now Currency
+    bool? loading,
+    String? error,
+    String? success,
+    bool? stripeConnected,
   }) {
     return CreateItemState(
-      loading: loading ?? this.loading, // Keep or set loading
-      error: error, // Replace error (even null)
-      success: success, // Replace success (even null)
-      name: name ?? this.name, // Keep or set name
-      itemTypeId: itemTypeId ?? this.itemTypeId, // Keep or set type
-      description: description ?? this.description, // Keep or set description
-      address: address ?? this.address, // Keep or set address
-      lat: lat ?? this.lat, // Keep or set lat
-      lng: lng ?? this.lng, // Keep or set lng
-      maxParticipants:
-          maxParticipants ?? this.maxParticipants, // Keep or set capacity
-      price: price ?? this.price, // Keep or set price
-      start: start ?? this.start, // Keep or set start
-      end: end ?? this.end, // Keep or set end
-      image: image ?? this.image, // Keep or set file
-      imageUrl: imageUrl ?? this.imageUrl, // Keep or set URL
-      types: types ?? this.types, // Keep or set types
-      currency: currency ?? this.currency, // Keep or set currency
-      businessId: businessId ?? this.businessId, // Keep or set business id
-      status: status ?? this.status, // Keep or set status
+      businessId: businessId ?? this.businessId,
+      name: name ?? this.name,
+      itemTypeId: itemTypeId ?? this.itemTypeId,
+      description: description ?? this.description,
+      address: address ?? this.address,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      maxParticipants: maxParticipants ?? this.maxParticipants,
+      price: price ?? this.price,
+      start: start ?? this.start,
+      end: end ?? this.end,
+      image: image ?? this.image,
+      imageUrl: imageUrl ?? this.imageUrl,
+      types: types ?? this.types, // ⬅️ List<ItemType>
+      currency: currency ?? this.currency, // ⬅️ Currency
+      loading: loading ?? this.loading,
+      error: error,
+      success: success,
+      stripeConnected: stripeConnected ?? this.stripeConnected,
     );
   }
 
   @override
   List<Object?> get props => [
-    // Equatable props
-    loading, error, success, // Status messages
-    name, itemTypeId, description, // Basic fields
-    address, lat, lng, // Location
-    maxParticipants, price, // Numbers
-    start, end, // Dates
-    image?.path, imageUrl, // Image sources
-    types, currency?.code, // Dropdowns
-    businessId, status, // Meta
+    businessId,
+    name,
+    itemTypeId,
+    description,
+    address,
+    lat,
+    lng,
+    maxParticipants,
+    price,
+    start,
+    end,
+    image,
+    imageUrl,
+    types, // ⬅️ List<ItemType>
+    currency, // ⬅️ Currency
+    loading,
+    error,
+    success,
+    stripeConnected,
   ];
 }

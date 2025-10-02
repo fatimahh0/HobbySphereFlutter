@@ -4873,6 +4873,18 @@ abstract class AppLocalizations {
   /// **'Server unavailable'**
   String get connectionServerDown;
 
+  /// No description provided for @stripeConnectRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stripe account required'**
+  String get stripeConnectRequiredTitle;
+
+  /// No description provided for @stripeConnectRequiredDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'To publish an activity and receive payments, please connect your Stripe account first.'**
+  String get stripeConnectRequiredDesc;
+
   /// Toast after saving interests
   ///
   /// In en, this message translates to:

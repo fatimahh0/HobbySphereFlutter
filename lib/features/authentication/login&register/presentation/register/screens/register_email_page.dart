@@ -4,7 +4,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hobby_sphere/features/authentication/presentation/register/widgets/interests_grid.dart';
+import 'package:hobby_sphere/features/authentication/login&register/presentation/login/widgets/password_input.dart';
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_bloc.dart';
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_event.dart';
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_state.dart';
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/widgets/interests_grid.dart';
+
 import 'package:image_picker/image_picker.dart';
 
 // l10n + shared
@@ -14,27 +19,25 @@ import 'package:hobby_sphere/shared/widgets/app_text_field.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 
 // DI (service + repos + usecases)
-import 'package:hobby_sphere/features/authentication/data/services/registration_service.dart';
-import 'package:hobby_sphere/features/authentication/data/repositories/registration_repository_impl.dart';
-import 'package:hobby_sphere/features/authentication/data/repositories/interests_repository_impl.dart';
+import 'package:hobby_sphere/features/authentication/login&register/data/services/registration_service.dart';
+import 'package:hobby_sphere/features/authentication/login&register/data/repositories/registration_repository_impl.dart';
+import 'package:hobby_sphere/features/authentication/login&register/data/repositories/interests_repository_impl.dart';
 
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/send_user_verification.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/verify_user_email_code.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/verify_user_phone_code.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/complete_user_profile.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/add_user_interests.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/resend_user_code.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/send_business_verification.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/verify_business_email_code.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/verify_business_phone_code.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/complete_business_profile.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/resend_business_code.dart';
-import 'package:hobby_sphere/features/authentication/domain/usecases/register/get_activity_types.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/send_user_verification.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_user_email_code.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_user_phone_code.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/complete_user_profile.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/add_user_interests.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/resend_user_code.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/send_business_verification.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_business_email_code.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_business_phone_code.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/complete_business_profile.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/resend_business_code.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart';
 
 // Bloc
-import 'package:hobby_sphere/features/authentication/presentation/register/bloc/register_bloc.dart';
-import 'package:hobby_sphere/features/authentication/presentation/register/bloc/register_event.dart';
-import 'package:hobby_sphere/features/authentication/presentation/register/bloc/register_state.dart';
+
 
 // Small widgets
 import '../widgets/login_link.dart';
@@ -43,8 +46,6 @@ import '../widgets/otp_boxes.dart';
 import '../widgets/pill_field.dart';
 import '../widgets/pick_box.dart';
 
-// Password field
-import 'package:hobby_sphere/features/authentication/presentation/login/widgets/password_input.dart';
 
 class RegisterEmailPage extends StatelessWidget {
   final RegistrationService service;

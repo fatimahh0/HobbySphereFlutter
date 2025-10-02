@@ -2411,6 +2411,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionServerDown => 'Server unavailable';
 
   @override
+  String get stripeConnectRequiredTitle => 'Stripe account required';
+
+  @override
+  String get stripeConnectRequiredDesc => 'To publish an activity and receive payments, please connect your Stripe account first.';
+
+  @override
   String get interestSaved => 'Interests saved successfully';
 
   @override

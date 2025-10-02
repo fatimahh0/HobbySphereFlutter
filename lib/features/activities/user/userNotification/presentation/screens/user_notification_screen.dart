@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
+import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 
@@ -55,7 +56,7 @@ class UserNotificationScreen extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.notifications_none_rounded,
                       size: 48,
                       color: AppColors.muted,
@@ -202,7 +203,7 @@ class _NotificationCard extends StatelessWidget {
           ),
         ),
         trailing: IconButton(
-          icon: const Icon(Icons.delete, color: AppColors.error),
+          icon: Icon(Icons.delete, color: AppColors.error),
           onPressed: () {
             bloc.add(DeleteUserNotification(notification.id));
             showTopToast(

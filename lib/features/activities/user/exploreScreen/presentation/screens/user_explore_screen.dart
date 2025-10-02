@@ -6,8 +6,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/app/bootstrap/start_user_realtime.dart' as rt;
+import 'package:hobby_sphere/app/router/router.dart';
 
 import 'package:hobby_sphere/l10n/app_localizations.dart';
+import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/shared/widgets/app_search_bar.dart';
 import 'package:hobby_sphere/features/activities/user/common/presentation/widgets/activity_card.dart';
@@ -66,6 +68,36 @@ class _ExploreScreenState extends State<ExploreScreen> {
   void Function(Map<String, dynamic>)? _onActivityCreated;
   void Function(int, Map<String, dynamic>)? _onActivityUpdated;
   void Function(int)? _onActivityDeleted;
+
+  // return a proper "Bearer xxx" or empty if guest
+  String _bearerOrEmpty(String token) {
+    // trim spaces
+    final t = token.trim(); // simple trim
+    if (t.isEmpty) return ''; // guest → empty
+    return t.startsWith('Bearer ') ? t : 'Bearer $t'; // ensure prefix
+  }
+
+  // push Activity Detail screen with the right args
+  void _goToDetails(
+    BuildContext context, // navigator context
+    int itemId, // activity id
+    String? currency, // currency code (e.g., "USD")
+    String? imageBase, // base url for images (server root)
+  ) {
+    // compute bearer once
+    final bearer = _bearerOrEmpty(widget.token); // format token
+
+    // push named route
+    Navigator.of(context).pushNamed(
+      Routes.userActivityDetail, // route name
+      arguments: UserActivityDetailRouteArgs(
+        itemId: itemId, // required id
+        token: bearer.isNotEmpty ? bearer : null, // null for guest
+        currencyCode: currency, // pass currency
+        imageBaseUrl: imageBase, // pass base url
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -295,8 +327,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                           currencyCode: code,
                                           imageBaseUrl: widget.imageBaseUrl,
                                           onPressed: () {
-                                            // TODO: navigate to details(it.id)
+                                            // call helper to navigate
+                                            _goToDetails(
+                                              ctx, // current context
+                                              it.id, // activity id
+                                              code, // currency from FutureBuilder
+                                              widget
+                                                  .imageBaseUrl, // image base url (server root)
+                                            );
                                           },
+
                                           padding: const EdgeInsets.all(12),
                                           margin: EdgeInsets.zero,
                                         ),

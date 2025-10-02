@@ -1,26 +1,43 @@
-// lib/core/nav/nav_from_theme.dart
 // Extract the navigation type from the theme API response.
 
-import 'nav_type.dart'; // enum + parser
+import 'nav_type.dart'; // AppNavType + parseNavType()
 
-// Try multiple common shapes so backend is flexible.
+// Try multiple common shapes so backend stays flexible.
+// Order matters: we FIRST read "menuType" (your actual API),
+// then fall back to other possible keys.
 AppNavType navTypeFromTheme(Map<String, dynamic> themeJson) {
-  // 1) Prefer nested: { "navigation": { "type": "bottom" } }
+  // 0) Top-level "menuType" from your backend:
+  //    { "menuType": "bottom" }
+  final mt = themeJson['menuType'];
+  if (mt is String && mt.trim().isNotEmpty) {
+    // parse and return immediately if present
+    return parseNavType(mt);
+  }
+
+  // 1) Nested object:
+  //    { "navigation": { "type": "bottom" } }
   final navObj = themeJson['navigation'];
   if (navObj is Map && navObj['type'] is String) {
+    // parse nested "type"
     return parseNavType(navObj['type'] as String);
   }
 
-  // 2) Or flat key: { "layout": "top" }
-  if (themeJson['layout'] is String) {
-    return parseNavType(themeJson['layout'] as String);
+  // 2) Flat alternative:
+  //    { "layout": "top" }
+  final layout = themeJson['layout'];
+  if (layout is String && layout.trim().isNotEmpty) {
+    // parse "layout"
+    return parseNavType(layout);
   }
 
-  // 3) Or mobile-specific key: { "mobileLayout": "drawer" }
-  if (themeJson['mobileLayout'] is String) {
-    return parseNavType(themeJson['mobileLayout'] as String);
+  // 3) Mobile-specific alternative:
+  //    { "mobileLayout": "drawer" }
+  final mobileLayout = themeJson['mobileLayout'];
+  if (mobileLayout is String && mobileLayout.trim().isNotEmpty) {
+    // parse "mobileLayout"
+    return parseNavType(mobileLayout);
   }
 
-  // 4) Default if nothing found
-  return AppNavType.bottom;
+  // 4) Default if nothing matched
+  return AppNavType.bottom; // safe fallback
 }

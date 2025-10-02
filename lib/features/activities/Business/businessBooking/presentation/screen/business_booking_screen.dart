@@ -1,63 +1,61 @@
-// ===== Flutter 3.35.x =====
-// BusinessBookingScreen — emits realtime "booking/statusChanged" after any success
-// → Analytics listens and refreshes revenue immediately.
+// lib/features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart
+// Flutter 3.35.x
+// BusinessBookingScreen — fixed Canceled > Approved filter to include
+// both "CancelApproved" AND final "Canceled/CANCELLED" statuses.
 
-import 'package:flutter/material.dart'; // UI base
-import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc helpers
+import 'package:flutter/material.dart'; // core UI
+import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
-import 'package:hobby_sphere/shared/widgets/app_button.dart'; // App buttons
-import 'package:hobby_sphere/shared/widgets/app_search_bar.dart'; // Search app bar
-import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // Top toast
+import 'package:hobby_sphere/shared/widgets/app_button.dart'; // buttons
+import 'package:hobby_sphere/shared/widgets/app_search_bar.dart'; // search app bar
+import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // toast
 
-// ✅ add realtime bus + event model
-import 'package:hobby_sphere/core/realtime/realtime_bus.dart'; // RealtimeBus
-import 'package:hobby_sphere/core/realtime/event_models.dart'; // RealtimeEvent, Domain, ActionType
+// realtime bus (if you already use it; kept as-is)
+import 'package:hobby_sphere/core/realtime/realtime_bus.dart'; // realtime bus
+import 'package:hobby_sphere/core/realtime/event_models.dart'; // event types
 
-import '../bloc/business_booking_bloc.dart'; // Bloc
-import '../bloc/business_booking_event.dart'; // Events
-import '../bloc/business_booking_state.dart'; // State
-import '../widgets/booking_card_business.dart'; // Booking card
+import '../bloc/business_booking_bloc.dart'; // bloc
+import '../bloc/business_booking_event.dart'; // events
+import '../bloc/business_booking_state.dart'; // state
+import '../widgets/booking_card_business.dart'; // booking card
 
 class BusinessBookingScreen extends StatefulWidget {
-  const BusinessBookingScreen({super.key}); // Stateless ctor
+  // basic ctor
+  const BusinessBookingScreen({super.key});
 
   @override
-  State<BusinessBookingScreen> createState() => _BusinessBookingScreenState(); // State create
+  State<BusinessBookingScreen> createState() => _BusinessBookingScreenState();
 }
 
-// Simple date filter (All / Past) to match your current behavior
-enum _DateFilter { all, past } // Date filter enum
+// simple enum for date filter
+enum _DateFilter { all, past }
 
 class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
-  String _searchQuery = ''; // Current search text
-  _DateFilter _dateFilter = _DateFilter.all; // Date filter selection
+  // search text
+  String _searchQuery = '';
 
-  // Sort keys: date_desc, date_asc, price_asc, price_desc, name_asc, name_desc
-  String _sortKey = 'date_desc'; // Current sort key
+  // date filter value
+  _DateFilter _dateFilter = _DateFilter.all;
 
-  // ===== Cancel sub-tab support =====
-  // We normalize statuses to lowercase letters only (remove spaces/_/-).
-  // Constants for the 3 cancel sub-statuses:
-  static const String _CANCEL_REQUESTED =
-      'cancelrequested'; // "CancelRequested"
-  static const String _CANCEL_APPROVED = 'cancelapproved'; // "CancelApproved"
-  static const String _CANCEL_REJECTED = 'cancelrejected'; // "CancelRejected"
-  // Optional generic "canceled/cancelled" forms (defensive):
-  static const String _CANCELED = 'canceled';
-  static const String _CANCELLED = 'cancelled';
+  // sort key (by date/price/name)
+  String _sortKey = 'date_desc';
 
-  // Current selected sub-tab under "Canceled"
-  String _cancelSubFilter = _CANCEL_REQUESTED; // Default: show requests first
+  // ------ Canceled sub-tabs keys (normalized letters only) ------
+  static const String _CANCEL_REQUESTED = 'cancelrequested'; // waiting decision
+  static const String _CANCEL_APPROVED = 'cancelapproved'; // approved cancel
+  static const String _CANCEL_REJECTED = 'cancelrejected'; // reject cancel
+
+  // current selected canceled sub-tab
+  String _cancelSubFilter = _CANCEL_REQUESTED;
 
   @override
   void initState() {
-    super.initState(); // Parent init
-    context.read<BusinessBookingBloc>().add(
-      BusinessBookingBootstrap(),
-    ); // First load
+    super.initState(); // base state init
+    // bootstrap list on open
+    context.read<BusinessBookingBloc>().add(BusinessBookingBootstrap());
   }
 
-  // Map top status filter key -> localized label
+  // helper: label for top status tabs
   String _labelForFilter(AppLocalizations l10n, String filter) {
     switch (filter) {
       case 'all':
@@ -71,135 +69,123 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
       case 'canceled':
         return l10n.bookingsFiltersCanceled; // Canceled
       default:
-        return filter; // Fallback
+        return filter; // fallback
     }
   }
 
-  // Sort key -> label
+  // helper: label for sort menu
   String _labelForSort(String key) {
     switch (key) {
       case 'date_desc':
-        return 'Date (Newest)'; // Newest first
+        return 'Date (Newest)'; // newest first
       case 'date_asc':
-        return 'Date (Oldest)'; // Oldest first
+        return 'Date (Oldest)'; // oldest first
       case 'price_asc':
-        return 'Price ↑'; // Price ascending
+        return 'Price ↑'; // price ascending
       case 'price_desc':
-        return 'Price ↓'; // Price descending
+        return 'Price ↓'; // price descending
       case 'name_asc':
-        return 'Name A–Z'; // Name asc
+        return 'Name A–Z'; // A–Z
       case 'name_desc':
-        return 'Name Z–A'; // Name desc
+        return 'Name Z–A'; // Z–A
       default:
-        return 'Sort'; // Fallback
+        return 'Sort'; // default
     }
   }
 
-  // Cancel sub-tab key -> short label (simple English)
+  // helper: short label for canceled sub-tabs
   String _labelForCancelSub(String key) {
     switch (key) {
       case _CANCEL_REQUESTED:
-        return 'Requested'; // CancelRequested
+        return 'Requested'; // requests
       case _CANCEL_APPROVED:
-        return 'Approved'; // CancelApproved
+        return 'Approved'; // approved (incl. final canceled)
       case _CANCEL_REJECTED:
-        return 'Rejected'; // CancelRejected
+        return 'Rejected'; // rejected
       default:
-        return 'Requested'; // Default
+        return 'Requested'; // default
     }
   }
 
-  // Normalize a status string to compare (lowercase, letters only)
+  // helper: normalize any status string to letters-only lowercase
   String _normalize(String? v) =>
-      (v ?? '').toLowerCase().replaceAll(RegExp(r'[^a-z]'), ''); // Keep a-z
+      (v ?? '').toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Theme
+    final theme = Theme.of(context); // theme
     final l10n = AppLocalizations.of(context)!; // i18n
 
     return Scaffold(
+      // search app bar
       appBar: AppSearchAppBar(
-        hint: l10n.searchPlaceholder, // Search hint
+        hint: l10n.searchPlaceholder, // placeholder
         onQueryChanged: (q) =>
-            setState(() => _searchQuery = q.toLowerCase()), // Update search
-        debounceMs: 300, // Debounce
-        showBack: false, // No back arrow
-        filled: true, // Filled style
+            setState(() => _searchQuery = q.toLowerCase()), // update
+        debounceMs: 300, // debounce
+        showBack: false, // no back arrow
+        filled: true, // filled
       ),
-      backgroundColor: theme.colorScheme.surface, // BG color
+      backgroundColor: theme.colorScheme.surface, // page bg
       body: BlocConsumer<BusinessBookingBloc, BusinessBookingState>(
-        // Show top toast on one-shot error/success
+        // listen for error/success toasts
         listener: (ctx, state) {
-          // ❌ error toast
+          // show error toast
           if (state.error != null) {
             showTopToast(
               ctx,
-              state.error!, // Error message
-              type: ToastType.error, // Red
-              haptics: true, // Haptic
+              state.error!,
+              type: ToastType.error,
+              haptics: true,
             );
             ctx.read<BusinessBookingBloc>().add(
               BusinessBookingClearFlash(),
-            ); // Clear flash
+            ); // clear
           }
-
-          // ✅ success toast + realtime pulse for analytics
+          // show success toast + optional realtime pulse
           if (state.success != null) {
             showTopToast(
               ctx,
-              l10n.bookingUpdated, // Success text
-              type: ToastType.success, // Green
-              haptics: true, // Haptic
+              l10n.bookingUpdated,
+              type: ToastType.success,
+              haptics: true,
             );
 
-            // ---- REALTIME ANALYTICS PULSE (BOOKING STATUS CHANGED) ----
-            // we try to get businessId from state (or from first booking).
-            // if not found, we send 0 (see bloc note to treat 0 as wildcard).
-            int businessId = 0; // default
+            // emit a generic realtime pulse for analytics (safe no-op if unused)
+            int businessId = 0; // default unknown
             try {
-              // try a field on state (if your state exposes businessId)
-              final dynamic s = state; // dynamic to access safely
-              if (s.businessId is int) businessId = s.businessId as int;
+              final dynamic s = state; // dynamic access
+              if (s.businessId is int)
+                businessId = s.businessId as int; // try state field
             } catch (_) {}
-
             if (businessId == 0 && state.bookings.isNotEmpty) {
-              // try first booking’s businessId if exposed by entity
-              final b0 = state.bookings.first;
               try {
-                final dynamic d = b0;
-                if (d.businessId is int) businessId = d.businessId as int;
+                final dynamic b0 = state.bookings.first; // first booking
+                if (b0.businessId is int)
+                  businessId = b0.businessId as int; // try booking field
               } catch (_) {}
             }
-
-            // build unique event id
-            final eid = 'bb-success-${DateTime.now().microsecondsSinceEpoch}';
-
-            // emit generic "booking/statusChanged" so Analytics refreshes now
             RealtimeBus.I.emit(
               RealtimeEvent(
-                eventId: eid, // unique id
+                eventId:
+                    'bb-success-${DateTime.now().microsecondsSinceEpoch}', // unique id
                 domain: Domain.booking, // booking domain
                 action: ActionType.statusChanged, // status changed
-                businessId: businessId, // which business (0 if unknown)
-                resourceId: 0, // unknown booking id → not needed by analytics
-                ts: DateTime.now(), // now
-                data: {
-                  'source': 'BusinessBookingScreen', // debug source
-                  'hint': state.success, // optional message
-                },
+                businessId: businessId, // which business (0 = unknown)
+                resourceId: 0, // not used here
+                ts: DateTime.now(), // timestamp
+                data: {'source': 'BusinessBookingScreen'}, // debug data
               ),
             );
-            // ----------------------------------------------------------
 
             ctx.read<BusinessBookingBloc>().add(
               BusinessBookingClearFlash(),
-            ); // Clear flash
+            ); // clear flags
           }
         },
         builder: (context, state) {
+          // show loader
           if (state.loading) {
-            // Loading spinner
             return Center(
               child: CircularProgressIndicator(
                 color: theme.colorScheme.primary,
@@ -207,61 +193,79 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
             );
           }
 
-          // ===== 1) FILTER BY STATUS + SEARCH =====
-          final List filtered = state.bookings.where((b) {
-            final sNorm = _normalize(b.status); // Normalize status once
-            bool matchesFilter; // decide match
+          // -------- 1) FILTER BY STATUS + SEARCH (with fixed canceled Approved logic) --------
+          final List filteredByStatusAndSearch = state.bookings.where((b) {
+            // normalize this booking status once
+            final sNorm = _normalize(b.status); // e.g., "cancelrequested"
 
+            // decide whether this booking is included by the top tab
+            bool matchesTab = true; // default include
+
+            // filter by top status tab
             if (state.filter == 'all') {
-              matchesFilter = true; // no filter
+              matchesTab = true; // include all
             } else if (state.filter == 'canceled') {
-              // within "Canceled" → only the chosen sub-state
-              matchesFilter = sNorm == _cancelSubFilter;
+              // we are inside the "Canceled" tab → filter by sub-tab
+              if (_cancelSubFilter == _CANCEL_REQUESTED) {
+                // show only "CancelRequested"
+                matchesTab = (sNorm == 'cancelrequested');
+              } else if (_cancelSubFilter == _CANCEL_APPROVED) {
+                // ✅ FIX: show "CancelApproved" **AND** final "Canceled/CANCELLED"
+                matchesTab =
+                    (sNorm == 'cancelapproved' ||
+                    sNorm == 'canceled' ||
+                    sNorm == 'cancelled');
+              } else if (_cancelSubFilter == _CANCEL_REJECTED) {
+                // show only "CancelRejected"
+                matchesTab = (sNorm == 'cancelrejected');
+              } else {
+                // unknown sub-filter → include none (safe)
+                matchesTab = false;
+              }
             } else {
-              // other tabs → exact normalized match
-              matchesFilter = sNorm == _normalize(state.filter);
+              // other tabs: exact normalized match with the tab key
+              matchesTab = (sNorm == _normalize(state.filter));
             }
 
-            // search by item name / user name
+            // apply search on item/user names
             final matchesSearch =
                 _searchQuery.isEmpty ||
                 (b.itemName?.toLowerCase().contains(_searchQuery) ?? false) ||
                 (b.bookedBy?.toLowerCase().contains(_searchQuery) ?? false);
 
-            return matchesFilter && matchesSearch; // final
+            // final decision
+            return matchesTab && matchesSearch;
           }).toList();
 
-          // ===== 2) DATE FILTER (All / Past) =====
-          final now = DateTime.now(); // Current time
-          final filteredByDate = filtered.where((b) {
-            if (_dateFilter == _DateFilter.all) return true; // keep all
-            final dt = b.bookingDatetime; // Nullable date
+          // -------- 2) DATE FILTER (All / Past) --------
+          final now = DateTime.now(); // current date-time
+          final filteredByDate = filteredByStatusAndSearch.where((b) {
+            if (_dateFilter == _DateFilter.all) return true; // no date filter
+            final dt = b.bookingDatetime; // booking date
             if (dt == null)
-              return _dateFilter == _DateFilter.all; // only in All
-            return dt.isBefore(now); // past only
+              return _dateFilter == _DateFilter.all; // keep only in "All"
+            return dt.isBefore(now); // past bookings
           }).toList();
 
-          // ===== 3) SORT =====
+          // -------- 3) SORT --------
           filteredByDate.sort((a, b) {
             switch (_sortKey) {
               case 'date_desc':
-                final ad = a.bookingDatetime;
-                final bd = b.bookingDatetime;
-                if (ad == null && bd == null) return 0;
-                if (ad == null) return 1;
-                if (bd == null) return -1;
+                final ad = a.bookingDatetime, bd = b.bookingDatetime; // dates
+                if (ad == null && bd == null) return 0; // both null
+                if (ad == null) return 1; // null last
+                if (bd == null) return -1; // null last
                 return bd.compareTo(ad); // newest first
               case 'date_asc':
-                final ad2 = a.bookingDatetime;
-                final bd2 = b.bookingDatetime;
-                if (ad2 == null && bd2 == null) return 0;
-                if (ad2 == null) return 1;
-                if (bd2 == null) return -1;
+                final ad2 = a.bookingDatetime, bd2 = b.bookingDatetime; // dates
+                if (ad2 == null && bd2 == null) return 0; // both null
+                if (ad2 == null) return 1; // null last
+                if (bd2 == null) return -1; // null last
                 return ad2.compareTo(bd2); // oldest first
               case 'price_asc':
-                return (a.price).compareTo(b.price); // price ↑
+                return (a.price).compareTo(b.price); // price low → high
               case 'price_desc':
-                return (b.price).compareTo(a.price); // price ↓
+                return (b.price).compareTo(a.price); // price high → low
               case 'name_asc':
                 return (a.itemName ?? '').toLowerCase().compareTo(
                   (b.itemName ?? '').toLowerCase(),
@@ -275,14 +279,15 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
             }
           });
 
+          // -------- UI --------
           return Column(
             children: [
-              // ===== TOP STATUS TABS =====
+              // ---- top status tabs ----
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 8,
                   vertical: 6,
-                ), // outer pad
+                ), // pad
                 width: double.infinity, // full width
                 child: Row(
                   children: [
@@ -299,30 +304,29 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                             horizontal: 4,
                           ), // gap
                           child: AppButton(
-                            label: _labelForFilter(l10n, f), // tab text
+                            label: _labelForFilter(l10n, f), // text
                             onPressed: () {
-                              // leaving "canceled" → reset sub-tab
+                              // leaving "canceled" resets sub-filter to Requested
                               if (f != 'canceled' &&
                                   _cancelSubFilter != _CANCEL_REQUESTED) {
                                 setState(
                                   () => _cancelSubFilter = _CANCEL_REQUESTED,
-                                );
+                                ); // reset
                               }
-                              // change filter
+                              // change tab in bloc
                               context.read<BusinessBookingBloc>().add(
                                 BusinessBookingFilterChanged(f),
                               );
                             },
                             type: state.filter == f
-                                ? AppButtonType
-                                      .primary // active
-                                : AppButtonType.outline, // inactive
+                                ? AppButtonType.primary
+                                : AppButtonType.outline, // active/inactive
                             size: AppButtonSize.sm, // small
                             textStyle: theme.textTheme.labelSmall?.copyWith(
                               fontSize: 12, // compact
                               fontWeight: state.filter == f
                                   ? FontWeight.bold
-                                  : FontWeight.w500, // weight
+                                  : FontWeight.w500,
                             ),
                           ),
                         ),
@@ -331,7 +335,7 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                 ),
               ),
 
-              // ===== CANCEL SUB-TABS (ONLY WHEN "CANCELED" TAB IS ACTIVE) =====
+              // ---- canceled sub-tabs (only when "canceled" is selected) ----
               if (state.filter == 'canceled')
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 8), // pad
@@ -348,19 +352,19 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                               horizontal: 4,
                             ), // gap
                             child: AppButton(
-                              label: _labelForCancelSub(sub), // text
-                              onPressed: () =>
-                                  setState(() => _cancelSubFilter = sub), // set
+                              label: _labelForCancelSub(sub), // short label
+                              onPressed: () => setState(
+                                () => _cancelSubFilter = sub,
+                              ), // switch
                               type: _cancelSubFilter == sub
-                                  ? AppButtonType
-                                        .primary // active
-                                  : AppButtonType.outline, // inactive
+                                  ? AppButtonType.primary
+                                  : AppButtonType.outline, // active/inactive
                               size: AppButtonSize.sm, // small
                               textStyle: theme.textTheme.labelSmall?.copyWith(
                                 fontSize: 12, // compact
                                 fontWeight: _cancelSubFilter == sub
                                     ? FontWeight.bold
-                                    : FontWeight.w500, // weight
+                                    : FontWeight.w500,
                               ),
                             ),
                           ),
@@ -369,18 +373,19 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                   ),
                 ),
 
-              // ===== DATE FILTER + SORT BAR =====
+              // ---- date filter + sort ----
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 2, 12, 8), // pad
                 child: Row(
                   children: [
                     // date chips
                     Wrap(
-                      spacing: 6, // space
+                      spacing: 6, // spacing
                       children: [
                         ChoiceChip(
                           label: const Text('All dates'), // label
-                          selected: _dateFilter == _DateFilter.all, // selected?
+                          selected:
+                              _dateFilter == _DateFilter.all, // is selected
                           onSelected: (_) => setState(
                             () => _dateFilter = _DateFilter.all,
                           ), // set
@@ -391,7 +396,7 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                         ChoiceChip(
                           label: const Text('Past'), // label
                           selected:
-                              _dateFilter == _DateFilter.past, // selected?
+                              _dateFilter == _DateFilter.past, // is selected
                           onSelected: (_) => setState(
                             () => _dateFilter = _DateFilter.past,
                           ), // set
@@ -401,11 +406,11 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                         ),
                       ],
                     ),
-                    const Spacer(), // push sort right
+                    const Spacer(), // push sort to right
                     // sort popup
                     PopupMenuButton<String>(
-                      initialValue: _sortKey, // current
-                      onSelected: (v) => setState(() => _sortKey = v), // update
+                      initialValue: _sortKey, // current key
+                      onSelected: (v) => setState(() => _sortKey = v), // change
                       itemBuilder: (ctx) => const [
                         PopupMenuItem(
                           value: 'date_desc',
@@ -444,17 +449,17 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                           color: theme.colorScheme.surfaceVariant.withOpacity(
                             0.4,
                           ), // bg
-                          borderRadius: BorderRadius.circular(10), // round
+                          borderRadius: BorderRadius.circular(10), // radius
                         ),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min, // tight
+                          mainAxisSize: MainAxisSize.min, // compact
                           children: [
                             const Icon(Icons.sort, size: 18), // icon
                             const SizedBox(width: 6), // gap
                             Text(
-                              _labelForSort(_sortKey), // text
-                              style: theme.textTheme.labelMedium, // style
-                            ),
+                              _labelForSort(_sortKey),
+                              style: theme.textTheme.labelMedium,
+                            ), // text
                           ],
                         ),
                       ),
@@ -463,39 +468,40 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
                 ),
               ),
 
-              // ===== LIST + PULL-TO-REFRESH =====
+              // ---- list + pull-to-refresh ----
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async {
+                    // reload from server
                     context.read<BusinessBookingBloc>().add(
                       BusinessBookingBootstrap(),
-                    ); // reload
+                    );
                   },
                   child: filteredByDate.isEmpty
-                      // empty
+                      // empty state
                       ? ListView(
                           children: [
                             SizedBox(
-                              height: 300, // space
+                              height: 300, // spacer
                               child: Center(
                                 child: Text(
                                   l10n.bookingsNoBookings(
                                     state.filter,
-                                  ), // no items text
+                                  ), // no data text
                                   style: theme.textTheme.bodyMedium, // style
                                 ),
                               ),
                             ),
                           ],
                         )
-                      // list
+                      // list with cards
                       : ListView.builder(
                           padding: const EdgeInsets.only(
                             bottom: 12,
                           ), // bottom pad
                           itemCount: filteredByDate.length, // count
                           itemBuilder: (ctx, i) => BookingCardBusiness(
-                            booking: filteredByDate[i], // item
+                            booking: filteredByDate[i], // pass booking
                           ),
                         ),
                 ),

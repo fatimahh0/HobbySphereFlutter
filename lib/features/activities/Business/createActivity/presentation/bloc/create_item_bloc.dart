@@ -1,77 +1,80 @@
-// Flutter 3.35.x — CreateItemBloc
-// Emit a local realtime event after success (so lists/details refresh immediately).
+// ===== Flutter 3.35.x =====
+// CreateItemBloc — now checks Stripe in bootstrap and blocks submit if not connected.
 
 import 'dart:io'; // File + temp dir
 import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
-import 'package:http/http.dart' as http; // Simple HTTP download
-import 'package:hobby_sphere/core/network/globals.dart'
-    as g; // serverRootNoApi()
+import 'package:http/http.dart' as http; // download retained image
+import 'package:hobby_sphere/core/network/globals.dart' as g; // serverRootNoApi
+import 'package:hobby_sphere/services/token_store.dart'; // token store
 
-// ⬇️ NEW: realtime bus + event model
-import 'package:hobby_sphere/core/realtime/realtime_bus.dart'; // send realtime events
-import 'package:hobby_sphere/core/realtime/event_models.dart'; // RealtimeEvent + enums
+// realtime (unchanged)
+import 'package:hobby_sphere/core/realtime/realtime_bus.dart';
+import 'package:hobby_sphere/core/realtime/event_models.dart';
 
+// lookups usecases (existing)
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
-import 'package:hobby_sphere/services/token_store.dart';
 
+// create item usecase (existing)
 import '../../domain/usecases/create_item.dart';
 import '../../domain/entities/create_item_request.dart';
 
+// ✅ stripe check usecase (reuse from Business module)
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart';
+
+// bloc parts
 import 'create_item_event.dart';
 import 'create_item_state.dart';
 
 class CreateItemBloc extends Bloc<CreateItemEvent, CreateItemState> {
-  final CreateItem createItem; // Use case to create item
-  final GetItemTypes getItemTypes; // Loads types
-  final GetCurrentCurrency getCurrentCurrency; // Loads currency
+  // ===== injected use cases =====
+  final CreateItem createItem; // create item
+  final GetItemTypes getItemTypes; // load types
+  final GetCurrentCurrency getCurrentCurrency; // load currency
+  final CheckStripeStatus checkStripeStatus; // ✅ check stripe connected
+
+  // ===== scope =====
+  final int businessId; // business id
 
   CreateItemBloc({
-    required this.createItem, // inject use case
-    required this.getItemTypes, // inject types loader
-    required this.getCurrentCurrency, // inject currency loader
-    required int businessId, // business owner id
+    required this.createItem, // inject create use case
+    required this.getItemTypes, // inject types use case
+    required this.getCurrentCurrency, // inject currency use case
+    required this.checkStripeStatus, // inject stripe check use case
+    required this.businessId, // inject business id
   }) : super(CreateItemState(businessId: businessId)) {
-    on<CreateItemBootstrap>(_onBootstrap); // load dropdowns + currency
+    // bootstrap
+    on<CreateItemBootstrap>(_onBootstrap);
 
-    on<CreateItemNameChanged>(
-      (e, emit) => emit(state.copyWith(name: e.name)),
-    ); // name
+    // field changes (unchanged)
+    on<CreateItemNameChanged>((e, emit) => emit(state.copyWith(name: e.name)));
     on<CreateItemTypeChanged>(
       (e, emit) => emit(state.copyWith(itemTypeId: e.typeId)),
-    ); // type
+    );
     on<CreateItemDescriptionChanged>(
       (e, emit) => emit(state.copyWith(description: e.description)),
-    ); // desc
+    );
     on<CreateItemLocationPicked>(
       (e, emit) =>
           emit(state.copyWith(address: e.address, lat: e.lat, lng: e.lng)),
-    ); // geo
+    );
     on<CreateItemMaxChanged>(
       (e, emit) => emit(state.copyWith(maxParticipants: e.max)),
-    ); // max
+    );
     on<CreateItemPriceChanged>(
       (e, emit) => emit(state.copyWith(price: e.price)),
-    ); // price
-    on<CreateItemStartChanged>(
-      (e, emit) => emit(state.copyWith(start: e.dt)),
-    ); // start
-    on<CreateItemEndChanged>(
-      (e, emit) => emit(state.copyWith(end: e.dt)),
-    ); // end
+    );
+    on<CreateItemStartChanged>((e, emit) => emit(state.copyWith(start: e.dt)));
+    on<CreateItemEndChanged>((e, emit) => emit(state.copyWith(end: e.dt)));
 
+    // image handlers (unchanged)
     on<CreateItemImageUrlRetained>(
       (e, emit) => emit(
-        state.copyWith(
-          imageUrl: e.imageUrl,
-          error: null,
-          success: null,
-        ), // keep old url
+        state.copyWith(imageUrl: e.imageUrl, error: null, success: null),
       ),
     );
-
     on<CreateItemImagePicked>((e, emit) {
-      // if user picked a file, prefer it and clear url; if null, keep old url
+      // if a new file is picked, clear imageUrl; if null, keep old url
       emit(
         state.copyWith(
           image: e.image,
@@ -80,136 +83,181 @@ class CreateItemBloc extends Bloc<CreateItemEvent, CreateItemState> {
       );
     });
 
-    on<CreateItemSubmitPressed>(_onSubmit); // submit handler
+    // submit
+    on<CreateItemSubmitPressed>(_onSubmit);
   }
 
   Future<void> _onBootstrap(
     CreateItemBootstrap event,
     Emitter<CreateItemState> emit,
   ) async {
-    emit(state.copyWith(loading: true, error: null, success: null)); // busy
+    // start loading
+    emit(state.copyWith(loading: true, error: null, success: null));
     try {
-      final auth = await TokenStore.read(); // read token
-      final token = auth.token ?? ''; // jwt
-      final types = await getItemTypes(token); // load types
-      final currency = await getCurrentCurrency(token); // load currency
+      // read token
+      final auth = await TokenStore.read(); // read auth
+      final token = auth.token ?? ''; // token string
+
+      // parallel (can be done in sequence too)
+      final types = await getItemTypes(token); // get types
+      final currency = await getCurrentCurrency(token); // get currency
+
+      // ✅ check stripe connected for this business
+      final connected = await checkStripeStatus(
+        token,
+        businessId,
+      ); // true/false
+
+      // stop loading and set data
       emit(
-        state.copyWith(loading: false, types: types, currency: currency),
-      ); // done
+        state.copyWith(
+          loading: false, // stop spinner
+          types: types, // set types
+          currency: currency, // set currency
+          stripeConnected: connected, // set stripe flag
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(loading: false, error: e.toString())); // error
+      // on error: keep stripeConnected = false (safe)
+      emit(
+        state.copyWith(
+          loading: false,
+          error: e.toString(),
+          stripeConnected: false,
+        ),
+      );
     }
   }
 
-  // download existing image into a temp file so we can re-upload it as "image"
+  // download retained image to a temp file (if needed)
   Future<File> _downloadToTemp(String absoluteUrl) async {
-    final uri = Uri.parse(absoluteUrl); // parse url
-    final res = await http.get(uri); // GET bytes
+    // parse url
+    final uri = Uri.parse(absoluteUrl);
+    // fetch bytes
+    final res = await http.get(uri);
+    // validate
     if (res.statusCode != 200 || res.bodyBytes.isEmpty) {
-      throw Exception('Failed to download image'); // fail fast
+      throw Exception('Failed to download image');
     }
+    // create temp file name
     final name = uri.pathSegments.isNotEmpty
         ? uri.pathSegments.last
-        : 'reopen_${DateTime.now().millisecondsSinceEpoch}.jpg'; // fallback name
-    final file = File('${Directory.systemTemp.path}/$name'); // temp path
-    await file.writeAsBytes(res.bodyBytes); // save bytes
-    return file; // return local file
+        : 'img_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    // write to temp
+    final file = File('${Directory.systemTemp.path}/$name');
+    await file.writeAsBytes(res.bodyBytes);
+    // return file
+    return file;
   }
 
   Future<void> _onSubmit(
     CreateItemSubmitPressed event,
     Emitter<CreateItemState> emit,
   ) async {
-    // validate required fields
-    if (!state.ready) {
-      emit(state.copyWith(error: 'Please fill all required fields.'));
-      return;
+    // ✅ hard-block if Stripe not connected
+    if (!state.stripeConnected) {
+      emit(
+        state.copyWith(error: 'Please connect your Stripe account first.'),
+      ); // show reason
+      return; // stop
     }
-    // validate date order
+
+    // validate fields
+    if (!state.ready) {
+      emit(
+        state.copyWith(error: 'Please fill all required fields.'),
+      ); // show error
+      return; // stop
+    }
+
+    // validate dates
     if (state.start != null &&
         state.end != null &&
         !state.end!.isAfter(state.start!)) {
-      emit(state.copyWith(error: 'End must be after Start.'));
-      return;
+      emit(state.copyWith(error: 'End must be after Start.')); // show error
+      return; // stop
     }
 
-    // keep normalized URL (relative to server) if present
-    String? normalizedUrl = state.imageUrl;
+    // normalize retained image url (make relative if needed)
+    String? normalizedUrl = state.imageUrl; // start with url
     if (normalizedUrl != null && normalizedUrl.isNotEmpty) {
-      final base = g.serverRootNoApi(); // http://host:port
+      final base = g.serverRootNoApi(); // e.g. http://host:port
       if (base.isNotEmpty && normalizedUrl.startsWith(base)) {
-        normalizedUrl = normalizedUrl.substring(base.length); // make relative
+        normalizedUrl = normalizedUrl.substring(base.length); // strip base
       }
-      if (!normalizedUrl.startsWith('/'))
+      if (!normalizedUrl.startsWith('/')) {
         normalizedUrl = '/$normalizedUrl'; // ensure leading slash
+      }
     }
 
-    // choose file to send
-    File? imageFile = state.image; // new picked file if any
+    // choose image file to send
+    File? imageFile = state.image; // prefer picked file
 
-    // fallback: no new file but we have old url → download and re-upload as file
+    // if no file but have url → try download to file
     if (imageFile == null && (normalizedUrl?.isNotEmpty ?? false)) {
       final abs = normalizedUrl!.startsWith('http')
           ? normalizedUrl // already absolute
-          : '${g.serverRootNoApi()}$normalizedUrl'; // make absolute
+          : '${g.serverRootNoApi()}$normalizedUrl'; // build absolute
       try {
-        imageFile = await _downloadToTemp(abs); // download
+        imageFile = await _downloadToTemp(abs); // download to temp file
         normalizedUrl = null; // send as file only
-      } catch (e) {
-        // ignore and keep normalizedUrl as fallback for backend
-        // ignore: avoid_print
-        print('fallback download failed: $e');
+      } catch (_) {
+        // ignore download fail — backend may accept imageUrl fallback
       }
     }
 
-    emit(state.copyWith(loading: true, error: null, success: null)); // busy
+    // start loading
+    emit(state.copyWith(loading: true, error: null, success: null));
     try {
-      final auth = await TokenStore.read(); // read token
-      final token = auth.token ?? ''; // jwt
+      // read token
+      final auth = await TokenStore.read(); // auth
+      final token = auth.token ?? ''; // token
 
-      // auto status
-      final now = DateTime.now();
+      // compute status based on start time
+      final now = DateTime.now(); // now
       final computedStatus = (state.start != null && state.start!.isAfter(now))
           ? 'Upcoming'
           : 'Active';
 
-      // send request
+      // call create item use case
       final msg = await createItem(
-        token: token,
+        token: token, // token
         req: CreateItemRequest(
-          itemName: state.name,
-          itemTypeId: state.itemTypeId!,
-          description: state.description,
-          location: state.address,
-          latitude: state.lat!,
-          longitude: state.lng!,
-          maxParticipants: state.maxParticipants!,
-          price: state.price!,
-          startDatetime: state.start!,
-          endDatetime: state.end!,
-          status: computedStatus,
-          businessId: state.businessId!,
-          image: imageFile, // prefer real file
-          imageUrl: normalizedUrl, // fallback url (only if no file)
+          itemName: state.name, // name
+          itemTypeId: state.itemTypeId!, // type id
+          description: state.description, // desc
+          location: state.address, // address
+          latitude: state.lat!, // lat
+          longitude: state.lng!, // lng
+          maxParticipants: state.maxParticipants!, // cap
+          price: state.price!, // price
+          startDatetime: state.start!, // start
+          endDatetime: state.end!, // end
+          status: computedStatus, // status
+          businessId: state.businessId!, // business id
+          image: imageFile, // file
+          imageUrl: normalizedUrl, // url if no file
         ),
       );
 
-      // 🔔 NEW: emit local realtime event so UI refreshes instantly
+      // optional: emit local realtime event
       RealtimeBus.I.emit(
         RealtimeEvent(
           eventId:
-              'local-${DateTime.now().microsecondsSinceEpoch}', // unique local id
-          domain: Domain.activity, // activities domain
-          action: ActionType.reopened, // or ActionType.created (your choice)
-          businessId: state.businessId!, // which business changed
-          resourceId: 0, // new id if backend returns it; else 0
-          ts: DateTime.now(), // now
+              'local-${DateTime.now().microsecondsSinceEpoch}', // unique id
+          domain: Domain.activity, // domain
+          action: ActionType.created, // created
+          businessId: state.businessId!, // business id
+          resourceId: 0, // unknown id (server can push later)
+          ts: DateTime.now(), // timestamp
         ),
       );
 
+      // success
       emit(state.copyWith(loading: false, success: msg)); // done
     } catch (e) {
-      emit(state.copyWith(loading: false, error: e.toString())); // error
+      // failure
+      emit(state.copyWith(loading: false, error: e.toString())); // show error
     }
   }
 }

@@ -1,26 +1,32 @@
-// ===== Flutter 3.35.x =====
-// UpdateBookingStatus — supports reject, unreject, cancel approve/reject, markPaid.
+// lib/features/activities/Business/businessBooking/domain/usecases/update_booking_status.dart
+//// Flutter 3.35.x
+//// Use case: update booking status by action keyword
 
-import '../repositories/business_booking_repository.dart';
+import '../repositories/business_booking_repository.dart'; // repo
 
 class UpdateBookingStatus {
-  final BusinessBookingRepository repo;
-  UpdateBookingStatus(this.repo);
+  // repo dependency
+  final BusinessBookingRepository repo; // repository
 
+  // constructor
+  UpdateBookingStatus(this.repo); // inject repo
+
+  // call with token, booking id, and action text
   Future<void> call(String token, int id, String action) {
+    // normalize action to lower
     switch (action.toLowerCase()) {
-      case 'rejected':
+      case 'rejected': // mark rejected
         return repo.rejectBooking(token, id);
-      case 'pending': // unreject → back to pending
+      case 'pending': // back to pending (unreject)
         return repo.unrejectBooking(token, id);
-      case 'paid':
+      case 'paid': // mark paid
         return repo.markPaid(token, id);
-      case 'cancel_approved':
+      case 'cancel_approved': // approve cancel
         return repo.approveCancel(token, id);
-      case 'cancel_rejected':
+      case 'cancel_rejected': // reject cancel
         return repo.rejectCancel(token, id);
-      default:
-        throw ArgumentError('Unknown action: $action');
+      default: // unknown action
+        throw ArgumentError('Unknown action: $action'); // fail fast
     }
   }
 }

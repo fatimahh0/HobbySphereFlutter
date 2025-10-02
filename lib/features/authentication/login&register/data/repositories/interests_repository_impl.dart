@@ -1,7 +1,7 @@
-import 'package:hobby_sphere/features/authentication/data/models/activity_type_model.dart';
-import 'package:hobby_sphere/features/authentication/data/services/registration_service.dart';
-import 'package:hobby_sphere/features/authentication/domain/entities/activity_type.dart';
-import 'package:hobby_sphere/features/authentication/domain/repositories/interests_repository.dart';
+import 'package:hobby_sphere/features/authentication/login&register/data/models/activity_type_model.dart';
+import 'package:hobby_sphere/features/authentication/login&register/data/services/registration_service.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/entities/activity_type.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/repositories/interests_repository.dart';
 
 // concrete repo using RegistrationService
 class InterestsRepositoryImpl implements InterestsRepository {

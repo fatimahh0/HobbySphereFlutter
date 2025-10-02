@@ -8,6 +8,7 @@ import 'package:hobby_sphere/core/network/globals.dart' as g; // globals
 
 // l10n + theme
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // l10n
+import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart'; // theme
 
 // data layer

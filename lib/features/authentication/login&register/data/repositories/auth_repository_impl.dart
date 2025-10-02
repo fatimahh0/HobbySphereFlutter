@@ -1,7 +1,7 @@
 // Converts raw Maps from service into AuthResult entity.
 
-import 'package:hobby_sphere/features/authentication/domain/entities/auth_result.dart';
-import 'package:hobby_sphere/features/authentication/domain/repositories/auth_repository.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/entities/auth_result.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/repositories/auth_repository.dart';
 
 import '../services/auth_service.dart';
 

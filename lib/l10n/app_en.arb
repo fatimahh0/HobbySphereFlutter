@@ -810,6 +810,9 @@
    "splashServerDownTitle": "Server is unavailable",
   "splashServerDownDesc": "We’re online, but can’t reach the server right now. Please try again in a moment.",
   "connectionServerDown": "Server unavailable",
+  "stripeConnectRequiredTitle": "Stripe account required",
+  "stripeConnectRequiredDesc": "To publish an activity and receive payments, please connect your Stripe account first.",
+
   "@editInterestsTitle": { "description": "AppBar title for edit interests screen" },
 
 

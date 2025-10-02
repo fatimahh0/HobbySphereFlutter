@@ -22,6 +22,7 @@ import 'package:hobby_sphere/features/activities/Business/businessNotification/p
 import 'package:hobby_sphere/core/constants/app_role.dart';
 
 import 'package:hobby_sphere/l10n/app_localizations.dart';
+import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 
@@ -204,7 +205,7 @@ class _NotificationCard extends StatelessWidget {
           ),
         ),
         trailing: IconButton(
-          icon: const Icon(Icons.delete, color: AppColors.error),
+          icon: Icon(Icons.delete, color: AppColors.error),
           onPressed: () {
             bloc.add(DeleteBusinessNotification(notification.id));
             showTopToast(

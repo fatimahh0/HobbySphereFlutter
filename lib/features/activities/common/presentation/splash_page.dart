@@ -5,6 +5,7 @@
 import 'dart:convert' as convert; // base64 + json
 import 'package:flutter/material.dart'; // UI
 import 'package:flutter_bloc/flutter_bloc.dart'; // read cubit
+import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // prefs
 
 import 'package:hobby_sphere/core/constants/app_role.dart'; // AppRole

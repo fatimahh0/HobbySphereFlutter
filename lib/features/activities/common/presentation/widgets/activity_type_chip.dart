@@ -1,5 +1,6 @@
 // Small pressable card for one category
 import 'package:flutter/material.dart';
+import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart'; // AppColors
 import 'icon_mapper.dart'; // icon mapper
 

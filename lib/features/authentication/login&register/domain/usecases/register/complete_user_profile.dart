@@ -1,4 +1,5 @@
-import 'package:hobby_sphere/features/authentication/domain/entities/user_profile.dart';
+
+import 'package:hobby_sphere/features/authentication/login&register/domain/entities/user_profile.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../repositories/registration_repository.dart';
