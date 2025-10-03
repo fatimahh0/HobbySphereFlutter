@@ -32,6 +32,7 @@ import 'package:hobby_sphere/features/activities/Business/businessNotification/p
 import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/create_stripe_connect_link.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/delete_business.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/get_business_by_id.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart';
@@ -396,24 +397,45 @@ class _ShellDrawerState extends State<ShellDrawer> {
     ),
 
     // 4) Profile
+   // 4. Profile
     BlocProvider(
-      create: (ctx) {
-        final businessRepo = BusinessRepositoryImpl(BusinessService());
+      create: (_) {
+        // create the HTTP service for business profile
+        final businessService = BusinessService(); // simple service
+
+        // wrap service in repository
+        final businessRepo = BusinessRepositoryImpl(businessService); // repo
+
+        // build the bloc with all needed usecases
         return BusinessProfileBloc(
-          getBusinessById: GetBusinessById(businessRepo),
-          updateBusinessVisibility: UpdateBusinessVisibility(businessRepo),
-          updateBusinessStatus: UpdateBusinessStatus(businessRepo),
-          deleteBusiness: DeleteBusiness(businessRepo),
-          checkStripeStatus: CheckStripeStatus(businessRepo),
-        )..add(LoadBusinessProfile(widget.token, widget.businessId));
+            getBusinessById: GetBusinessById(businessRepo), // load profile
+            updateBusinessVisibility: UpdateBusinessVisibility(
+              businessRepo,
+            ), // toggle public/private
+            updateBusinessStatus: UpdateBusinessStatus(
+              businessRepo,
+            ), // change status
+            deleteBusiness: DeleteBusiness(businessRepo), // delete account
+            checkStripeStatus: CheckStripeStatus(
+              businessRepo,
+            ), // check stripe connected
+            createStripeConnectLink: CreateStripeConnectLink(
+              businessRepo,
+            ), // NEW: create onboarding link
+          )
+          // immediately load the profile data when the bloc is created
+          ..add(
+            LoadBusinessProfile(widget.token, widget.businessId),
+          ); // initial load
       },
       child: BusinessProfileScreen(
-        token: widget.token,
-        businessId: widget.businessId,
-        onTabChange: (i) => setState(() => _index = i),
-        onChangeLocale: widget.onChangeLocale,
+        token: widget.token, // pass token to screen
+        businessId: widget.businessId, // pass business id to screen
+        onTabChange: (i) => setState(() => _index = i), // allow tab change
+        onChangeLocale: widget.onChangeLocale, // pass locale callback
       ),
     ),
+
   ];
 
   // ===== Drawer menu models (labels + icons + pages + optional badges) =====

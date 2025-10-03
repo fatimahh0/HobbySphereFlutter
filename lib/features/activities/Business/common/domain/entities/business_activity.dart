@@ -77,7 +77,7 @@ class BusinessActivity {
         (m['itemType']?['id'] as num?)?.toInt();
 
     final String? typeName =
-        m['itemType']?['activity_type']?.toString() ??
+        m['itemType']?['item-type']?.toString() ??
         m['itemTypeName']?.toString();
 
     final String title = (m['itemName'] ?? m['name'] ?? 'Unnamed').toString();

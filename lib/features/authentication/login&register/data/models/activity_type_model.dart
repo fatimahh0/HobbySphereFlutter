@@ -1,4 +1,4 @@
-import '../../domain/entities/activity_type.dart'; // domain entity
+import 'package:hobby_sphere/features/authentication/login&register/domain/entities/activity_type.dart';
 
 // raw DTO from API
 class ActivityTypeModel {

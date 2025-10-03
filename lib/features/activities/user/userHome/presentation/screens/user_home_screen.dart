@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart'; // kDebugMode + debugPrint
 import 'package:flutter/material.dart'; // UI
 import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC
 import 'package:hobby_sphere/app/router/router.dart'; // routes
+import 'package:hobby_sphere/features/activities/common/presentation/screens/activity_types_all_screen.dart';
+import 'package:hobby_sphere/features/activities/common/presentation/widgets/activity_types_section.dart';
 import 'package:hobby_sphere/features/activities/user/userNotification/data/repositories/user_notification_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/user/userNotification/data/services/user_notification_service.dart';
 import 'package:hobby_sphere/features/activities/user/userNotification/presentation/bloc/user_unread_cubit.dart';
@@ -17,8 +19,7 @@ import 'package:hobby_sphere/core/network/globals.dart' as g; // server root
 // Sections
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/widgets/interest_section.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/widgets/explore_section.dart';
-import 'package:hobby_sphere/features/activities/common/presentation/widgets/activity_types_section.dart';
-import 'package:hobby_sphere/features/activities/common/presentation/screens/activity_types_all_screen.dart';
+
 import 'package:hobby_sphere/features/activities/common/presentation/screens/activities_by_type_screen.dart';
 
 // Usecases

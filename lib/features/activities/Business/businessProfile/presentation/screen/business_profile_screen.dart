@@ -1,185 +1,208 @@
-// ===== Flutter 3.35.x =====
-// BusinessProfileScreen — clean; deactivation via old Business service stack
+// Flutter 3.35.x
+// BusinessProfileScreen — simple, shows Stripe button, uses BLoC.
 
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/cubit/deactivate_account_cubit.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/widgets/deactivate_account_dialog.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart'; // UI
+import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC
+import 'package:shared_preferences/shared_preferences.dart'; // local storage
 
-import 'package:hobby_sphere/app/router/router.dart';
-import 'package:hobby_sphere/core/network/globals.dart' as g;
-import 'package:hobby_sphere/l10n/app_localizations.dart';
+import 'package:hobby_sphere/app/router/router.dart'; // routes
+import 'package:hobby_sphere/core/network/globals.dart' as g; // server root
+import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
 
-// Invite route args
-import 'package:hobby_sphere/features/activities/Business/BusinessUserInvite/presentation/screens/invite_manager_screen.dart';
+// Invite manager route args
+import 'package:hobby_sphere/features/activities/Business/BusinessUserInvite/presentation/screens/invite_manager_screen.dart'; // invite args
 
-// Profile bloc
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_event.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_state.dart';
+// Profile BLoC
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_bloc.dart'; // bloc
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_event.dart'; // events
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_state.dart'; // states
 
-// OLD business service stack
-import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart';
+// OLD stack for deactivate dialog
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart'; // service
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart'; // repo impl
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/cubit/deactivate_account_cubit.dart'; // cubit
+import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/widgets/deactivate_account_dialog.dart'; // dialog
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart'; // usecase
 
 class BusinessProfileScreen extends StatelessWidget {
-  final String token;
-  final int businessId;
-
-  final void Function(int)? onTabChange;
-  final void Function(Locale)? onChangeLocale;
+  final String token; // auth token
+  final int businessId; // business id
+  final void Function(int)? onTabChange; // optional callback
+  final void Function(Locale)? onChangeLocale; // optional callback
 
   const BusinessProfileScreen({
-    super.key,
-    required this.token,
-    required this.businessId,
-    this.onTabChange,
-    this.onChangeLocale,
+    super.key, // key
+    required this.token, // set token
+    required this.businessId, // set id
+    this.onTabChange, // optional
+    this.onChangeLocale, // optional
   });
 
-  // For images (strip /api)
+  // Helper: get server root without /api
   String _serverRoot() {
-    final base = (g.appServerRoot ?? '');
-    return base.replaceFirst(RegExp(r'/api/?$'), '');
+    final base = (g.appServerRoot ?? ''); // take global root
+    return base.replaceFirst(RegExp(r'/api/?$'), ''); // strip /api
   }
 
   @override
   Widget build(BuildContext context) {
-    final tr = AppLocalizations.of(context)!;
+    final tr = AppLocalizations.of(context)!; // i18n
 
     return BlocBuilder<BusinessProfileBloc, BusinessProfileState>(
       builder: (context, state) {
+        // show spinner while loading
         if (state is BusinessProfileLoading) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(child: CircularProgressIndicator()), // spinner
           );
         }
+        // show error
         if (state is BusinessProfileError) {
-          return Scaffold(body: Center(child: Text(state.message)));
+          return Scaffold(
+            body: Center(child: Text(state.message)),
+          ); // error text
         }
+        // show content
         if (state is BusinessProfileLoaded) {
-          return _buildProfile(context, state, tr);
+          return _buildProfile(context, state, tr); // content
         }
-        return const SizedBox.shrink();
+        // empty if initial
+        return const SizedBox.shrink(); // nothing
       },
     );
   }
 
+  // Content builder
   Widget _buildProfile(
-    BuildContext context,
-    BusinessProfileLoaded state,
-    AppLocalizations tr,
+    BuildContext context, // context
+    BusinessProfileLoaded state, // loaded state
+    AppLocalizations tr, // i18n
   ) {
-    final business = state.business;
-    final stripeConnected = state.stripeConnected;
-    final theme = Theme.of(context);
-    final serverRoot = _serverRoot();
+    final business = state.business; // business entity
+    final stripeConnected = state.stripeConnected; // stripe flag
+    final theme = Theme.of(context); // theme
+    final serverRoot = _serverRoot(); // server root for images
 
-    const double avatarSize = 96;
+    const double avatarSize = 96; // avatar size
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.background, // bg color
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ), // page padding
           children: [
-            // Logo
+            // Logo circle
             Center(
               child: Container(
-                width: avatarSize,
-                height: avatarSize,
+                width: avatarSize, // width
+                height: avatarSize, // height
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: theme.colorScheme.surface,
+                  shape: BoxShape.circle, // circle
+                  color: theme.colorScheme.surface, // surface color
                   border: Border.all(
-                    color: theme.colorScheme.outlineVariant,
-                    width: 1,
+                    color: theme.colorScheme.outlineVariant, // thin border
+                    width: 1, // 1px
                   ),
                 ),
                 child: ClipOval(
                   child:
-                      (business.logoUrl != null && business.logoUrl!.isNotEmpty)
+                      (business.logoUrl != null &&
+                          business.logoUrl!.isNotEmpty) // has logo?
                       ? Image.network(
-                          '$serverRoot${business.logoUrl}',
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) =>
-                              const Icon(Icons.store, size: 44),
+                          '$serverRoot${business.logoUrl}', // full image url
+                          fit: BoxFit.contain, // contain
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.store,
+                            size: 44,
+                          ), // fallback icon
                         )
-                      : const Icon(Icons.store, size: 44),
+                      : const Icon(Icons.store, size: 44), // default icon
                 ),
               ),
             ),
 
-            const SizedBox(height: 12),
-
+            const SizedBox(height: 12), // space
+            // Business name
             Text(
-              business.name,
-              textAlign: TextAlign.center,
+              business.name, // name
+              textAlign: TextAlign.center, // center text
               style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary, // primary color
+                fontWeight: FontWeight.bold, // bold
               ),
             ),
 
-            const SizedBox(height: 6),
-
+            const SizedBox(height: 6), // space
+            // Visibility + status
             Text(
-              "${business.isPublicProfile ? tr.publicProfile : tr.privateProfile} | ${business.status}",
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium,
+              "${business.isPublicProfile ? tr.publicProfile : tr.privateProfile} | ${business.status}", // info
+              textAlign: TextAlign.center, // center
+              style: theme.textTheme.bodyMedium, // style
             ),
 
-            const SizedBox(height: 6),
+            const SizedBox(height: 6), // space
+            // Motivation line
             Text(
-              tr.businessGrowMessage,
-              textAlign: TextAlign.center,
+              tr.businessGrowMessage, // localized text
+              textAlign: TextAlign.center, // center
               style: theme.textTheme.bodySmall?.copyWith(
-                fontStyle: FontStyle.italic,
+                fontStyle: FontStyle.italic, // italic
               ),
             ),
 
-            const SizedBox(height: 14),
-
-            if (stripeConnected == true)
+            const SizedBox(height: 14), // space
+            // Stripe section
+            if (stripeConnected == true) // if connected
               Center(
                 child: Text(
-                  tr.stripeAccountConnected,
+                  tr.stripeAccountConnected, // "Stripe connected"
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.green,
-                    fontWeight: FontWeight.w600,
+                    color: Colors.green, // green text
+                    fontWeight: FontWeight.w600, // semi-bold
                   ),
                 ),
               )
             else
               Center(
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.account_balance_wallet),
-                  label: Text(tr.registerOnStripe),
-                  onPressed: () {},
+                  icon: const Icon(Icons.account_balance_wallet), // wallet icon
+                  label: Text(tr.registerOnStripe), // "Register on Stripe"
+                  onPressed: () {
+                    // Dispatch event to open Stripe onboarding
+                    context.read<BusinessProfileBloc>().add(
+                      ConnectStripePressed(
+                        // custom event
+                        token: token, // pass token
+                        businessId: businessId, // pass id
+                      ),
+                    );
+                  },
                 ),
               ),
 
-            const SizedBox(height: 18),
-
-            // ===== Menu =====
+            const SizedBox(height: 18), // space
+            // ===== Menu tiles =====
             _menuTile(
               context,
-              icon: Icons.edit,
-              title: tr.editBusinessInfo,
+              icon: Icons.edit, // edit icon
+              title: tr.editBusinessInfo, // edit text
               onTap: () async {
+                // Open edit screen
                 final updated = await Navigator.pushNamed(
                   context,
-                  Routes.editBusiness,
+                  Routes.editBusiness, // route
                   arguments: EditBusinessRouteArgs(
-                    token: token,
-                    businessId: businessId,
+                    token: token, // pass token
+                    businessId: businessId, // pass id
                   ),
                 );
+                // If updated, reload profile
                 if (updated == true && context.mounted) {
                   context.read<BusinessProfileBloc>().add(
-                    LoadBusinessProfile(token, businessId),
+                    LoadBusinessProfile(token, businessId), // reload
                   );
                 }
               },
@@ -187,15 +210,16 @@ class BusinessProfileScreen extends StatelessWidget {
 
             _menuTile(
               context,
-              icon: Icons.notifications,
-              title: tr.notifications,
+              icon: Icons.notifications, // bell
+              title: tr.notifications, // title
               onTap: () {
+                // Open notifications
                 Navigator.pushNamed(
                   context,
-                  Routes.businessNotifications,
+                  Routes.businessNotifications, // route
                   arguments: BusinessNotificationsRouteArgs(
-                    token: token,
-                    businessId: businessId,
+                    token: token, // token
+                    businessId: businessId, // id
                   ),
                 );
               },
@@ -203,89 +227,98 @@ class BusinessProfileScreen extends StatelessWidget {
 
             _menuTile(
               context,
-              icon: Icons.person_add,
-              title: tr.inviteManager,
+              icon: Icons.person_add, // add person
+              title: tr.inviteManager, // title
               onTap: () => Navigator.pushNamed(
                 context,
-                Routes.inviteManager,
+                Routes.inviteManager, // route
                 arguments: InviteManagerRouteArgs(
-                  token: token,
-                  businessId: businessId,
+                  token: token, // token
+                  businessId: businessId, // id
                 ),
               ),
             ),
 
             _menuTile(
               context,
-              icon: Icons.privacy_tip,
-              title: tr.privacyPolicy,
-              onTap: () =>
-                  Navigator.of(context).pushNamed(Routes.privacyPolicy),
+              icon: Icons.privacy_tip, // privacy icon
+              title: tr.privacyPolicy, // title
+              onTap: () => Navigator.of(
+                context,
+              ).pushNamed(Routes.privacyPolicy), // open policy
             ),
 
             _menuTile(
               context,
-              icon: Icons.language,
-              title: tr.language,
-              onTap: () => _showLanguageSelector(context, tr),
+              icon: Icons.language, // language icon
+              title: tr.language, // title
+              onTap: () => _showLanguageSelector(context, tr), // open selector
             ),
 
             _menuTile(
               context,
-              icon: Icons.logout,
-              title: tr.logout,
-              onTap: () => _confirmLogout(context, tr),
+              icon: Icons.logout, // logout icon
+              title: tr.logout, // title
+              onTap: () => _confirmLogout(context, tr), // confirm logout
             ),
 
-            const SizedBox(height: 8),
-
+            const SizedBox(height: 8), // space
+            // Manage account (expand)
             ExpansionTile(
-              leading: const Icon(Icons.settings),
-              title: Text(tr.manageAccount),
+              leading: const Icon(Icons.settings), // settings icon
+              title: Text(tr.manageAccount), // title
               children: [
                 _menuTile(
                   context,
-                  icon: Icons.visibility,
+                  icon: Icons.visibility, // eye icon
                   title: business.isPublicProfile
                       ? tr.profileMakePrivate
-                      : tr.profileMakePublic,
+                      : tr.profileMakePublic, // toggle text
                   onTap: () {
+                    // Dispatch toggle visibility
                     context.read<BusinessProfileBloc>().add(
                       ToggleVisibility(
-                        token,
-                        businessId,
-                        !business.isPublicProfile,
+                        token, // token
+                        businessId, // id
+                        !business.isPublicProfile, // switch value
                       ),
                     );
                   },
                 ),
                 _menuTile(
                   context,
-                  icon: Icons.power_settings_new,
-                  title: tr.setInactive,
+                  icon: Icons.power_settings_new, // power icon
+                  title: tr.setInactive, // title
                   onTap: () async {
+                    // Show deactivate dialog (old stack)
                     final ok = await showDialog<bool>(
-                      context: context,
-                      barrierDismissible: false,
+                      context: context, // context
+                      barrierDismissible: false, // force choice
                       builder: (ctx) {
-                        // Wire cubit to OLD business stack
-                        final repo = BusinessRepositoryImpl(BusinessService());
-                        final usecase = UpdateBusinessStatus(repo);
+                        // Create repo + usecase for dialog
+                        final repo = BusinessRepositoryImpl(
+                          BusinessService(),
+                        ); // repo
+                        final usecase = UpdateBusinessStatus(repo); // usecase
                         return BlocProvider(
-                          create: (_) => DeactivateAccountCubit(usecase),
+                          create: (_) =>
+                              DeactivateAccountCubit(usecase), // cubit
                           child: DeactivateAccountDialog(
-                            token: token,
-                            businessId: businessId,
+                            token: token, // token
+                            businessId: businessId, // id
                           ),
                         );
                       },
                     );
+                    // If deactivated, clear and go to login
                     if (ok == true && context.mounted) {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.clear();
-                      Navigator.of(
-                        context,
-                      ).pushNamedAndRemoveUntil(Routes.login, (_) => false);
+                      final prefs =
+                          await SharedPreferences.getInstance(); // prefs
+                      await prefs.clear(); // clear
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                        Routes.login,
+                        (_) => false,
+                      ); // go login
                     }
                   },
                 ),
@@ -297,54 +330,54 @@ class BusinessProfileScreen extends StatelessWidget {
     );
   }
 
-  // ===== helpers =====
-
+  // Simple tile helper
   Widget _menuTile(
     BuildContext context, {
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
+    required IconData icon, // left icon
+    required String title, // title text
+    required VoidCallback onTap, // on press
   }) {
     return Column(
       children: [
         ListTile(
-          leading: Icon(icon),
-          title: Text(title),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: onTap,
+          leading: Icon(icon), // icon
+          title: Text(title), // text
+          trailing: const Icon(Icons.chevron_right), // arrow
+          onTap: onTap, // open
         ),
-        const Divider(height: 1),
+        const Divider(height: 1), // thin divider
       ],
     );
   }
 
+  // Language selector bottom sheet
   void _showLanguageSelector(BuildContext context, AppLocalizations tr) {
     showModalBottomSheet(
-      context: context,
+      context: context, // context
       builder: (ctx) {
         return SafeArea(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min, // wrap content
             children: [
               ListTile(
-                title: const Text("English"),
+                title: const Text("English"), // en
                 onTap: () {
-                  Navigator.pop(ctx);
-                  onChangeLocale?.call(const Locale('en'));
+                  Navigator.pop(ctx); // close
+                  onChangeLocale?.call(const Locale('en')); // set
                 },
               ),
               ListTile(
-                title: const Text("Français"),
+                title: const Text("Français"), // fr
                 onTap: () {
-                  Navigator.pop(ctx);
-                  onChangeLocale?.call(const Locale('fr'));
+                  Navigator.pop(ctx); // close
+                  onChangeLocale?.call(const Locale('fr')); // set
                 },
               ),
               ListTile(
-                title: const Text("العربية"),
+                title: const Text("العربية"), // ar
                 onTap: () {
-                  Navigator.pop(ctx);
-                  onChangeLocale?.call(const Locale('ar'));
+                  Navigator.pop(ctx); // close
+                  onChangeLocale?.call(const Locale('ar')); // set
                 },
               ),
             ],
@@ -355,26 +388,26 @@ class BusinessProfileScreen extends StatelessWidget {
   }
 }
 
-// ===== logout helper (unchanged) =====
+// Logout confirm dialog
 Future<void> _confirmLogout(BuildContext context, AppLocalizations tr) async {
-  final theme = Theme.of(context);
+  final theme = Theme.of(context); // theme
   final confirmed = await showDialog<bool>(
-    context: context,
+    context: context, // context
     builder: (ctx) {
       return AlertDialog(
-        title: Text(tr.logout),
-        content: Text(tr.profileLogoutConfirm),
+        title: Text(tr.logout), // title
+        content: Text(tr.profileLogoutConfirm), // message
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(ctx, false), // cancel
             child: Text(
-              tr.cancel,
-              style: TextStyle(color: theme.colorScheme.error),
+              tr.cancel, // cancel text
+              style: TextStyle(color: theme.colorScheme.error), // red text
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(tr.confirm),
+            onPressed: () => Navigator.pop(ctx, true), // confirm
+            child: Text(tr.confirm), // confirm text
           ),
         ],
       );
@@ -382,10 +415,12 @@ Future<void> _confirmLogout(BuildContext context, AppLocalizations tr) async {
   );
 
   if (confirmed == true) {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    final prefs = await SharedPreferences.getInstance(); // prefs
+    await prefs.clear(); // clear
     if (context.mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (_) => false);
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(Routes.login, (_) => false); // go login
     }
   }
 }

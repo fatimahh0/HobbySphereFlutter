@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart';
 import 'package:hobby_sphere/features/authentication/login&register/presentation/login/widgets/password_input.dart';
 import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_bloc.dart';
 import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_event.dart';
@@ -34,10 +35,8 @@ import 'package:hobby_sphere/features/authentication/login&register/domain/useca
 import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_business_phone_code.dart';
 import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/complete_business_profile.dart';
 import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/resend_business_code.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart';
 
 // Bloc
-
 
 // Small widgets
 import '../widgets/login_link.dart';
@@ -45,7 +44,6 @@ import '../widgets/guidelines.dart';
 import '../widgets/otp_boxes.dart';
 import '../widgets/pill_field.dart';
 import '../widgets/pick_box.dart';
-
 
 class RegisterEmailPage extends StatelessWidget {
   final RegistrationService service;

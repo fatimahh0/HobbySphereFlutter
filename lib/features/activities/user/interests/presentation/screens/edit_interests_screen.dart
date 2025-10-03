@@ -8,14 +8,15 @@
 import 'package:flutter/material.dart'; // UI widgets
 import 'package:dio/dio.dart'; // HTTP client
 import 'package:flutter/services.dart';
-
 import 'package:hobby_sphere/features/authentication/login&register/domain/entities/activity_type.dart';
+
+
 import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart';
+
 import 'package:hobby_sphere/features/authentication/login&register/presentation/register/widgets/interests_grid.dart';
 
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // l10n strings
 import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // top toast
-
 
 // === tiny API wrapper for user interests (we made earlier) ===
 import 'package:hobby_sphere/features/activities/user/interests/data/services/user_interests_api.dart';

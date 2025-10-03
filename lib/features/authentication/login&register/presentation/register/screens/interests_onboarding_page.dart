@@ -5,12 +5,12 @@ import 'package:hobby_sphere/core/network/globals.dart' as g;
 import 'package:hobby_sphere/features/authentication/login&register/data/services/registration_service.dart';
 import 'package:hobby_sphere/features/authentication/login&register/data/repositories/registration_repository_impl.dart';
 import 'package:hobby_sphere/features/authentication/login&register/data/repositories/interests_repository_impl.dart';
-
 import 'package:hobby_sphere/features/authentication/login&register/domain/entities/activity_type.dart';
+
+
 import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart';
 import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/add_user_interests.dart';
 import 'package:hobby_sphere/features/authentication/login&register/presentation/register/widgets/interests_grid.dart';
-
 
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 import 'package:hobby_sphere/shared/widgets/app_button.dart';
@@ -20,7 +20,8 @@ class InterestsOnboardingPage extends StatefulWidget {
   const InterestsOnboardingPage({super.key, required this.userId});
 
   @override
-  State<InterestsOnboardingPage> createState() => _InterestsOnboardingPageState();
+  State<InterestsOnboardingPage> createState() =>
+      _InterestsOnboardingPageState();
 }
 
 class _InterestsOnboardingPageState extends State<InterestsOnboardingPage> {
@@ -44,12 +45,21 @@ class _InterestsOnboardingPageState extends State<InterestsOnboardingPage> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final items = await _getTypes();
-      setState(() { _options = items; _loading = false; });
+      setState(() {
+        _options = items;
+        _loading = false;
+      });
     } catch (e) {
-      setState(() { _error = 'Failed to load interests'; _loading = false; });
+      setState(() {
+        _error = 'Failed to load interests';
+        _loading = false;
+      });
     }
   }
 
@@ -63,7 +73,9 @@ class _InterestsOnboardingPageState extends State<InterestsOnboardingPage> {
       await _addInterests(widget.userId, _selected.toList());
       if (!mounted) return;
       showTopToast(context, 'All set!', type: ToastType.success);
-      Navigator.of(context).pop(); // back to Login -> then it will route to shell
+      Navigator.of(
+        context,
+      ).pop(); // back to Login -> then it will route to shell
     } catch (e) {
       setState(() => _loading = false);
       showTopToast(context, 'Could not save interests', type: ToastType.error);
@@ -76,8 +88,7 @@ class _InterestsOnboardingPageState extends State<InterestsOnboardingPage> {
       appBar: AppBar(title: const Text('Pick your interests')),
       body: Stack(
         children: [
-          if (_loading)
-            const Center(child: CircularProgressIndicator()),
+          if (_loading) const Center(child: CircularProgressIndicator()),
           if (!_loading && _error != null)
             Center(
               child: Column(
@@ -98,7 +109,9 @@ class _InterestsOnboardingPageState extends State<InterestsOnboardingPage> {
                 showAll: _showAll,
                 onToggleShow: () => setState(() => _showAll = !_showAll),
                 onToggle: (id) => setState(() {
-                  _selected.contains(id) ? _selected.remove(id) : _selected.add(id);
+                  _selected.contains(id)
+                      ? _selected.remove(id)
+                      : _selected.add(id);
                 }),
                 onSubmit: _submit,
               ),

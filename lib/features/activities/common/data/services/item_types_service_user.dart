@@ -10,13 +10,13 @@ class ItemTypesService {
   final _fetch = ApiFetch(); // shared instance
 
   // base path for this service (global baseUrl already contains "/api")
-  static const _base = '/item-types'; // final URL => <server>/api/item-types
+  static const _base = '/item-type'; // final URL => <server>/api/item-type
 
   // ------------------------------------------------------------
-  // GET /api/item-types/guest
+  // GET /api/item-type/guest
   // same as: getAllActivityTypes() in RN
   Future<List<dynamic>> getAllActivityTypes() async {
-    // call GET /item-types/guest
+    // call GET /item-type/guest
     final res = await _fetch.fetch(
       HttpMethod.get, // HTTP method
       '$_base/guest', // endpoint path
@@ -35,10 +35,10 @@ class ItemTypesService {
   }
 
   // ------------------------------------------------------------
-  // GET /api/item-types/guest
+  // GET /api/item-type/guest
   // same as: getActivityTypesCategories() in RN (same endpoint)
   Future<List<dynamic>> getActivityTypesCategories() async {
-    // call GET /item-types/guest (same endpoint used in your RN code)
+    // call GET /item-type/guest (same endpoint used in your RN code)
     final res = await _fetch.fetch(
       HttpMethod.get, // HTTP method
       '$_base/guest', // endpoint path

@@ -25,8 +25,8 @@ class ItemTypeModel {
   }
 
   factory ItemTypeModel.fromJson(Map<String, dynamic> j) {
-    // name can come as: displayName / activity_type / name
-    final label = (j['displayName'] ?? j['activity_type'] ?? j['name'] ?? '')
+    // name can come as: displayName / item-type / name
+    final label = (j['displayName'] ?? j['item-type'] ?? j['name'] ?? '')
         .toString()
         .trim();
 

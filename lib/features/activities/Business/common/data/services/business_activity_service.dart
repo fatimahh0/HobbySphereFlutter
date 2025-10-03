@@ -15,7 +15,7 @@ class BusinessActivityService {
 
   // Base paths (global Dio baseUrl already ends with "/api")
   static const _itemsBase = '/items'; // -> <server>/api/items
-  static const _typesBase = '/item-types'; // -> <server>/api/item-types
+  static const _typesBase = '/item-type'; // -> <server>/api/item-type
 
   // ---------- helpers --------------------------------------------------------
 
@@ -249,7 +249,7 @@ class BusinessActivityService {
   }
 
   // DELETE /api/items/{id}
-Future<void> deleteActivity({required int id, required String token}) async {
+  Future<void> deleteActivity({required int id, required String token}) async {
     final res = await _fetch.fetch(
       HttpMethod.delete,
       '$_itemsBase/$id',
@@ -272,14 +272,14 @@ Future<void> deleteActivity({required int id, required String token}) async {
   Future<void> deleteBusinessActivity(String token, int id) =>
       deleteActivity(id: id, token: token); // forward
 
-  // GET /api/item-types
+  // GET /api/item-type
   Future<List<dynamic>> getActivityTypes({
     required String token, // bearer token
   }) async {
     // Send GET
     final res = await _fetch.fetch(
       HttpMethod.get, // method
-      _typesBase, // "/item-types"
+      _typesBase, // "/item-type"
       headers: {'Authorization': 'Bearer $token'}, // auth
     );
     // Validate array payload

@@ -1,4 +1,5 @@
-import '../../entities/activity_type.dart'; // entity
+import 'package:hobby_sphere/features/authentication/login&register/domain/entities/activity_type.dart';
+
 import '../../repositories/interests_repository.dart'; // repo
 
 // query-usecase to get interests

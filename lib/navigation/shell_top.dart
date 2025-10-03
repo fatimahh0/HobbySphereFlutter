@@ -29,6 +29,7 @@ import 'package:hobby_sphere/features/activities/Business/businessNotification/p
 import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/create_stripe_connect_link.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/delete_business.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/get_business_by_id.dart';
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart';
@@ -402,24 +403,38 @@ class ShellTop extends StatelessWidget {
       ),
 
       // 4) Profile
+     // 4) Profile — inject Stripe connect usecase so the button can open the link
       BlocProvider(
         create: (ctx) {
-          final businessRepo = BusinessRepositoryImpl(BusinessService());
+          final businessRepo = BusinessRepositoryImpl(
+            // repo wrapper
+            BusinessService(), // low-level API service
+          );
           return BusinessProfileBloc(
-            getBusinessById: GetBusinessById(businessRepo),
-            updateBusinessVisibility: UpdateBusinessVisibility(businessRepo),
-            updateBusinessStatus: UpdateBusinessStatus(businessRepo),
-            deleteBusiness: DeleteBusiness(businessRepo),
-            checkStripeStatus: CheckStripeStatus(businessRepo),
-          )..add(LoadBusinessProfile(token, businessId));
+            getBusinessById: GetBusinessById(businessRepo), // load profile
+            updateBusinessVisibility: UpdateBusinessVisibility(
+              businessRepo,
+            ), // toggle public/private
+            updateBusinessStatus: UpdateBusinessStatus(
+              businessRepo,
+            ), // set ACTIVE/INACTIVE
+            deleteBusiness: DeleteBusiness(businessRepo), // delete business
+            checkStripeStatus: CheckStripeStatus(
+              businessRepo,
+            ), // check Stripe connected
+            createStripeConnectLink: CreateStripeConnectLink(
+              businessRepo,
+            ), // NEW: get onboarding URL
+          )..add(LoadBusinessProfile(token, businessId)); // initial load event
         },
         child: BusinessProfileScreen(
-          token: token,
-          businessId: businessId,
-          onTabChange: (_) {},
-          onChangeLocale: onChangeLocale,
+          token: token, // pass token to screen
+          businessId: businessId, // pass business id to screen
+          onTabChange: (_) {}, // keep existing callback
+          onChangeLocale: onChangeLocale, // pass locale callback
         ),
       ),
+
     ];
   }
 

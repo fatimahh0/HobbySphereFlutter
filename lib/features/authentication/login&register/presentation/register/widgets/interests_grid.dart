@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:hobby_sphere/features/authentication/login&register/domain/entities/activity_type.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/widgets/app_button.dart';
 
-import '../../../domain/entities/activity_type.dart';
+
 import 'interest_icon_resolver.dart';
 
 class InterestsGridRemote extends StatelessWidget {

@@ -21,7 +21,7 @@ class InstantRegister {
           g.appDio!.get('/api/items/feed?page=1&limit=12'),
           g.appDio!.get('/api/chat/unread-count'),
           g.appDio!.get('/api/notifications/count'),
-          g.appDio!.get('/api/item-types'),
+          g.appDio!.get('/api/item-type'),
           g.appDio!.get('/api/currencies'),
         ]);
 

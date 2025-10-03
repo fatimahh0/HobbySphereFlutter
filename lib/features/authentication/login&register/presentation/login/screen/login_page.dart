@@ -104,6 +104,15 @@ class _LoginViewState extends State<_LoginView> {
   final _emailCtrl = TextEditingController(); // email input controller
   final _pwdCtrl = TextEditingController(); // password input controller
 
+
+  bool _pwdObscure = true; // start hidden
+
+  @override
+  void dispose() {
+    _pwdCtrl.dispose(); // clean up
+    super.dispose();
+  }
+
   // --- GoogleSignIn instance with WEB client id (required for idToken) ---
   final _gsi = GoogleSignIn(
     scopes: const ['email', 'profile'], // request email + profile
@@ -113,12 +122,7 @@ class _LoginViewState extends State<_LoginView> {
   // --- flag to avoid opening multiple reactivation dialogs ---
   bool _reactivateOpen = false; // dialog guard
 
-  @override
-  void dispose() {
-    _emailCtrl.dispose(); // clean email controller
-    _pwdCtrl.dispose(); // clean password controller
-    super.dispose(); // call parent
-  }
+ 
 
   // --- Google sign-in handler (with diagnostics) ---
   Future<void> _handleGoogle(BuildContext context) async {
@@ -406,10 +410,14 @@ class _LoginViewState extends State<_LoginView> {
                       const SizedBox(height: 8), // space
                       // --- password field ---
                       PasswordInput(
-                        controller: _pwdCtrl, // controller
-                        obscure: true, // hide chars
-                        onToggleObscure: () {}, // (wired inside widget)
-                      ),
+  controller: _pwdCtrl,       // pass controller
+  obscure: _pwdObscure,       // pass current state
+  onToggleObscure: () {       // eye tap handler
+    setState(() {
+      _pwdObscure = !_pwdObscure; // flip show/hide
+    });
+  },
+),
 
                       const SizedBox(height: 12), // space
                       // --- actions row (login + forgot) ---

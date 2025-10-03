@@ -1,10 +1,11 @@
-// lib/features/activities/common/presentation/widgets/activity_types_section.dart
+// lib/features/activities/common/presentation/widgets/item-types_section.dart
 // Flutter 3.35.x
 // Home section: shows first 6 categories, and shows "See all" ONLY if there are > 6
 // Optionally filters to only categories that currently have activities (via GetItemsByType).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/features/activities/common/presentation/widgets/activity_type_chip.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 
@@ -13,7 +14,7 @@ import '../../domain/usecases/get_items_by_type.dart';
 import '../bloc/types/types_bloc.dart';
 import '../bloc/types/types_event.dart';
 import '../bloc/types/types_state.dart';
-import 'activity_type_chip.dart';
+
 import '../../domain/entities/item_type.dart';
 
 class ActivityTypesSection extends StatelessWidget {

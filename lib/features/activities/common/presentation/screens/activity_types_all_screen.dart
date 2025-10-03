@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/features/activities/common/presentation/widgets/activity_type_chip.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
 import 'package:hobby_sphere/shared/widgets/app_search_bar.dart';
@@ -13,7 +14,7 @@ import '../../domain/usecases/get_items_by_type.dart';
 import '../bloc/types/types_bloc.dart';
 import '../bloc/types/types_event.dart';
 import '../bloc/types/types_state.dart';
-import '../widgets/activity_type_chip.dart';
+
 
 class ActivityTypesAllScreen extends StatefulWidget {
   final GetItemTypes getTypes;

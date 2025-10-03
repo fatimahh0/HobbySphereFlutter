@@ -21,6 +21,9 @@ import 'package:hobby_sphere/features/activities/Business/businessProfile/data/r
     as bprof_repo;
 import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart'
     as bprof_svc;
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/create_stripe_connect_link.dart';
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/create_stripe_connect_link.dart'
+    as bprof_uc;
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/delete_business.dart'
     as bprof_uc;
 import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/get_business_by_id.dart'
@@ -109,6 +112,7 @@ import 'package:hobby_sphere/features/activities/Business/businessHome/presentat
 import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/edit_item_page.dart';
 import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/screen/create_item_page.dart';
 import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart';
+
 import 'package:hobby_sphere/features/authentication/login&register/presentation/login/screen/login_page.dart';
 import 'package:hobby_sphere/features/authentication/login&register/presentation/register/screens/register_email_page.dart';
 import 'package:hobby_sphere/features/authentication/login&register/presentation/register/screens/register_page.dart';
@@ -480,57 +484,66 @@ class AppRouter {
         );
 
       // Inside AppRouter.onGenerateRoute's switch(name)
-      case Routes.businessProfile: // open business profile screen
+      // Flutter 3.35.x
+      // Open Business Profile with all DI (now includes CreateStripeConnectLink)
+      case Routes.businessProfile: // route name
         {
-          // 1) Safely read typed args
-          final data = args is BusinessProfileRouteArgs ? args : null; // cast
+          final data = args is BusinessProfileRouteArgs
+              ? args
+              : null; // safe cast
           if (data == null) {
-            // 2) Guard if missing args
+            // guard missing args
             return _error(
               'Missing BusinessProfileRouteArgs (token + businessId).',
-            );
+            ); // error page
           }
 
-          // 3) Build DI: service -> repository -> use cases -> bloc
           return MaterialPageRoute(
-            settings: settings, // keep settings
+            // build route
+            settings: settings, // keep route settings
             builder: (_) {
-              // Service (HTTP)
-              final svc =
-                  bprof_svc.BusinessService(); // service for profile APIs
+              // 1) Service (HTTP)
+              final svc = bprof_svc.BusinessService(); // low-level API service
 
-              // Repository (wraps service)
-              final repo = bprof_repo.BusinessRepositoryImpl(svc); // repo
+              // 2) Repository (wraps service)
+              final repo = bprof_repo.BusinessRepositoryImpl(svc); // repo impl
 
-              // Use cases (profile stack)
-              final getOne = bprof_uc.GetBusinessById(repo); // load profile
+              // 3) Use cases (profile stack)
+              final getOne = bprof_uc.GetBusinessById(repo); // load business
               final toggleVis = bprof_uc.UpdateBusinessVisibility(
                 repo,
-              ); // toggle visibility
+              ); // toggle public/private
               final updateStatus = bprof_uc.UpdateBusinessStatus(
                 repo,
               ); // set active/inactive
-              final deleteBiz = bprof_uc.DeleteBusiness(repo); // delete account
+              final deleteBiz = bprof_uc.DeleteBusiness(
+                repo,
+              ); // delete business
               final checkStripe = bprof_uc.CheckStripeStatus(
                 repo,
-              ); // check Stripe
+              ); // check stripe status
+              final createStripeLink = bprof_uc.CreateStripeConnectLink(
+                repo,
+              ); // NEW: create onboarding link
 
-              // 4) Provide Bloc + dispatch initial load
+              // 4) Provide the BLoC and fire initial load
               return BlocProvider(
                 create: (_) =>
                     BusinessProfileBloc(
-                      getBusinessById: getOne, // inject
-                      updateBusinessVisibility: toggleVis, // inject
-                      updateBusinessStatus: updateStatus, // inject
-                      deleteBusiness: deleteBiz, // inject
-                      checkStripeStatus: checkStripe, // inject
+                      getBusinessById: getOne, // inject usecase
+                      updateBusinessVisibility: toggleVis, // inject usecase
+                      updateBusinessStatus: updateStatus, // inject usecase
+                      deleteBusiness: deleteBiz, // inject usecase
+                      checkStripeStatus: checkStripe, // inject usecase
+                      createStripeConnectLink:
+                          createStripeLink, // NEW: inject usecase
                     )..add(
                       LoadBusinessProfile(data.token, data.businessId),
-                    ), // fire initial load
+                    ), // initial load
                 child: BusinessProfileScreen(
                   token: data.token, // pass token to screen
                   businessId: data.businessId, // pass id to screen
-                  onChangeLocale: onChangeLocale, // reuse router callback
+                  onChangeLocale: onChangeLocale, // keep language callback
                 ),
               );
             },
