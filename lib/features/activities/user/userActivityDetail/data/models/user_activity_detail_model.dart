@@ -4,7 +4,7 @@ import '../../domain/entities/user_activity_detail_entity.dart'; // entity class
 // DTO model that mirrors backend JSON for an item
 class UserActivityDetailModel {
   final int id; // item id
-  final String itemName; // item name
+  final String name; // item name
   final String? description; // item description
   final String itemTypeName; // type name
   final String? imageUrl; // image url (relative or absolute)
@@ -21,7 +21,7 @@ class UserActivityDetailModel {
   // model constructor
   UserActivityDetailModel({
     required this.id, // set id
-    required this.itemName, // set name
+    required this.name, // set name
     required this.description, // set desc
     required this.itemTypeName, // set type
     required this.imageUrl, // set img
@@ -45,7 +45,7 @@ class UserActivityDetailModel {
 
     return UserActivityDetailModel(
       id: (j['id'] as num).toInt(), // id
-      itemName: '${j['itemName'] ?? ''}', // name
+      name: '${j['name'] ?? ''}', // name
       description: j['description'] as String?, // desc
       itemTypeName: '${j['itemTypeName'] ?? ''}', // type
       imageUrl: j['imageUrl'] as String?, // img
@@ -67,7 +67,7 @@ class UserActivityDetailModel {
     final b = business; // alias
     return UserActivityDetailEntity(
       id: id, // id
-      name: itemName, // name
+      name: name, // name
       description: description, // desc
       typeName: itemTypeName, // type
       imageUrl: imageUrl, // img

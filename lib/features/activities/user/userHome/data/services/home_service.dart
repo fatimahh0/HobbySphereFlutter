@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show DioException;
 import 'package:hobby_sphere/core/network/api_fetch.dart' as net;
 import 'package:hobby_sphere/core/network/api_methods.dart';
 
@@ -8,27 +9,49 @@ class HomeService {
     String token,
     int userId,
   ) async {
-    final res = await _fetch.fetch(
-      HttpMethod.get,
-      '/items/interest-based/$userId',
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    final data = res.data;
-    if (data is List) {
-      return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    try {
+      final auth = token.isEmpty
+          ? null
+          : (token.startsWith('Bearer ') ? token : 'Bearer $token');
+
+      final res = await _fetch.fetch(
+        HttpMethod.get,
+        '/items/interest-based/$userId',
+        headers: {if (auth != null) 'Authorization': auth},
+      );
+
+      final data = res.data;
+      if (data is List) {
+        return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+      return const <Map<String, dynamic>>[];
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        return const <Map<String, dynamic>>[];
+      }
+
+      rethrow;
     }
-    return <Map<String, dynamic>>[];
   }
 
   Future<List<Map<String, dynamic>>> getUpcomingGuest({int? typeId}) async {
-    final path = typeId == null
-        ? '/items/guest/upcoming'
-        : '/items/guest/upcoming?typeId=$typeId';
-    final res = await _fetch.fetch(HttpMethod.get, path);
-    final data = res.data;
-    if (data is List) {
-      return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    try {
+      final path = typeId == null
+          ? '/items/guest/upcoming'
+          : '/items/guest/upcoming?typeId=$typeId';
+
+      final res = await _fetch.fetch(HttpMethod.get, path);
+
+      final data = res.data;
+      if (data is List) {
+        return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+      return const <Map<String, dynamic>>[];
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        return const <Map<String, dynamic>>[];
+      }
+      rethrow;
     }
-    return <Map<String, dynamic>>[];
   }
 }
