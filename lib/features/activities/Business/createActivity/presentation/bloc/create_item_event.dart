@@ -1,93 +1,99 @@
-// ===== lib/features/activities/Business/createActivity/presentation/bloc/create_item_event.dart =====
-// Flutter 3.35.x
-import 'dart:io'; // File type
-import 'package:equatable/equatable.dart'; // For easy ==
+// Flutter 3.35.x — simple and clean
+// Every line has a short comment.
 
-class CreateItemEvent extends Equatable {
-  // Base event
+// ===== Imports =====
+import 'dart:io'; // for File
+import 'package:equatable/equatable.dart'; // value equality
+
+// ===== Base event =====
+abstract class CreateItemEvent extends Equatable {
   @override
-  List<Object?> get props => []; // Default props
+  List<Object?> get props => []; // default equality list
 }
 
-class CreateItemBootstrap
-    extends CreateItemEvent {} // Load dropdowns + currency
+// Fire once when screen opens (load dropdowns + currency + stripe)
+class CreateItemBootstrap extends CreateItemEvent {}
 
+// Fire after returning from Profile or when user taps refresh in banner
+class CreateItemRecheckStripe extends CreateItemEvent {}
+
+// Name changed
 class CreateItemNameChanged extends CreateItemEvent {
-  // Update name
-  final String name; // New value
-  CreateItemNameChanged(this.name); // Ctor
+  final String name; // new value
+  CreateItemNameChanged(this.name); // ctor
   @override
-  List<Object?> get props => [name]; // Equality
+  List<Object?> get props => [name]; // eq by name
 }
 
+// Keep old image URL (when editing)
 class CreateItemImageUrlRetained extends CreateItemEvent {
-  // Keep old image URL
-  final String imageUrl; // URL string
-  CreateItemImageUrlRetained(this.imageUrl); // Ctor
+  final String imageUrl; // url value
+  CreateItemImageUrlRetained(this.imageUrl); // ctor
   @override
-  List<Object?> get props => [imageUrl]; // Equality
+  List<Object?> get props => [imageUrl]; // eq by url
 }
 
+// Type changed
 class CreateItemTypeChanged extends CreateItemEvent {
-  // Update type
-  final int? typeId; // New id
-  CreateItemTypeChanged(this.typeId); // Ctor
+  final int? typeId; // selected id
+  CreateItemTypeChanged(this.typeId); // ctor
   @override
-  List<Object?> get props => [typeId]; // Equality
+  List<Object?> get props => [typeId]; // eq by id
 }
 
+// Description changed
 class CreateItemDescriptionChanged extends CreateItemEvent {
-  // Update description
-  final String description; // New text
-  CreateItemDescriptionChanged(this.description); // Ctor
+  final String description; // new text
+  CreateItemDescriptionChanged(this.description); // ctor
   @override
-  List<Object?> get props => [description]; // Equality
+  List<Object?> get props => [description]; // eq by text
 }
 
+// Location picked from map
 class CreateItemLocationPicked extends CreateItemEvent {
-  // Update location
-  final String address; // Address text
-  final double lat; // Latitude
-  final double lng; // Longitude
-  CreateItemLocationPicked(this.address, this.lat, this.lng); // Ctor
+  final String address; // address text
+  final double lat; // latitude
+  final double lng; // longitude
+  CreateItemLocationPicked(this.address, this.lat, this.lng); // ctor
   @override
-  List<Object?> get props => [address, lat, lng]; // Equality
+  List<Object?> get props => [address, lat, lng]; // eq
 }
 
+// Max participants changed
 class CreateItemMaxChanged extends CreateItemEvent {
-  // Update capacity
-  final int? max; // Value
-  CreateItemMaxChanged(this.max); // Ctor
+  final int? max; // new value
+  CreateItemMaxChanged(this.max); // ctor
   @override
-  List<Object?> get props => [max]; // Equality
+  List<Object?> get props => [max]; // eq
 }
 
+// Price changed
 class CreateItemPriceChanged extends CreateItemEvent {
-  // Update price
-  final double? price; // Value
-  CreateItemPriceChanged(this.price); // Ctor
+  final double? price; // new value
+  CreateItemPriceChanged(this.price); // ctor
   @override
-  List<Object?> get props => [price]; // Equality
+  List<Object?> get props => [price]; // eq
 }
 
+// Image picked (or cleared)
 class CreateItemImagePicked extends CreateItemEvent {
-  // Picked file
-  final File? image; // File or null
-  CreateItemImagePicked(this.image); // Ctor
+  final File? image; // file or null
+  CreateItemImagePicked(this.image); // ctor
   @override
-  List<Object?> get props => [image?.path]; // Use path for equality
+  List<Object?> get props => [image?.path]; // eq by path
 }
 
+// Start changed
 class CreateItemStartChanged extends CreateItemEvent {
-  // Update start datetime
-  final DateTime? dt; // New value
-  CreateItemStartChanged(this.dt); // Ctor
+  final DateTime? dt; // new start
+  CreateItemStartChanged(this.dt); // ctor
 }
 
+// End changed
 class CreateItemEndChanged extends CreateItemEvent {
-  // Update end datetime
-  final DateTime? dt; // New value
-  CreateItemEndChanged(this.dt); // Ctor
+  final DateTime? dt; // new end
+  CreateItemEndChanged(this.dt); // ctor
 }
 
-class CreateItemSubmitPressed extends CreateItemEvent {} // Submit form
+// Submit pressed
+class CreateItemSubmitPressed extends CreateItemEvent {}

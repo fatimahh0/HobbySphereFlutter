@@ -7,7 +7,7 @@ class ItemTypesService {
   // create one ApiFetch instance
   final net.ApiFetch _fetch = net.ApiFetch(); // HTTP client
   // base path (adjust if backend differs)
-  static const String _typesPath = '/item-type'; // endpoint path
+  static const String _typesPath = '/item-types'; // endpoint path
 
   // returns raw JSON list from API
   Future<List<Map<String, dynamic>>> getTypes(String token) async {

@@ -1,49 +1,37 @@
-// ===== Flutter 3.35.x =====
-// CreateItemState — uses your real domain models (ItemType, Currency)
-// so Bloc/UI can pass List<ItemType> without casting.
-
+// Flutter 3.35.x — patch CreateItemState to allow setting nulls explicitly
 import 'dart:io';
 import 'package:equatable/equatable.dart';
-
-// ⬇️ Use your actual entities returned by the use cases:
 import 'package:hobby_sphere/features/activities/common/domain/entities/item_type.dart';
 import 'package:hobby_sphere/features/activities/common/domain/entities/currency.dart';
 
 class CreateItemState extends Equatable {
   // ===== identity =====
-  final int? businessId; // business id
-
-  // ===== form fields =====
-  final String name; // activity name
-  final int? itemTypeId; // selected type id
-  final String description; // description
-  final String address; // address
-  final double? lat; // latitude
-  final double? lng; // longitude
-  final int? maxParticipants; // capacity
-  final double? price; // price
-  final DateTime? start; // start time
-  final DateTime? end; // end time
-  final File? image; // picked image file
-  final String? imageUrl; // retained image url
-
-  // ===== lookups (REAL MODELS) =====
-  final List<ItemType> types; // item types
-  final Currency? currency; // current currency
-
+  final int? businessId;
+  // ===== form =====
+  final String name;
+  final int? itemTypeId;
+  final String description;
+  final String address;
+  final double? lat;
+  final double? lng;
+  final int? maxParticipants;
+  final double? price;
+  final DateTime? start; // ⬅️ date (nullable)
+  final DateTime? end; // ⬅️ date (nullable)
+  final File? image;
+  final String? imageUrl;
+  // ===== lookups =====
+  final List<ItemType> types;
+  final Currency? currency;
   // ===== ui =====
-  final bool loading; // loading flag
-  final String? error; // error text
-  final String? success; // success text
-
+  final bool loading;
+  final String? error;
+  final String? success;
   // ===== stripe =====
-  final bool stripeConnected; // connected to Stripe?
+  final bool stripeConnected;
 
   const CreateItemState({
-    // identity
     this.businessId,
-
-    // form
     this.name = '',
     this.itemTypeId,
     this.description = '',
@@ -56,21 +44,15 @@ class CreateItemState extends Equatable {
     this.end,
     this.image,
     this.imageUrl,
-
-    // lookups
     this.types = const [],
     this.currency,
-
-    // ui
     this.loading = false,
     this.error,
     this.success,
-
-    // stripe
     this.stripeConnected = false,
   });
 
-  // basic "ready" validation (Stripe checked separately)
+  // Simple readiness check
   bool get ready {
     final okBasics =
         name.trim().isNotEmpty &&
@@ -83,6 +65,9 @@ class CreateItemState extends Equatable {
     return okBasics && okLoc && okMeta && okDates;
   }
 
+  // ======= SENTINEL PATTERN (lets us set nulls explicitly) =======
+  static const Object _noChange = Object();
+
   CreateItemState copyWith({
     int? businessId,
     String? name,
@@ -93,15 +78,15 @@ class CreateItemState extends Equatable {
     double? lng,
     int? maxParticipants,
     double? price,
-    DateTime? start,
-    DateTime? end,
+    Object? start = _noChange, // ⬅️ Object? + sentinel
+    Object? end = _noChange, // ⬅️ Object? + sentinel
     File? image,
-    String? imageUrl,
-    List<ItemType>? types, // ⬅️ now List<ItemType>
-    Currency? currency, // ⬅️ now Currency
+    Object? imageUrl = _noChange, // optional: allow clearing imageUrl too
+    List<ItemType>? types,
+    Currency? currency,
     bool? loading,
-    String? error,
-    String? success,
+    Object? error = _noChange, // optional: allow clearing error
+    Object? success = _noChange, // optional: allow clearing success
     bool? stripeConnected,
   }) {
     return CreateItemState(
@@ -114,15 +99,22 @@ class CreateItemState extends Equatable {
       lng: lng ?? this.lng,
       maxParticipants: maxParticipants ?? this.maxParticipants,
       price: price ?? this.price,
-      start: start ?? this.start,
-      end: end ?? this.end,
+
+      // if param is _noChange → keep; else cast Even if null → set null
+      start: identical(start, _noChange) ? this.start : (start as DateTime?),
+      end: identical(end, _noChange) ? this.end : (end as DateTime?),
+
       image: image ?? this.image,
-      imageUrl: imageUrl ?? this.imageUrl,
-      types: types ?? this.types, // ⬅️ List<ItemType>
-      currency: currency ?? this.currency, // ⬅️ Currency
+      imageUrl: identical(imageUrl, _noChange)
+          ? this.imageUrl
+          : (imageUrl as String?),
+      types: types ?? this.types,
+      currency: currency ?? this.currency,
       loading: loading ?? this.loading,
-      error: error,
-      success: success,
+      error: identical(error, _noChange) ? this.error : (error as String?),
+      success: identical(success, _noChange)
+          ? this.success
+          : (success as String?),
       stripeConnected: stripeConnected ?? this.stripeConnected,
     );
   }
@@ -142,8 +134,8 @@ class CreateItemState extends Equatable {
     end,
     image,
     imageUrl,
-    types, // ⬅️ List<ItemType>
-    currency, // ⬅️ Currency
+    types,
+    currency,
     loading,
     error,
     success,

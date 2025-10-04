@@ -10,7 +10,7 @@ class ItemTypesService {
   final _fetch = ApiFetch(); // shared instance
 
   // base path for this service (global baseUrl already contains "/api")
-  static const _base = '/item-type'; // final URL => <server>/api/item-type
+  static const _base = '/item-types'; // final URL => <server>/api/item-type
 
   // ------------------------------------------------------------
   // GET /api/item-type/guest

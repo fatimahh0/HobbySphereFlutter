@@ -1,47 +1,46 @@
-// ===== Flutter 3.35.x =====
-// CreateItemPage — show Stripe blocker banner and disable submit until connected.
+// Flutter 3.35.x — simple and clean
+// Every line has a short comment.
 
+// ===== Imports =====
 import 'dart:io'; // File
 import 'package:flutter/material.dart'; // UI
-import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
+import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC
 import 'package:image_picker/image_picker.dart'; // picker
-import 'package:intl/intl.dart'; // date format
+import 'package:intl/intl.dart'; // dates
 
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
-import 'package:hobby_sphere/shared/widgets/app_button.dart'; // app button
+import 'package:hobby_sphere/shared/widgets/app_button.dart'; // button
 import 'package:hobby_sphere/shared/widgets/app_text_field.dart'; // text field
 import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // toast
 
-// map picker
-import '../widgets/map_location_picker.dart'; // map picker
+import '../widgets/map_location_picker.dart'; // map widget
 
-// ===== create item DI (existing) =====
-import '../../data/services/create_item_service.dart';
-import '../../data/repositories/create_item_repository_impl.dart';
-import '../../domain/usecases/create_item.dart';
+// Your create stack
+import '../../data/services/create_item_service.dart'; // service
+import '../../data/repositories/create_item_repository_impl.dart'; // repo impl
+import '../../domain/usecases/create_item.dart'; // use case
 
-// ===== lookups use cases (existing) =====
-import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
-import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
+// Lookups use cases
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart'; // currency
+import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart'; // types
 
-// ✅ reuse Business module to check Stripe (no new service)
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart';
+// ✅ Bring the SAME BusinessRepository you use in BusinessProfile
+import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/repositories/business_repository.dart'; // contract
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart'; // service
+import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart'; // impl
 
-// bloc
-import '../bloc/create_item_bloc.dart';
-import '../bloc/create_item_event.dart';
-import '../bloc/create_item_state.dart';
+// BLoC parts
+import '../bloc/create_item_bloc.dart'; // bloc
+import '../bloc/create_item_event.dart'; // events
+import '../bloc/create_item_state.dart'; // state
 
-// (optional) if you navigate to BusinessProfile for connecting Stripe
-import 'package:hobby_sphere/app/router/router.dart'; // Routes + args (if available)
+// Route (to open BusinessProfile safely)
+import 'package:hobby_sphere/app/router/router.dart'; // Routes + args
 
 class CreateItemPage extends StatelessWidget {
-  // inputs from router/DI
   final int businessId; // business id
-  final GetItemTypes getItemTypes; // use case
-  final GetCurrentCurrency getCurrentCurrency; // use case
+  final GetItemTypes getItemTypes; // types uc
+  final GetCurrentCurrency getCurrentCurrency; // currency uc
 
   const CreateItemPage({
     super.key,
@@ -52,148 +51,131 @@ class CreateItemPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // create item use case
-    final repo = CreateItemRepositoryImpl(CreateItemService()); // repo
-    final createUsecase = CreateItem(repo); // use case
+    // Build create use case (same as before)
+    final createUsecase = CreateItem(
+      CreateItemRepositoryImpl(CreateItemService()), // repo
+    );
 
-    // ✅ stripe check use case (reuse your Business stack)
+    // ✅ Use the SAME BusinessRepository stack used in BusinessProfile
     final businessRepo = BusinessRepositoryImpl(BusinessService()); // repo
-    final checkStripe = CheckStripeStatus(businessRepo); // use case
 
-    // provide bloc
+    // Provide BLoC
     return BlocProvider(
       create: (_) => CreateItemBloc(
-        createItem: createUsecase, // create
-        getItemTypes: getItemTypes, // types
-        getCurrentCurrency: getCurrentCurrency, // currency
-        checkStripeStatus: checkStripe, // ✅ stripe
+        createItem: createUsecase, // create uc
+        getItemTypes: getItemTypes, // types uc
+        getCurrentCurrency: getCurrentCurrency, // currency uc
+        businessRepo: businessRepo, // ✅ stripe source
         businessId: businessId, // id
       )..add(CreateItemBootstrap()), // bootstrap
-      child: const _CreateItemView(), // view
+      child: const _CreateItemView(), // child view
     );
   }
 }
 
 class _CreateItemView extends StatefulWidget {
   const _CreateItemView();
-
   @override
   State<_CreateItemView> createState() => _CreateItemViewState();
 }
 
 class _CreateItemViewState extends State<_CreateItemView> {
-  // controllers
-  final _name = TextEditingController(); // name
-  final _desc = TextEditingController(); // description
-  final _price = TextEditingController(); // price
-  final _max = TextEditingController(); // capacity
-  File? _pickedImage; // picked image
+  // Controllers for text fields
+  final _name = TextEditingController(); // name ctrl
+  final _desc = TextEditingController(); // desc ctrl
+  final _price = TextEditingController(); // price ctrl
+  final _max = TextEditingController(); // max ctrl
+
+  File? _pickedImage; // preview image
 
   @override
   void dispose() {
-    // dispose controllers
     _name.dispose();
     _desc.dispose();
     _price.dispose();
-    _max.dispose();
+    _max.dispose(); // clean
     super.dispose();
   }
 
+  // Image picker bottom sheet
   Future<void> _pickImage(BuildContext context) async {
-    // i18n + theme
-    final t = AppLocalizations.of(context)!; // texts
-    final cs = Theme.of(context).colorScheme; // colors
-    // picker
-    final picker = ImagePicker(); // picker instance
+    final t = AppLocalizations.of(context)!; // i18n
+    final picker = ImagePicker(); // picker
 
-    // ask source
+    // Choose source
     final src = await showModalBottomSheet<ImageSource>(
       context: context, // ctx
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // bg
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)), // round
-      ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ), // rounded
       builder: (_) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min, // wrap
           children: [
-            const SizedBox(height: 8), // space
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: cs.outlineVariant, // subtle
-                borderRadius: BorderRadius.circular(4), // round
-              ),
-            ),
             ListTile(
               leading: const Icon(Icons.photo_library), // icon
-              title: Text(t.createActivityChooseLibrary), // label
-              onTap: () =>
-                  Navigator.pop(context, ImageSource.gallery), // action
+              title: Text(t.createActivityChooseLibrary), // text
+              onTap: () => Navigator.pop(context, ImageSource.gallery), // pick
             ),
             ListTile(
               leading: const Icon(Icons.photo_camera), // icon
-              title: Text(t.createActivityTakePhoto), // label
-              onTap: () => Navigator.pop(context, ImageSource.camera), // action
+              title: Text(t.createActivityTakePhoto), // text
+              onTap: () => Navigator.pop(context, ImageSource.camera), // pick
             ),
-            const SizedBox(height: 6), // space
           ],
         ),
       ),
     );
 
-    // cancelled
-    if (src == null) return;
+    if (src == null) return; // cancelled
 
-    // pick
-    final x = await picker.pickImage(source: src, imageQuality: 85); // pick
+    final x = await picker.pickImage(
+      source: src,
+      imageQuality: 85,
+    ); // pick file
     if (!mounted) return; // guard
-
-    // set
-    final file = x != null ? File(x.path) : null; // to file
+    final file = x != null ? File(x.path) : null; // to File
     setState(() => _pickedImage = file); // preview
-    context.read<CreateItemBloc>().add(CreateItemImagePicked(file)); // state
-
-    // toast
-    if (file != null) {
-      showTopToast(
-        context,
-        t.createActivityPickImage,
-        type: ToastType.success,
-      ); // ok
-    }
+    context.read<CreateItemBloc>().add(CreateItemImagePicked(file)); // set
   }
 
-  String _fmtDate(DateTime? dt) {
-    // format or dash
-    if (dt == null) return '—'; // empty
-    return DateFormat(
-      'EEE, MMM d, yyyy • HH:mm',
-    ).format(dt.toLocal()); // nice format
+  // Format date or dash
+  String _fmtDate(DateTime? dt) => dt == null
+      ? '—'
+      : DateFormat('EEE, MMM d, yyyy • HH:mm').format(dt.toLocal());
+
+  // Open Profile to connect Stripe then re-check on return
+  Future<void> _goConnectStripe(BuildContext context, int businessId) async {
+    await Navigator.pushNamed(
+      context,
+      Routes.businessProfile, // your route
+      arguments: BusinessProfileRouteArgs(
+        token: '', // profile reads its own token
+        businessId: businessId, // pass id
+      ),
+    ); // wait for return
+    if (!mounted) return; // guard
+    context.read<CreateItemBloc>().add(CreateItemRecheckStripe()); // recheck
   }
 
   @override
   Widget build(BuildContext context) {
-    // i18n + theme
-    final t = AppLocalizations.of(context)!; // texts
+    final t = AppLocalizations.of(context)!; // i18n
     final cs = Theme.of(context).colorScheme; // colors
-    final tt = Theme.of(context).textTheme; // text styles
+    final tt = Theme.of(context).textTheme; // text
 
     return BlocConsumer<CreateItemBloc, CreateItemState>(
-      // listen when error or success change
-      listenWhen: (p, c) => p.error != c.error || p.success != c.success,
+      listenWhen: (p, c) =>
+          p.error != c.error || p.success != c.success, // listen on change
       listener: (context, state) {
-        // show error toast
         if (state.error?.isNotEmpty == true) {
           showTopToast(
             context,
             state.error!,
             type: ToastType.error,
             haptics: true,
-          ); // error
+          ); // show error
         }
-        // show success toast then pop
         if (state.success?.isNotEmpty == true) {
           showTopToast(
             context,
@@ -203,47 +185,42 @@ class _CreateItemViewState extends State<_CreateItemView> {
           ); // success
           if (mounted) {
             Future.delayed(const Duration(milliseconds: 300), () {
-              if (mounted) Navigator.pop(context, true); // close
+              if (mounted) Navigator.pop(context, true); // close screen
             });
           }
         }
       },
       builder: (context, state) {
-        // bloc
         final bloc = context.read<CreateItemBloc>(); // bloc
-        // date validity
+
+        // Check invalid date pair
         final hasDateConflict =
             state.start != null &&
             state.end != null &&
-            !state.end!.isAfter(state.start!); // check
+            !state.end!.isAfter(state.start!); // end must be after start
 
         return Scaffold(
           appBar: AppBar(title: Text(t.createActivityTitle)), // title
           body: SafeArea(
             child: AbsorbPointer(
-              absorbing: state.loading, // block during loading
+              absorbing: state.loading, // block when loading
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16), // page padding
                 child: Column(
                   children: [
-                    // ===== Stripe blocker (visible when not connected) =====
+                    // ===== Stripe blocker (only if NOT connected) =====
                     if (!state.stripeConnected)
                       _StripeBlockerCard(
-                        onConnectTap: () {
-                          // navigate to BusinessProfile where "Register on Stripe" exists
-                          Navigator.pushNamed(
-                            context,
-                            Routes.businessProfile, // your route
-                            arguments: BusinessProfileRouteArgs(
-                              token:
-                                  '', // profile will fetch token inside (keep blank if not needed here)
-                              businessId: state.businessId!, // pass id
-                            ),
-                          );
-                        },
+                        onConnectTap: () => _goConnectStripe(
+                          context,
+                          state.businessId!,
+                        ), // open profile
+                        onRefreshTap: () => bloc.add(
+                          CreateItemRecheckStripe(),
+                        ), // recheck inline
                       ),
 
-                    // ===== Title =====
+                    // ===== Name =====
                     AppTextField(
                       controller: _name, // ctrl
                       label: t.createActivityActivityName, // label
@@ -251,7 +228,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
                       filled: true, // style
                       margin: const EdgeInsets.only(bottom: 12), // gap
                       onChanged: (v) =>
-                          bloc.add(CreateItemNameChanged(v)), // event
+                          bloc.add(CreateItemNameChanged(v)), // set
                     ),
 
                     // ===== Type =====
@@ -265,19 +242,6 @@ class _CreateItemViewState extends State<_CreateItemView> {
                           borderSide: BorderSide(
                             color: cs.outlineVariant,
                           ), // border
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14), // round
-                          borderSide: BorderSide(
-                            color: cs.outlineVariant,
-                          ), // border
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14), // round
-                          borderSide: BorderSide(
-                            color: cs.primary,
-                            width: 1.6,
-                          ), // focus
                         ),
                       ),
                       child: DropdownButtonHideUnderline(
@@ -300,7 +264,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
                               .toList(),
                           onChanged: (v) {
                             if (v != null)
-                              bloc.add(CreateItemTypeChanged(v)); // event
+                              bloc.add(CreateItemTypeChanged(v)); // set
                           },
                         ),
                       ),
@@ -315,7 +279,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
                       maxLines: 5, // multi
                       margin: const EdgeInsets.only(top: 12, bottom: 12), // gap
                       onChanged: (v) =>
-                          bloc.add(CreateItemDescriptionChanged(v)), // event
+                          bloc.add(CreateItemDescriptionChanged(v)), // set
                     ),
 
                     // ===== Map =====
@@ -323,10 +287,10 @@ class _CreateItemViewState extends State<_CreateItemView> {
                       hintText: t.createActivitySearchPlaceholder, // hint
                       initialAddress: state.address.isEmpty
                           ? null
-                          : state.address, // initial
+                          : state.address, // show if has
                       onPicked: (addr, lat, lng) => bloc.add(
                         CreateItemLocationPicked(addr, lat, lng),
-                      ), // event
+                      ), // set
                     ),
                     const SizedBox(height: 12), // gap
                     // ===== Max participants =====
@@ -339,7 +303,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
                       margin: const EdgeInsets.only(bottom: 12), // gap
                       onChanged: (v) => bloc.add(
                         CreateItemMaxChanged(int.tryParse(v)),
-                      ), // event
+                      ), // set
                     ),
 
                     // ===== Price + Currency =====
@@ -356,7 +320,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
                             ), // numeric
                             onChanged: (v) => bloc.add(
                               CreateItemPriceChanged(double.tryParse(v)),
-                            ), // event
+                            ), // set
                           ),
                         ),
                         const SizedBox(width: 10), // gap
@@ -376,18 +340,19 @@ class _CreateItemViewState extends State<_CreateItemView> {
                           child: Text(
                             state.currency?.code ?? '---',
                             style: tt.titleMedium,
-                          ), // code
+                          ), // show code
                         ),
                       ],
                     ),
 
                     const SizedBox(height: 12), // gap
-                    // ===== Start =====
+                    // ===== Start date =====
                     _DateField(
                       label: t.createActivityStartDate, // label
                       value: state.start, // value
-                      fmt: _fmtDate, // format
+                      fmt: _fmtDate, // formatter
                       onPick: (dt) {
+                        // on pick
                         bloc.add(CreateItemStartChanged(dt)); // set start
                         final end = context
                             .read<CreateItemBloc>()
@@ -404,12 +369,13 @@ class _CreateItemViewState extends State<_CreateItemView> {
                       onClear: () =>
                           bloc.add(CreateItemStartChanged(null)), // clear
                     ),
+
                     const SizedBox(height: 10), // gap
-                    // ===== End =====
+                    // ===== End date =====
                     _DateField(
                       label: t.createActivityEndDate, // label
                       value: state.end, // value
-                      fmt: _fmtDate, // format
+                      fmt: _fmtDate, // formatter
                       onPick: (dt) {
                         final start = context
                             .read<CreateItemBloc>()
@@ -418,8 +384,8 @@ class _CreateItemViewState extends State<_CreateItemView> {
                         if (start != null && !dt.isAfter(start)) {
                           final fixed = start.add(
                             const Duration(hours: 1),
-                          ); // +1h
-                          bloc.add(CreateItemEndChanged(fixed)); // set fixed
+                          ); // fix
+                          bloc.add(CreateItemEndChanged(fixed)); // set
                           showTopToast(
                             context,
                             'End must be after start. Adjusted by +1h.',
@@ -433,15 +399,15 @@ class _CreateItemViewState extends State<_CreateItemView> {
                           bloc.add(CreateItemEndChanged(null)), // clear
                     ),
 
-                    // conflict hint
+                    // ===== Date conflict hint =====
                     if (hasDateConflict) ...[
                       const SizedBox(height: 8), // gap
                       Align(
-                        alignment: Alignment.centerLeft, // align
+                        alignment: Alignment.centerLeft, // left
                         child: Text(
                           'End must be after Start.',
                           style: TextStyle(color: cs.error),
-                        ), // text
+                        ), // hint
                       ),
                     ],
 
@@ -477,14 +443,14 @@ class _CreateItemViewState extends State<_CreateItemView> {
                     ),
 
                     const SizedBox(height: 16), // gap
-                    // ===== Submit =====
+                    // ===== Submit button =====
                     AppButton(
                       label: t.createActivitySubmit, // label
                       expand: true, // full width
                       isBusy: state.loading, // spinner
                       onPressed:
                           state
-                                  .ready // form ready
+                                  .ready // form ok?
                                   &&
                               state
                                   .stripeConnected // ✅ must be connected
@@ -499,13 +465,13 @@ class _CreateItemViewState extends State<_CreateItemView> {
                           : null, // disabled
                     ),
 
-                    // text error
+                    // ===== Inline error text =====
                     if (state.error != null && state.error!.isNotEmpty) ...[
                       const SizedBox(height: 12), // gap
                       Text(
                         state.error!,
                         style: TextStyle(color: cs.error),
-                      ), // error
+                      ), // error text
                     ],
                   ],
                 ),
@@ -518,13 +484,13 @@ class _CreateItemViewState extends State<_CreateItemView> {
   }
 }
 
-// Small date field
+// Small date field widget (unchanged style)
 class _DateField extends StatelessWidget {
-  final String label; // label
+  final String label; // label text
   final DateTime? value; // value
   final String Function(DateTime?) fmt; // formatter
-  final ValueChanged<DateTime> onPick; // pick handler
-  final VoidCallback? onClear; // clear handler
+  final ValueChanged<DateTime> onPick; // pick callback
+  final VoidCallback? onClear; // clear callback
 
   const _DateField({
     required this.label,
@@ -570,27 +536,27 @@ class _DateField extends StatelessWidget {
           ),
           if (value != null && onClear != null)
             IconButton(
-              icon: const Icon(Icons.clear), // icon
-              color: cs.onSurfaceVariant, // color
-              onPressed: onClear, // clear
-            ),
+              icon: const Icon(Icons.clear),
+              color: cs.onSurfaceVariant,
+              onPressed: onClear,
+            ), // clear
           TextButton.icon(
             onPressed: () async {
               final now = DateTime.now(); // now
               final init = value ?? now; // init
               final date = await showDatePicker(
-                context: context, // ctx
-                firstDate: now, // min
-                lastDate: DateTime(now.year + 2), // max
-                initialDate: init.isBefore(now) ? now : init, // clamp
-              );
+                context: context,
+                firstDate: now,
+                lastDate: DateTime(now.year + 2),
+                initialDate: init.isBefore(now) ? now : init,
+              ); // pick date
               if (date == null) return; // cancel
               final time = await showTimePicker(
-                context: context, // ctx
+                context: context,
                 initialTime: TimeOfDay.fromDateTime(
                   init.isBefore(now) ? now : init,
-                ), // time
-              );
+                ),
+              ); // pick time
               if (time == null) return; // cancel
               onPick(
                 DateTime(
@@ -611,11 +577,14 @@ class _DateField extends StatelessWidget {
   }
 }
 
-// ===== Simple Stripe blocker card (inline) =====
+// ===== Stripe blocker card with Refresh =====
 class _StripeBlockerCard extends StatelessWidget {
-  final VoidCallback onConnectTap; // action to open profile/connect
-
-  const _StripeBlockerCard({required this.onConnectTap});
+  final VoidCallback onConnectTap; // open profile
+  final VoidCallback onRefreshTap; // re-check inline
+  const _StripeBlockerCard({
+    required this.onConnectTap,
+    required this.onRefreshTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -630,9 +599,9 @@ class _StripeBlockerCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14), // round
       ),
       padding: const EdgeInsets.all(14), // pad
-      margin: const EdgeInsets.only(bottom: 14), // space below
+      margin: const EdgeInsets.only(bottom: 14), // space
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start, // top
+        crossAxisAlignment: CrossAxisAlignment.start, // top align
         children: [
           Icon(Icons.info, color: cs.primary), // icon
           const SizedBox(width: 10), // gap
@@ -642,22 +611,28 @@ class _StripeBlockerCard extends StatelessWidget {
               children: [
                 Text(
                   t.stripeConnectRequiredTitle, // "Stripe account required"
-                  style: tt.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ), // bold
+                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6), // gap
                 Text(
-                  t.stripeConnectRequiredDesc, // short reason
-                  style: tt.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ), // muted
+                  t.stripeConnectRequiredDesc, // short description
+                  style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 10), // gap
-                TextButton.icon(
-                  onPressed: onConnectTap, // go connect
-                  icon: const Icon(Icons.link), // icon
-                  label: Text(t.registerOnStripe), // "Register on Stripe"
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: onConnectTap, // open profile
+                      icon: const Icon(Icons.link), // icon
+                      label: Text(t.registerOnStripe), // label
+                    ),
+                    const SizedBox(width: 8), // gap
+                    IconButton(
+                      tooltip: 'Refresh', // tooltip
+                      onPressed: onRefreshTap, // re-check
+                      icon: const Icon(Icons.refresh), // icon
+                    ),
+                  ],
                 ),
               ],
             ),
