@@ -13,8 +13,8 @@ class CreateItemRepositoryImpl implements CreateItemRepository {
   Future<String> createItem(String token, CreateItemRequest req) async {
     // Build payload map for multipart (File stays as File, strings as fields)
     final payload = {
-      'itemName': req.itemName, // Name
-      'itemTypeId': req.itemTypeId, // Type id
+      'name': req.name, //  must be 'name'
+      'itemTypeId': req.itemTypeId, //  required
       'description': req.description, // Description
       'location': req.location, // Address text
       'latitude': req.latitude, // Lat

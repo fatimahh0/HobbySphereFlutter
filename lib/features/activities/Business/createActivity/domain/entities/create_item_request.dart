@@ -3,7 +3,7 @@
 import 'dart:io'; // File type
 
 class CreateItemRequest {
-  final String itemName; // Name
+  final String name; // Name
   final int itemTypeId; // Type id
   final String description; // Description
   final String location; // Address
@@ -19,7 +19,7 @@ class CreateItemRequest {
   final String? imageUrl; // Optional retained URL
 
   CreateItemRequest({
-    required this.itemName, // Set name
+    required this.name, // Set name
     required this.itemTypeId, // Set type
     required this.description, // Set description
     required this.location, // Set address
@@ -37,7 +37,7 @@ class CreateItemRequest {
 
   Map<String, dynamic> toJson() {
     return {
-      'itemName': itemName, // Name
+      'name': name, // Name
       'itemTypeId': itemTypeId, // Type id
       'description': description, // Desc
       'location': location, // Address

@@ -2,7 +2,7 @@ import 'dart:io';
 
 class EditItemRequest {
   final int id; // item id to update
-  final String itemName;
+  final String name;
   final int itemTypeId;
   final String description;
   final String location;
@@ -19,7 +19,7 @@ class EditItemRequest {
 
   EditItemRequest({
     required this.id,
-    required this.itemName,
+    required this.name,
     required this.itemTypeId,
     required this.description,
     required this.location,

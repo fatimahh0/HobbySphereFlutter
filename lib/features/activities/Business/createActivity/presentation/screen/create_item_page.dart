@@ -5,6 +5,7 @@
 import 'dart:io'; // File
 import 'package:flutter/material.dart'; // UI
 import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC
+import 'package:hobby_sphere/shared/utils/ion_icon_mapper.dart';
 import 'package:image_picker/image_picker.dart'; // picker
 import 'package:intl/intl.dart'; // dates
 
@@ -249,19 +250,30 @@ class _CreateItemViewState extends State<_CreateItemView> {
                           isExpanded: true, // full width
                           value: state.itemTypeId, // selected
                           hint: Text(t.createActivitySelectType), // hint
-                          items: state.types
-                              .map(
-                                (tpe) => DropdownMenuItem<int>(
-                                  value: tpe.id, // id
-                                  child: Text(
-                                    tpe.name.isNotEmpty
-                                        ? tpe.name
-                                        : '—', // text
-                                    overflow: TextOverflow.ellipsis, // safe
+                          // Build dropdown items with icon + text
+                          items: state.types.map((tpe) {
+                            return DropdownMenuItem<int>(
+                              value: tpe.id, // id
+                              child: Row(
+                                children: [
+                                  if ((tpe.icon ?? '').isNotEmpty) ...[
+                                    Icon(
+                                      iconFromBackend(tpe.icon),
+                                      size: 18,
+                                    ), // mapped icon
+                                    const SizedBox(width: 8), // gap
+                                  ],
+                                  Expanded(
+                                    child: Text(
+                                      tpe.name, // ✅ now comes from item_type
+                                      overflow: TextOverflow.ellipsis, // safe
+                                    ),
                                   ),
-                                ),
-                              )
-                              .toList(),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+
                           onChanged: (v) {
                             if (v != null)
                               bloc.add(CreateItemTypeChanged(v)); // set

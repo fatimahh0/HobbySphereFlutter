@@ -1,18 +1,20 @@
-// Repo implementation – maps model -> entity
+// Flutter 3.35.x — simple and clean
+
 import '../../domain/entities/item_type.dart'; // entity
-import '../../domain/repositories/item_type_repository.dart'; // repo
-import '../models/item_type_model.dart'; // model
-import '../services/item_types_service.dart'; // service
+import '../../domain/repositories/item_type_repository.dart'; // contract
+import '../services/item_types_service.dart'; // http
 
 class ItemTypeRepositoryImpl implements ItemTypeRepository {
-  final ItemTypesService service; // dependency
+  final ItemTypesService service; // http service
   ItemTypeRepositoryImpl(this.service); // inject
 
   @override
   Future<List<ItemType>> getItemTypes(String token) async {
-    final raw = await service.getTypes(token); // service call
-    return raw
-        .map((m) => ItemTypeModel.fromJson(m).toEntity())
-        .toList(); // map to entities
+    final raw = await service.getTypes(token); // call API
+    final list = raw.map(ItemType.fromJson).toList(); // map to entity
+    list.sort(
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    ); // sort
+    return list; // return
   }
 }

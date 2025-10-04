@@ -3,17 +3,14 @@ import '../../domain/entities/edit_item_request.dart';
 import '../../domain/repositories/edit_item_repository.dart';
 import '../services/edit_activity_service.dart';
 
-
 class EditItemRepositoryImpl implements EditItemRepository {
   final UpdatedItemService service;
   EditItemRepositoryImpl(this.service);
 
-  
-
   @override
   Future<String> updateItem(String token, EditItemRequest req) async {
     final payload = {
-      'itemName': req.itemName,
+      'name': req.name,
       'itemTypeId': req.itemTypeId,
       'description': req.description,
       'location': req.location,

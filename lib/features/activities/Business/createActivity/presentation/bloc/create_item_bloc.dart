@@ -253,7 +253,7 @@ class CreateItemBloc extends Bloc<CreateItemEvent, CreateItemState> {
 
       // Build request entity
       final req = CreateItemRequest(
-        itemName: state.name, // name
+        name: state.name, // name
         itemTypeId: state.itemTypeId!, // type id
         description: state.description, // desc
         location: state.address, // address

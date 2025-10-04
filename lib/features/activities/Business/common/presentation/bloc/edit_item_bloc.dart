@@ -147,7 +147,7 @@ class EditItemBloc extends Bloc<EditItemEvent, EditItemState> {
         token: token,
         req: EditItemRequest(
           id: state.id!,
-          itemName: state.name,
+          name: state.name,
           itemTypeId: state.itemTypeId!,
           description: state.description,
           location: state.address,
