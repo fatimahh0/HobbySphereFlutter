@@ -4885,6 +4885,18 @@ abstract class AppLocalizations {
   /// **'To publish an activity and receive payments, please connect your Stripe account first.'**
   String get stripeConnectRequiredDesc;
 
+  /// No description provided for @registerPickFromCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'take photo'**
+  String get registerPickFromCamera;
+
+  /// No description provided for @registerPickFromGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'choose from gallery'**
+  String get registerPickFromGallery;
+
   /// Toast after saving interests
   ///
   /// In en, this message translates to:

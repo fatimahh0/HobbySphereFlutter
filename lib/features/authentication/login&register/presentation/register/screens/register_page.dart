@@ -1,134 +1,170 @@
-// ======================= register_page.dart — Flutter 3.35.x =======================
-// Phone-first registration flow with smooth, pro UI.
-// - Step A: enter phone → continue
-// - Step B: password fields slide in → sign up (sends code)
-// - Step C: OTP verify → proceed to profile steps (name, username, photo, interests)
-// Uses your existing RegisterBloc + widgets (RoleSelector, PhoneInput, PasswordInput, etc.)
+// ===== register_page.dart — Flutter 3.35.x =====
+// - Fix: picked image now displays immediately.
+// - Add: choose image from Camera or Gallery (for user photo, business logo, banner).
+// - Safe: handles cancel/error, compresses a bit (imageQuality), and rebuilds via Bloc state.
 
-// ---- core dart/flutter ----
-import 'dart:io'; // for File images preview
-import 'package:flutter/material.dart'; // base UI
-import 'package:flutter_bloc/flutter_bloc.dart'; // bloc provider/consumer
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart';
+// ---- core ----
+import 'dart:io'; // File for local image preview
+import 'package:flutter/material.dart'; // UI
+import 'package:flutter/services.dart'; // PlatformException for picker errors
+import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
 import 'package:image_picker/image_picker.dart'; // pick images
 
-// ---- shared widgets you already have ----
+// ---- domain/usecases for remote interests ----
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart'; // interests
+
+// ---- shared widgets ----
 import 'package:hobby_sphere/shared/widgets/phone_input.dart'; // phone field
-import 'package:hobby_sphere/shared/widgets/app_button.dart'; // primary/outline buttons
+import 'package:hobby_sphere/shared/widgets/app_button.dart'; // buttons
 import 'package:hobby_sphere/shared/widgets/app_text_field.dart'; // text fields
-import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // top toast
+import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // toasts
 
-// ---- login/register shared widgets ----
-import 'package:hobby_sphere/features/authentication/login&register/presentation/login/widgets/role_selector.dart'; // user/business pills
-import 'package:hobby_sphere/features/authentication/login&register/presentation/login/widgets/password_input.dart'; // password input
+// ---- login/register widgets ----
+import 'package:hobby_sphere/features/authentication/login&register/presentation/login/widgets/role_selector.dart'; // role pills
+import 'package:hobby_sphere/features/authentication/login&register/presentation/login/widgets/password_input.dart'; // password field
 import '../widgets/login_link.dart'; // "Already have an account?"
-import '../widgets/guidelines.dart'; // password rules helper
-import '../widgets/otp_boxes.dart'; // 6 boxes for code input
+import '../widgets/guidelines.dart'; // password rules
+import '../widgets/otp_boxes.dart'; // 6-digit boxes
 import '../widgets/pill_field.dart'; // rounded text field
-import '../widgets/pick_box.dart'; // image picker tile
-import '../widgets/divider_with_text.dart'; // "or" divider
-import 'package:hobby_sphere/features/authentication/login&register/presentation/register/widgets/interests_grid.dart'; // remote interests grid
+import '../widgets/pick_box.dart'; // tile look box (we hook it to our picker)
+import '../widgets/divider_with_text.dart'; // "or"
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/widgets/interests_grid.dart'; // interests grid
 
-// ---- bloc: events / states / bloc ----
-import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_bloc.dart'; // main bloc
+// ---- bloc ----
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_bloc.dart'; // bloc
 import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_event.dart'; // events
 import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_state.dart'; // state
 
-// ---- DI: services / repos / usecases ----
-import 'package:hobby_sphere/features/authentication/login&register/data/services/registration_service.dart'; // service to call backend
-import 'package:hobby_sphere/features/authentication/login&register/data/repositories/registration_repository_impl.dart'; // repo impl
-import 'package:hobby_sphere/features/authentication/login&register/data/repositories/interests_repository_impl.dart'; // interests repo
+// ---- DI: services + repos ----
+import 'package:hobby_sphere/features/authentication/login&register/data/services/registration_service.dart'; // http
+import 'package:hobby_sphere/features/authentication/login&register/data/repositories/registration_repository_impl.dart'; // repo
+import 'package:hobby_sphere/features/authentication/login&register/data/repositories/interests_repository_impl.dart'; // repo
 
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/send_user_verification.dart'; // usecases...
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_user_email_code.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_user_phone_code.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/complete_user_profile.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/add_user_interests.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/resend_user_code.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/send_business_verification.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_business_email_code.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_business_phone_code.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/complete_business_profile.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/resend_business_code.dart';
+// ---- usecases (user) ----
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/send_user_verification.dart'; // send code
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_user_email_code.dart'; // verify email
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_user_phone_code.dart'; // verify phone
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/complete_user_profile.dart'; // complete profile
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/add_user_interests.dart'; // add interests
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/resend_user_code.dart'; // resend
 
-// ---- l10n ----
-import 'package:hobby_sphere/l10n/app_localizations.dart'; // localized strings
+// ---- usecases (business) ----
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/send_business_verification.dart'; // send code
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_business_email_code.dart'; // verify email
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_business_phone_code.dart'; // verify phone
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/complete_business_profile.dart'; // complete
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/resend_business_code.dart'; // resend
 
-// ---- routes ----
-import 'package:hobby_sphere/app/router/router.dart'
-    show Routes; // for "continue with email" nav
+// ---- l10n + routes ----
+import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
+import 'package:hobby_sphere/app/router/router.dart' show Routes; // routes
 
-// ======================= Public entry widget =======================
-
+// ======================= Public entry =======================
 class RegisterPage extends StatelessWidget {
-  // the backend service passed from caller (so you can swap easily)
-  final RegistrationService service; // holds http logic
+  final RegistrationService service; // backend service
   const RegisterPage({super.key, required this.service}); // ctor
 
   @override
   Widget build(BuildContext context) {
-    // build repositories from the service
-    final regRepo = RegistrationRepositoryImpl(service); // register repo
-    final interestsRepo = InterestsRepositoryImpl(service); // interests repo
+    final regRepo = RegistrationRepositoryImpl(service); // repo
+    final interestsRepo = InterestsRepositoryImpl(service); // repo
 
-    // provide the RegisterBloc to subtree
     return BlocProvider(
-      // create the bloc with all needed usecases
       create: (_) => RegisterBloc(
+        // user usecases
         sendUserVerification: SendUserVerification(regRepo),
         verifyUserEmail: VerifyUserEmailCode(regRepo),
         verifyUserPhone: VerifyUserPhoneCode(regRepo),
         completeUser: CompleteUserProfile(regRepo),
         addInterests: AddUserInterests(regRepo),
         resendUser: ResendUserCode(regRepo),
+        // business usecases
         sendBizVerification: SendBusinessVerification(regRepo),
         verifyBizEmail: VerifyBusinessEmailCode(regRepo),
         verifyBizPhone: VerifyBusinessPhoneCode(regRepo),
         completeBiz: CompleteBusinessProfile(regRepo),
         resendBiz: ResendBusinessCode(regRepo),
+        // interests
         getActivityTypes: GetActivityTypes(interestsRepo),
       ),
-      child: const _RegisterView(), // actual UI view
+      child: const _RegisterView(), // view
     );
   }
 }
 
-// ======================= Internal stateful view =======================
-
+// ======================= View (stateful) =======================
 class _RegisterView extends StatefulWidget {
-  const _RegisterView(); // simple ctor
+  const _RegisterView(); // ctor
   @override
-  State<_RegisterView> createState() => _RegisterViewState(); // create state
+  State<_RegisterView> createState() => _RegisterViewState(); // state
 }
 
 class _RegisterViewState extends State<_RegisterView> {
-  // ---- controllers for inputs ----
+  // ---- text controllers ----
   final _pwd = TextEditingController(); // password
-  final _pwd2 = TextEditingController(); // confirm password
+  final _pwd2 = TextEditingController(); // confirm
   final _otpCtrls = List.generate(6, (_) => TextEditingController()); // 6 boxes
-  final _otpNodes = List.generate(6, (_) => FocusNode()); // focus nodes
+  final _otpNodes = List.generate(6, (_) => FocusNode()); // 6 nodes
 
   final _first = TextEditingController(); // first name
   final _last = TextEditingController(); // last name
   final _username = TextEditingController(); // username
 
   final _bizName = TextEditingController(); // business name
-  final _bizDesc = TextEditingController(); // business description
+  final _bizDesc = TextEditingController(); // business desc
   final _bizWebsite = TextEditingController(); // website
 
   // ---- local ui state ----
-  final _picker = ImagePicker(); // image picker
-  bool _pwdObscure = true; // hide/show pwd
+  final ImagePicker _picker = ImagePicker(); // single picker instance
+  bool _pwdObscure = true; // hide/show password
   bool _pwd2Obscure = true; // hide/show confirm
-  bool _rememberMe = true; // save login info
-  bool _showAllInterests = true; // expand interests grid
+  bool _rememberMe = true; // remember flag
+  bool _showAllInterests = true; // expand/collapse interests
   String _e164Phone = ''; // normalized phone
-  bool _showPasswordStage = false; // toggle password section
-  bool _requestedInterests = false; // guard single fetch
+  bool _showPasswordStage = false; // password stage toggle
+  bool _requestedInterests = false; // avoid duplicate fetch
+
+  // ---- helpers: bottom sheet to choose camera/gallery ----
+  Future<XFile?> _chooseAndPick({
+    required BuildContext context, // for sheet
+    required AppLocalizations t, // for labels
+  }) async {
+    // show bottom sheet to choose source
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context, // current context
+      showDragHandle: true, // nice handle
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ), // rounded sheet
+      builder: (_) => _ImageSourceSheet(t: t), // custom widget (below)
+    );
+
+    // if user closed sheet, return null
+    if (source == null) return null; // canceled
+
+    try {
+      // pick with compression + reasonable max size
+      final x = await _picker.pickImage(
+        source: source, // camera or gallery
+        imageQuality: 85, // compress a bit
+        maxWidth: 1600, // downscale
+        maxHeight: 1600, // downscale
+      );
+      return x; // may be null (user canceled)
+    } on PlatformException catch (e) {
+      // show error toast if permission/other error
+      showTopToast(
+        context,
+        '${t.globalError}: ${e.code}', // simple error text
+        type: ToastType.error,
+      );
+      return null; // fail safe
+    }
+  }
 
   @override
   void dispose() {
-    // dispose all controllers + nodes to avoid leaks
+    // dispose controllers/nodes to avoid leaks
     _pwd.dispose();
     _pwd2.dispose();
     for (final c in _otpCtrls) c.dispose();
@@ -139,450 +175,322 @@ class _RegisterViewState extends State<_RegisterView> {
     _bizName.dispose();
     _bizDesc.dispose();
     _bizWebsite.dispose();
-    super.dispose(); // call super
+    super.dispose(); // super
   }
 
   @override
   Widget build(BuildContext context) {
-    // local helpers: theme + strings
-    final t = AppLocalizations.of(context)!; // l10n instance
+    final t = AppLocalizations.of(context)!; // strings
     final theme = Theme.of(context); // theme
-    final cs = theme.colorScheme; // colorscheme
+    final cs = theme.colorScheme; // colors
 
-    // Scaffold = base page
     return Scaffold(
-      // clean appbar
       appBar: AppBar(
         elevation: 0, // flat
-        backgroundColor: theme.scaffoldBackgroundColor, // match bg
+        backgroundColor: theme.scaffoldBackgroundColor, // same as bg
         leading: const BackButton(), // back arrow
       ),
-      // Main bloc consumer (listen for toasts + rebuild UI)
       body: BlocConsumer<RegisterBloc, RegisterState>(
-        listenWhen: (p, c) => p != c, // listen when state changes
+        listenWhen: (p, c) => p != c, // listen on change
         listener: (context, s) {
-          // show error toast if any error text
+          // show error toast
           if (s.error?.isNotEmpty == true) {
-            showTopToast(
-              context,
-              s.error!,
-              type: ToastType.error,
-              haptics: true,
-            );
+            showTopToast(context, s.error!, type: ToastType.error, haptics: true);
           }
-          // show info toast if any info text
+          // show info toast
           if (s.info?.isNotEmpty == true) {
             showTopToast(context, s.info!, type: ToastType.info);
           }
-          // success toast after final done
+          // final success
           if (s.step == RegStep.done) {
             showTopToast(
               context,
-              s.roleIndex == 0
-                  ? t.registerSuccessUser
-                  : t.registerSuccessBusiness,
+              s.roleIndex == 0 ? t.registerSuccessUser : t.registerSuccessBusiness,
               type: ToastType.success,
             );
           }
-          // sync bloc code into the 6 OTP boxes
+          // copy code to boxes
           if (s.code.length == 6) {
             for (var i = 0; i < 6; i++) {
-              _otpCtrls[i].text = s.code[i]; // set each box
+              _otpCtrls[i].text = s.code[i]; // copy digit
             }
           }
         },
         builder: (context, s) {
-          // read bloc
-          final bloc = context.read<RegisterBloc>(); // quick access
+          final bloc = context.read<RegisterBloc>(); // bloc
 
-          // decide if "Continue" allowed (phone only)
-          final phoneContinueReady =
-              !_showPasswordStage && _e164Phone.isNotEmpty;
-          // decide if "Sign Up" allowed (passwords valid)
-          final phoneSignUpReady =
-              _showPasswordStage &&
-              _pwd.text.length >= 8 &&
-              _pwd.text == _pwd2.text;
+          // compute buttons enabled
+          final phoneContinueReady = !_showPasswordStage && _e164Phone.isNotEmpty; // has phone
+          final phoneSignUpReady = _showPasswordStage && _pwd.text.length >= 8 && _pwd.text == _pwd2.text; // passwords ok
 
-          // lazy fetch of interests when entering that step
+          // lazy fetch interests one time
           if (s.step == RegStep.interests &&
               !_requestedInterests &&
               !s.interestsLoading &&
               s.interestOptions.isEmpty) {
-            _requestedInterests = true; // lock
+            _requestedInterests = true; // guard
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              bloc.add(RegFetchInterests()); // trigger fetch
+              bloc.add(RegFetchInterests()); // fetch now
             });
           }
 
-          // main content (scrollable)
           return SafeArea(
             child: Stack(
               children: [
-                // scroll for smaller screens
                 SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ), // page padding
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // page padding
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.stretch, // full width
+                    crossAxisAlignment: CrossAxisAlignment.stretch, // full width
                     children: [
-                      // =================== STEP: CONTACT (phone-first) ===================
+                      // ===== contact (phone-first) =====
                       if (s.step == RegStep.contact) ...[
-                        const SizedBox(height: 8), // spacing
+                        const SizedBox(height: 8), // space
                         Text(
                           t.selectMethodTitle, // "Sign up"
-                          textAlign: TextAlign.center, // center title
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700, // bold
-                          ),
+                          textAlign: TextAlign.center, // center
+                          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700), // bold
                         ),
-                        const SizedBox(height: 18), // spacing
-                        // Role selector: user/business pills
+                        const SizedBox(height: 18), // space
                         Center(
                           child: RoleSelector(
-                            value: s.roleIndex, // selected index
-                            onChanged: (i) =>
-                                bloc.add(RegRoleChanged(i)), // fire event
+                            value: s.roleIndex, // current role
+                            onChanged: (i) => bloc.add(RegRoleChanged(i)), // change role
                           ),
                         ),
-                        const SizedBox(height: 20), // spacing
-                        // Phone field
+                        const SizedBox(height: 20), // space
                         PhoneInput(
-                          initialIso:
-                              'CA', // default country code (change if needed)
-                          submittedOnce: false, // validation styling
+                          initialIso: 'CA', // default country
+                          submittedOnce: false,// visual validation
                           onChanged: (e164, _, __) {
-                            setState(
-                              () => _e164Phone = e164 ?? '',
-                            ); // save phone
-                            bloc.add(RegPhoneChanged(e164 ?? '')); // event
+                            setState(() => _e164Phone = e164 ?? ''); // store
+                            bloc.add(RegPhoneChanged(e164 ?? '')); // update bloc
                           },
                           onSwapToEmail: () => Navigator.pushNamed(
                             context,
-                            Routes.registerEmail, // go to email flow
+                            Routes.registerEmail, // email flow route
+                            arguments: {
+                              'roleIndex': context.read<RegisterBloc>().state.roleIndex, // keep role
+                            },
                           ),
                         ),
-
-                        // Animated slide-in of password section (pro UX)
                         AnimatedCrossFade(
-                          duration: const Duration(
-                            milliseconds: 220,
-                          ), // quick anim
-                          crossFadeState: _showPasswordStage
-                              ? CrossFadeState.showSecond
-                              : CrossFadeState.showFirst, // show based on flag
-                          firstChild: const SizedBox(
-                            height: 12,
-                          ), // minimal space
+                          duration: const Duration(milliseconds: 220), // smooth
+                          crossFadeState:
+                              _showPasswordStage ? CrossFadeState.showSecond : CrossFadeState.showFirst, // stage
+                          firstChild: const SizedBox(height: 12), // spacer
                           secondChild: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.stretch, // full width
+                            crossAxisAlignment: CrossAxisAlignment.stretch, // full width
                             children: [
-                              const SizedBox(height: 18), // spacing
+                              const SizedBox(height: 18), // space
                               Text(
-                                t.selectMethodCreatePassword, // "Create password"
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700, // bold
-                                ),
+                                t.selectMethodCreatePassword, // title
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), // bold
                               ),
-                              const SizedBox(height: 8), // spacing
-                              // Password input (with rules)
+                              const SizedBox(height: 8), // space
                               PasswordInput(
-                                controller: _pwd, // controller
+                                controller: _pwd, // pwd
                                 obscure: _pwdObscure, // hide/show
-                                onToggleObscure: () => setState(
-                                  () => _pwdObscure = !_pwdObscure,
-                                ), // toggle
-                                onChanged: (_) =>
-                                    setState(() {}), // refresh validation
+                                onToggleObscure: () => setState(() => _pwdObscure = !_pwdObscure), // toggle
+                                onChanged: (_) => setState(() {}), // refresh validity
                               ),
-                              const SizedBox(height: 10), // spacing
-                              // Confirm password
+                              const SizedBox(height: 10), // space
                               AppTextField(
-                                controller: _pwd2, // controller
+                                controller: _pwd2, // confirm
                                 label: t.registerConfirmPassword, // label
-                                hint: t
-                                    .emailRegistrationPasswordPlaceholder, // hint
+                                hint: t.emailRegistrationPasswordPlaceholder, // hint
                                 prefix: const Icon(Icons.lock_outline), // icon
                                 suffix: IconButton(
-                                  icon: Icon(
-                                    _pwd2Obscure
-                                        ? Icons.visibility_off
-                                        : Icons.visibility,
-                                  ), // eye icon
-                                  onPressed: () => setState(
-                                    () => _pwd2Obscure = !_pwd2Obscure,
-                                  ), // toggle
+                                  icon: Icon(_pwd2Obscure ? Icons.visibility_off : Icons.visibility), // eye
+                                  onPressed: () => setState(() => _pwd2Obscure = !_pwd2Obscure), // toggle
                                 ),
-                                obscure: _pwd2Obscure, // hide/show
-                                textInputAction:
-                                    TextInputAction.done, // ime action
-                                borderRadius: 28, // pill look
+                                obscure: _pwd2Obscure, // hide
+                                textInputAction: TextInputAction.done, // ime
+                                borderRadius: 28, // pill
                               ),
-                              const SizedBox(height: 10), // spacing
-                              const Guidelines(), // password rules helper
-                              const SizedBox(height: 8), // spacing
-                              // Save login info checkbox
+                              const SizedBox(height: 10), // space
+                              const Guidelines(), // rules
+                              const SizedBox(height: 8), // space
                               Row(
                                 children: [
                                   Checkbox(
                                     value: _rememberMe, // value
-                                    onChanged: (v) => setState(
-                                      () => _rememberMe = v ?? true,
-                                    ), // toggle
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                        6,
-                                      ), // rounded
-                                    ),
+                                    onChanged: (v) => setState(() => _rememberMe = v ?? true), // toggle
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)), // shape
                                   ),
-                                  Expanded(
-                                    child: Text(
-                                      t.selectMethodSaveInfo, // "Save login info..."
-                                      style: theme
-                                          .textTheme
-                                          .bodyMedium, // text style
-                                    ),
-                                  ),
+                                  Expanded(child: Text(t.selectMethodSaveInfo, style: theme.textTheme.bodyMedium)), // text
                                 ],
                               ),
                             ],
                           ),
                         ),
-
-                        const SizedBox(height: 12), // spacing
-                        // Primary sticky action (Continue or Sign up depending on stage)
+                        const SizedBox(height: 12), // space
                         AppButton(
                           onPressed: _showPasswordStage
                               ? (phoneSignUpReady
-                                    ? () {
-                                        bloc.add(
-                                          RegPasswordChanged(_pwd.text.trim()),
-                                        ); // pass pwd
-                                        bloc.add(
-                                          RegSendVerification(),
-                                        ); // send code
-                                      }
-                                    : null)
+                                  ? () {
+                                      bloc.add(RegPasswordChanged(_pwd.text.trim())); // set pwd
+                                      bloc.add(RegSendVerification()); // send code (role aware)
+                                    }
+                                  : null)
                               : (phoneContinueReady
-                                    ? () =>
-                                          setState(
-                                            () => _showPasswordStage = true,
-                                          ) // reveal password
-                                    : null),
-                          label: _showPasswordStage
-                              ? t
-                                    .selectMethodSignUp // "Sign Up"
-                              : t.selectMethodContinue, // "Continue"
+                                  ? () => setState(() => _showPasswordStage = true) // show password stage
+                                  : null),
+                          label: _showPasswordStage ? t.selectMethodSignUp : t.selectMethodContinue, // label
                           expand: true, // full width
                         ),
-
-                        const SizedBox(height: 14), // spacing
-                        // Only show SSO / Email buttons before password stage (clean UI)
+                        const SizedBox(height: 14), // space
                         if (!_showPasswordStage) ...[
                           DividerWithText(text: t.selectMethodOr), // "or"
-                          const SizedBox(height: 10), // spacing
+                          const SizedBox(height: 10), // space
                           _ProviderButton(
-                            icon: Icons.mail_outline, // mail icon
+                            icon: Icons.mail_outline, // icon
                             label: t.selectMethodContinueWithEmail, // label
                             onPressed: () => Navigator.pushNamed(
                               context,
-                              Routes.registerEmail, // go email registration
+                              Routes.registerEmail, // email flow
+                              arguments: {'roleIndex': context.read<RegisterBloc>().state.roleIndex}, // keep role
                             ),
                           ),
-                          const SizedBox(height: 10), // spacing
+                          const SizedBox(height: 10), // space
                           _ProviderButton(
-                            icon: Icons.g_mobiledata, // google placeholder
+                            icon: Icons.g_mobiledata, // placeholder
                             label: t.selectMethodContinueWithGoogle, // label
-                            onPressed: () => showTopToast(
-                              context,
-                              t.globalSuccess,
-                            ), // TODO SSO
+                            onPressed: () => showTopToast(context, t.globalSuccess), // TODO integrate
                           ),
-                          const SizedBox(height: 10), // spacing
+                          const SizedBox(height: 10), // space
                           _ProviderButton(
-                            icon: Icons.facebook, // fb icon
+                            icon: Icons.facebook, // placeholder
                             label: t.selectMethodContinueWithFacebook, // label
-                            onPressed: () => showTopToast(
-                              context,
-                              t.globalSuccess,
-                            ), // TODO SSO
+                            onPressed: () => showTopToast(context, t.globalSuccess), // TODO integrate
                           ),
                         ],
-
-                        const SizedBox(height: 16), // spacing
-                        const LoginLink(), // "Already have an account?"
+                        const SizedBox(height: 16), // space
+                        const LoginLink(), // to login
                         const SizedBox(height: 8), // bottom space
                       ],
 
-                      // =================== STEP: OTP ===================
+                      // ===== code (OTP) =====
                       if (s.step == RegStep.code) ...[
-                        const SizedBox(height: 8), // spacing
+                        const SizedBox(height: 8), // space
                         Text(
-                          t.verifyEnterCode, // "Enter 6-digit code"
+                          t.verifyEnterCode, // title
                           textAlign: TextAlign.center, // center
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700, // bold
-                          ),
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), // bold
                         ),
-                        const SizedBox(height: 18), // spacing
+                        const SizedBox(height: 18), // space
                         OtpBoxes(
-                          ctrls: _otpCtrls, // your 6 controllers
-                          nodes: _otpNodes, // your 6 nodes
-                          onChanged: (code) {
-                            // every change
-                            context.read<RegisterBloc>().add(
-                              RegCodeChanged(code),
-                            );
-                          },
-                          onCompleted: (code) {
-                            // when 6/6 filled
-                            context.read<RegisterBloc>().add(RegVerifyCode());
-                          },
-                          // optional error from bloc
+                          ctrls: _otpCtrls, // ctrls
+                          nodes: _otpNodes, // nodes
+                          onChanged: (code) => context.read<RegisterBloc>().add(RegCodeChanged(code)), // update
+                          onCompleted: (_) => context.read<RegisterBloc>().add(RegVerifyCode()), // verify
                         ),
-
-                        const SizedBox(height: 20), // spacing
+                        const SizedBox(height: 20), // space
                         AppButton(
                           onPressed: () => bloc.add(RegVerifyCode()), // verify
-                          label: t.verifyVerifyBtn, // "Verify"
+                          label: t.verifyVerifyBtn, // label
                           expand: true, // full width
                         ),
-                        const SizedBox(height: 10), // spacing
+                        const SizedBox(height: 10), // space
                         AppButton(
                           onPressed: () => bloc.add(RegResendCode()), // resend
-                          type: AppButtonType.outline, // outline style
-                          label: t.verifyResendBtn, // "Resend Code"
-                          expand: true, // full width
+                          type: AppButtonType.outline, // outline
+                          label: t.verifyResendBtn, // label
+                          expand: true, // full
                         ),
                       ],
 
-                      // =================== USER: NAME ===================
+                      // ===== user: name =====
                       if (s.step == RegStep.name) ...[
-                        const SizedBox(height: 16), // spacing
+                        const SizedBox(height: 16), // space
                         Text(
                           t.registerCompleteStep1FirstNameQuestion, // title
                           textAlign: TextAlign.center, // center
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700, // bold
-                          ),
+                          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700), // bold
                         ),
-                        const SizedBox(height: 12), // spacing
+                        const SizedBox(height: 12), // space
                         PillField(
-                          controller: _first, // first name
+                          controller: _first, // first
                           label: t.registerCompleteStep1FirstName, // label
-                          onChanged: (v) =>
-                              bloc.add(RegFirstNameChanged(v)), // event
+                          onChanged: (v) => bloc.add(RegFirstNameChanged(v)), // update
                         ),
-                        const SizedBox(height: 12), // spacing
+                        const SizedBox(height: 12), // space
                         PillField(
-                          controller: _last, // last name
+                          controller: _last, // last
                           label: t.registerCompleteStep1LastName, // label
-                          onChanged: (v) =>
-                              bloc.add(RegLastNameChanged(v)), // event
+                          onChanged: (v) => bloc.add(RegLastNameChanged(v)), // update
                         ),
-                        const SizedBox(height: 16), // spacing
+                        const SizedBox(height: 16), // space
                         AppButton(
-                          onPressed: () => context.read<RegisterBloc>().emit(
-                            s.copyWith(step: RegStep.username), // next step
-                          ),
-                          label:
-                              t.registerCompleteButtonsContinue, // "Continue"
-                          expand: true, // full width
+                          onPressed: () => context.read<RegisterBloc>().emit(s.copyWith(step: RegStep.username)), // next
+                          label: t.registerCompleteButtonsContinue, // label
+                          expand: true, // full
                         ),
                       ],
 
-                      // =================== USER: USERNAME ===================
+                      // ===== user: username =====
                       if (s.step == RegStep.username) ...[
-                        const SizedBox(height: 16), // spacing
+                        const SizedBox(height: 16), // space
                         Text(
                           t.registerCompleteStep2ChooseUsername, // title
                           textAlign: TextAlign.center, // center
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700, // bold
-                          ),
+                          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700), // bold
                         ),
-                        const SizedBox(height: 12), // spacing
+                        const SizedBox(height: 12), // space
                         PillField(
                           controller: _username, // username
                           label: t.registerCompleteStep2Username, // label
-                          helper:
-                              '${t.registerCompleteStep2UsernameHint1}\n'
+                          helper: '${t.registerCompleteStep2UsernameHint1}\n'
                               '${t.registerCompleteStep2UsernameHint2}\n'
                               '${t.registerCompleteStep2UsernameHint3}', // hints
-                          onChanged: (v) =>
-                              bloc.add(RegUsernameChanged(v)), // event
+                          onChanged: (v) => bloc.add(RegUsernameChanged(v)), // update
                         ),
-                        const SizedBox(height: 16), // spacing
+                        const SizedBox(height: 16), // space
                         AppButton(
-                          onPressed: () => context.read<RegisterBloc>().emit(
-                            s.copyWith(step: RegStep.profile), // next step
-                          ),
-                          label:
-                              t.registerCompleteButtonsContinue, // "Continue"
-                          expand: true, // full width
+                          onPressed: () => context.read<RegisterBloc>().emit(s.copyWith(step: RegStep.profile)), // next
+                          label: t.registerCompleteButtonsContinue, // label
+                          expand: true, // full
                         ),
                       ],
 
-                      // =================== USER: PROFILE ===================
+                      // ===== user: profile (with camera/gallery) =====
                       if (s.step == RegStep.profile) ...[
-                        const SizedBox(height: 12), // spacing
+                        const SizedBox(height: 12), // space
                         Center(
                           child: GestureDetector(
                             onTap: () async {
-                              final img = await _picker.pickImage(
-                                source:
-                                    ImageSource.gallery, // pick from gallery
-                              );
-                              bloc.add(RegPickUserImage(img)); // event
-                              showTopToast(
-                                context,
-                                t.registerAddProfilePhoto, // info toast
-                                type: ToastType.info,
-                              );
+                              // open sheet, pick camera/gallery
+                              final img = await _chooseAndPick(context: context, t: t); // returns XFile?
+                              if (img == null) return; // canceled
+                              // send to bloc (bloc must store XFile in state.userImage and emit)
+                              bloc.add(RegPickUserImage(img)); // update state
+                              // small info toast
+                              showTopToast(context, t.registerAddProfilePhoto, type: ToastType.info); // toast
                             },
                             child: Stack(
-                              clipBehavior: Clip.none, // allow overflow
+                              clipBehavior: Clip.none, // allow badge overflow
                               children: [
                                 CircleAvatar(
                                   radius: 56, // size
-                                  backgroundColor:
-                                      cs.surfaceVariant, // bg color
-                                  backgroundImage: s.userImage != null
-                                      ? Image.file(File(s.userImage!.path))
-                                            .image // preview
+                                  backgroundColor: cs.surfaceVariant, // bg
+                                  // use FileImage so preview updates when state changes
+                                  backgroundImage: (s.userImage != null && s.userImage!.path.isNotEmpty)
+                                      ? FileImage(File(s.userImage!.path)) // show picked image
                                       : null, // else null
-                                  child: s.userImage == null
-                                      ? const Icon(
-                                          Icons.person,
-                                          size: 48,
-                                        ) // placeholder
+                                  child: (s.userImage == null || s.userImage!.path.isEmpty)
+                                      ? const Icon(Icons.person, size: 48) // placeholder
                                       : null, // else nothing
                                 ),
-                                if (s.userImage !=
-                                    null) // show clear button if chosen
+                                // small "X" to clear image
+                                if (s.userImage != null && s.userImage!.path.isNotEmpty)
                                   Positioned(
-                                    right: -4, // offset
-                                    top: -4, // offset
+                                    right: -4, // x
+                                    top: -4, // y
                                     child: InkWell(
-                                      onTap: () => bloc.add(
-                                        RegPickUserImage(null),
-                                      ), // clear
+                                      onTap: () => bloc.add(RegPickUserImage(null)), // clear
                                       child: Container(
-                                        width: 26, // size
-                                        height: 26, // size
-                                        decoration: BoxDecoration(
-                                          color: cs.error, // red
-                                          shape: BoxShape.circle, // round
-                                        ),
-                                        child: Icon(
-                                          Icons.close,
-                                          size: 16,
-                                          color: cs.onError,
-                                        ), // x
+                                        width: 26, height: 26, // size
+                                        decoration: BoxDecoration(color: cs.error, shape: BoxShape.circle), // red
+                                        child: Icon(Icons.close, size: 16, color: cs.onError), // X
                                       ),
                                     ),
                                   ),
@@ -590,194 +498,151 @@ class _RegisterViewState extends State<_RegisterView> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12), // spacing
+                        const SizedBox(height: 12), // space
                         SwitchListTile(
-                          value: s.userPublic, // public flag
-                          onChanged: (v) =>
-                              bloc.add(RegUserPublicToggled(v)), // toggle
-                          title: Text(
-                            t.registerCompleteStep3PublicProfile,
-                          ), // label
+                          value: s.userPublic, // public/private
+                          onChanged: (v) => bloc.add(RegUserPublicToggled(v)), // toggle
+                          title: Text(t.registerCompleteStep3PublicProfile), // label
                         ),
-                        const SizedBox(height: 8), // spacing
+                        const SizedBox(height: 8), // space
                         AppButton(
-                          onPressed: () =>
-                              bloc.add(RegSubmitUserProfile()), // complete
-                          label: t.registerCompleteButtonsFinish, // "Finish"
-                          expand: true, // full width
+                          onPressed: () => bloc.add(RegSubmitUserProfile()), // finish profile
+                          label: t.registerCompleteButtonsFinish, // label
+                          expand: true, // full
                         ),
                       ],
 
-                      // =================== USER: INTERESTS ===================
+                      // ===== user: interests =====
                       if (s.step == RegStep.interests) ...[
                         if (s.interestsLoading) ...[
-                          const SizedBox(height: 24), // spacing
-                          const Center(
-                            child: CircularProgressIndicator(),
-                          ), // loader
-                          const SizedBox(height: 24), // spacing
+                          const SizedBox(height: 24), // space
+                          const Center(child: CircularProgressIndicator()), // loader
+                          const SizedBox(height: 24), // space
                         ] else if ((s.interestsError ?? '').isNotEmpty) ...[
-                          const SizedBox(height: 8), // spacing
+                          const SizedBox(height: 8), // space
                           Center(
                             child: Text(
-                              t.interestLoadError, // generic error text
+                              t.interestLoadError, // error text
                               textAlign: TextAlign.center, // center
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: cs.error,
-                              ), // red
+                              style: theme.textTheme.bodyMedium?.copyWith(color: cs.error), // red
                             ),
                           ),
-                          const SizedBox(height: 12), // spacing
+                          const SizedBox(height: 12), // space
                           AppButton(
-                            onPressed: () =>
-                                bloc.add(RegFetchInterests()), // retry
-                            label: t.selectMethodContinue, // reuse "Continue"
-                            expand: true, // full width
+                            onPressed: () => bloc.add(RegFetchInterests()), // retry
+                            label: t.selectMethodContinue, // reuse
+                            expand: true, // full
                           ),
                         ] else ...[
                           InterestsGridRemote(
-                            items: s.interestOptions, // options from backend
-                            selected: s.interests, // selected ids
-                            showAll: _showAllInterests, // expand/collapse
-                            onToggleShow: () => setState(
-                              () => _showAllInterests =
-                                  !_showAllInterests, // toggle
-                            ),
-                            onToggle: (id) => bloc.add(
-                              RegToggleInterest(id),
-                            ), // add/remove interest
-                            onSubmit: () =>
-                                bloc.add(RegSubmitInterests()), // save
+                            items: s.interestOptions, // options
+                            selected: s.interests, // chosen ids
+                            showAll: _showAllInterests, // flag
+                            onToggleShow: () => setState(() => _showAllInterests = !_showAllInterests), // toggle
+                            onToggle: (id) => bloc.add(RegToggleInterest(id)), // toggle item
+                            onSubmit: () => bloc.add(RegSubmitInterests()), // submit
                           ),
                         ],
                       ],
 
-                      // =================== BUSINESS: STEPS (name → details → profile) ===================
+                      // ===== business: name =====
                       if (s.step == RegStep.bizName) ...[
-                        const SizedBox(height: 16), // spacing
+                        const SizedBox(height: 16), // space
                         Text(
                           t.registerCompleteStep1BusinessName, // title
                           textAlign: TextAlign.center, // center
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ), // bold
+                          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700), // bold
                         ),
-                        const SizedBox(height: 12), // spacing
+                        const SizedBox(height: 12), // space
                         PillField(
-                          controller: _bizName, // controller
+                          controller: _bizName, // name
                           label: t.registerBusinessName, // label
-                          onChanged: (v) =>
-                              bloc.add(RegBusinessNameChanged(v)), // event
+                          onChanged: (v) => bloc.add(RegBusinessNameChanged(v)), // update
                         ),
-                        const SizedBox(height: 16), // spacing
+                        const SizedBox(height: 16), // space
                         AppButton(
-                          onPressed: () => context.read<RegisterBloc>().emit(
-                            s.copyWith(step: RegStep.bizDetails), // next
-                          ),
-                          label:
-                              t.registerCompleteButtonsContinue, // "Continue"
-                          expand: true, // full width
+                          onPressed: () => context.read<RegisterBloc>().emit(s.copyWith(step: RegStep.bizDetails)), // next
+                          label: t.registerCompleteButtonsContinue, // label
+                          expand: true, // full
                         ),
                       ],
 
+                      // ===== business: details =====
                       if (s.step == RegStep.bizDetails) ...[
-                        const SizedBox(height: 8), // spacing
+                        const SizedBox(height: 8), // space
                         Text(
                           t.registerCompleteStep2BusinessDescription, // title
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ), // bold
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), // bold
                         ),
                         AppTextField(
-                          controller: _bizDesc, // controller
+                          controller: _bizDesc, // desc
                           label: t.registerDescription, // label
-                          maxLines: 4, // textarea style
+                          maxLines: 4, // textarea
                           borderRadius: 18, // rounded
-                          onChanged: (v) =>
-                              bloc.add(RegBusinessDescChanged(v)), // event
+                          onChanged: (v) => bloc.add(RegBusinessDescChanged(v)), // update
                         ),
-                        const SizedBox(height: 12), // spacing
+                        const SizedBox(height: 12), // space
                         Text(
                           t.registerCompleteStep2WebsiteUrl, // title
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ), // bold
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), // bold
                         ),
                         PillField(
-                          controller: _bizWebsite, // controller
+                          controller: _bizWebsite, // url
                           label: t.registerWebsite, // label
-                          onChanged: (v) =>
-                              bloc.add(RegBusinessWebsiteChanged(v)), // event
+                          onChanged: (v) => bloc.add(RegBusinessWebsiteChanged(v)), // update
                         ),
-                        const SizedBox(height: 16), // spacing
+                        const SizedBox(height: 16), // space
                         AppButton(
-                          onPressed: () => context.read<RegisterBloc>().emit(
-                            s.copyWith(step: RegStep.bizProfile), // next
-                          ),
-                          label:
-                              t.registerCompleteButtonsContinue, // "Continue"
-                          expand: true, // full width
+                          onPressed: () => context.read<RegisterBloc>().emit(s.copyWith(step: RegStep.bizProfile)), // next
+                          label: t.registerCompleteButtonsContinue, // label
+                          expand: true, // full
                         ),
                       ],
 
+                      // ===== business: profile (logo + banner with camera/gallery) =====
                       if (s.step == RegStep.bizProfile) ...[
                         Text(
                           t.registerSelectLogo, // title
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ), // bold
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), // bold
                         ),
                         PickBox(
-                          label: t.registerSelectLogo, // tile label
+                          label: t.registerSelectLogo, // tile text
                           onPick: () async {
-                            final img = await _picker.pickImage(
-                              source: ImageSource.gallery,
-                            ); // pick
-                            bloc.add(RegPickBusinessLogo(img)); // event
+                            final img = await _chooseAndPick(context: context, t: t); // choose source
+                            if (img == null) return; // canceled
+                            bloc.add(RegPickBusinessLogo(img)); // set logo
                           },
                         ),
-                        const SizedBox(height: 12), // spacing
+                        const SizedBox(height: 12), // space
                         Text(
                           t.registerSelectBanner, // title
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ), // bold
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), // bold
                         ),
                         PickBox(
-                          label: t.registerSelectBanner, // tile label
+                          label: t.registerSelectBanner, // tile text
                           onPick: () async {
-                            final img = await _picker.pickImage(
-                              source: ImageSource.gallery,
-                            ); // pick
-                            bloc.add(RegPickBusinessBanner(img)); // event
+                            final img = await _chooseAndPick(context: context, t: t); // choose source
+                            if (img == null) return; // canceled
+                            bloc.add(RegPickBusinessBanner(img)); // set banner
                           },
                         ),
-                        const SizedBox(height: 16), // spacing
+                        const SizedBox(height: 16), // space
                         AppButton(
-                          onPressed: () =>
-                              bloc.add(RegSubmitBusinessProfile()), // submit
-                          label: t.registerCompleteButtonsFinish, // "Finish"
-                          expand: true, // full width
+                          onPressed: () => bloc.add(RegSubmitBusinessProfile()), // submit
+                          label: t.registerCompleteButtonsFinish, // label
+                          expand: true, // full
                         ),
                       ],
 
-                      // =================== DONE ===================
+                      // ===== done =====
                       if (s.step == RegStep.done) ...[
-                        const SizedBox(height: 40), // spacing
-                        Icon(
-                          Icons.check_circle,
-                          size: 64,
-                          color: cs.primary,
-                        ), // big check
-                        const SizedBox(height: 10), // spacing
+                        const SizedBox(height: 40), // space
+                        Icon(Icons.check_circle, size: 64, color: cs.primary), // big check
+                        const SizedBox(height: 10), // space
                         Center(
                           child: Text(
-                            s.roleIndex == 0
-                                ? t.registerSuccessUser
-                                : t.registerSuccessBusiness, // success text
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ), // bold
+                            s.roleIndex == 0 ? t.registerSuccessUser : t.registerSuccessBusiness, // text
+                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), // bold
                           ),
                         ),
                       ],
@@ -785,19 +650,17 @@ class _RegisterViewState extends State<_RegisterView> {
                   ),
                 ),
 
-                // global loading overlay
-                if (s.loading)
+                // loading overlay
+                if (context.watch<RegisterBloc>().state.loading)
                   Container(
-                    color: Colors.black.withOpacity(.12), // soft dim
+                    color: Colors.black.withOpacity(.12), // dim
                     child: Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min, // compact
                         children: [
                           const CircularProgressIndicator(), // spinner
-                          const SizedBox(height: 10), // spacing
-                          Text(
-                            t.registerCompleteButtonsSubmitting,
-                          ), // "Submitting..."
+                          const SizedBox(height: 10), // space
+                          Text(t.registerCompleteButtonsSubmitting), // "Submitting..."
                         ],
                       ),
                     ),
@@ -811,36 +674,66 @@ class _RegisterViewState extends State<_RegisterView> {
   }
 }
 
-// ======================= helper: outlined provider button =======================
-
+// ======================= helper: provider button (unchanged) =======================
 class _ProviderButton extends StatelessWidget {
-  final IconData icon; // leading icon
-  final String label; // text label
-  final VoidCallback? onPressed; // tap callback
-  const _ProviderButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  }); // ctor
+  final IconData icon; // icon
+  final String label; // text
+  final VoidCallback? onPressed; // action
+  const _ProviderButton({required this.icon, required this.label, required this.onPressed}); // ctor
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme; // colors
     return SizedBox(
-      height: 48, // standard button height
+      height: 48, // standard height
       child: OutlinedButton.icon(
         onPressed: onPressed, // tap
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: cs.outlineVariant), // thin border
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ), // rounded
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), // rounded
         ),
         icon: Icon(icon), // icon
-        label: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(label),
-        ), // left-aligned text
+        label: Align(alignment: Alignment.centerLeft, child: Text(label)), // left text
+      ),
+    );
+  }
+}
+
+// ======================= helper: bottom sheet for image source =======================
+class _ImageSourceSheet extends StatelessWidget {
+  final AppLocalizations t; // i18n
+  const _ImageSourceSheet({required this.t}); // ctor
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme; // colors
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16), // sheet padding
+        child: Column(
+          mainAxisSize: MainAxisSize.min, // wrap content
+          children: [
+            Container(
+              width: 44, height: 4, // small handle
+              decoration: BoxDecoration(
+                color: cs.outlineVariant, // muted
+                borderRadius: BorderRadius.circular(2), // rounded
+              ),
+            ),
+            const SizedBox(height: 12), // space
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined), // camera icon
+              title: Text(t.registerPickFromCamera), // "Take photo" (add to l10n if missing)
+              onTap: () => Navigator.pop(context, ImageSource.camera), // return camera
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_outlined), // gallery icon
+              title: Text(t.registerPickFromGallery), // "Choose from gallery" (add to l10n if missing)
+              onTap: () => Navigator.pop(context, ImageSource.gallery), // return gallery
+            ),
+            const SizedBox(height: 4), // small space
+          ],
+        ),
       ),
     );
   }

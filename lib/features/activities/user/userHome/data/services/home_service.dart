@@ -16,7 +16,7 @@ class HomeService {
 
       final res = await _fetch.fetch(
         HttpMethod.get,
-        '/items/interest-based/$userId',
+        '/items/category-based/$userId',
         headers: {if (auth != null) 'Authorization': auth},
       );
 

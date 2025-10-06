@@ -812,7 +812,8 @@
   "connectionServerDown": "Server unavailable",
   "stripeConnectRequiredTitle": "Stripe account required",
   "stripeConnectRequiredDesc": "To publish an activity and receive payments, please connect your Stripe account first.",
-
+"registerPickFromCamera": "take photo",
+"registerPickFromGallery": "choose from gallery",
   "@editInterestsTitle": { "description": "AppBar title for edit interests screen" },
 
 

@@ -1,69 +1,122 @@
+// interest_icon_resolver.dart
+// Flutter 3.35.x
+// Map Ionicons-like names to Material lookalikes (no extra deps).
+// Add the icon keys that appear in your payload.
+
 import 'package:flutter/material.dart'; // Material icons
-// import 'package:ionicons/ionicons.dart';                // ← add pkg if you want true Ionicons
 
-// pick an IconData based on lib + icon name
 IconData interestIcon(String lib, String name) {
-  final k = name.toLowerCase().trim(); // normalize
+  final k = name
+      .toLowerCase()
+      .trim(); // normalize (e.g., "American-Football" → "american-football")
+  final isIon = lib.toLowerCase() == 'ionicons'; // check lib
 
-  // when backend says Ionicons, try mapping (fallback to Material)
-  if (lib.toLowerCase() == 'ionicons') {
-    // Real Ionicons mapping (uncomment when package added)
-    // switch (k) {
-    //   case 'basketball': return Ionicons.basketball_outline;
-    //   case 'musical-notes': return Ionicons.musical_notes_outline;
-    //   case 'color-palette': return Ionicons.color_palette_outline;
-    //   case 'laptop': return Ionicons.laptop_outline;
-    //   case 'barbell': return Ionicons.barbell_outline;
-    //   case 'restaurant': return Ionicons.restaurant_outline;
-    //   case 'airplane': return Ionicons.airplane_outline;
-    //   case 'game-controller': return Ionicons.game_controller_outline;
-    //   case 'happy': return Ionicons.happy_outline;
-    //   case 'language': return Ionicons.language_outline;
-    //   case 'camera': return Ionicons.camera_outline;
-    //   case 'construct': return Ionicons.construct_outline;
-    //   case 'rose': return Ionicons.rose_outline;
-    //   case 'wallet': return Ionicons.wallet_outline;
-    //   case 'star': return Ionicons.star_outline;
-    //   default: return Icons.category_outlined;
-    // }
-
-    // Material lookalikes (compile now, no extra deps)
+  // If using Ionicons naming, return Material equivalents
+  if (isIon) {
     switch (k) {
+      // SPORTS
+      case 'american-football':
+        return Icons.sports_football_outlined; // ball icon
       case 'basketball':
-        return Icons.sports_basketball_outlined;
+        return Icons.sports_basketball_outlined; // basketball
+      case 'walk':
+        return Icons.directions_walk_outlined; // walking
+      case 'shield':
+        return Icons.security_outlined; // shield
+      case 'leaf':
+        return Icons.eco_outlined; // leaf
+      case 'paw':
+        return Icons.pets_outlined; // paw
+      case 'fish':
+        return Icons.set_meal_outlined; // fish-like
+
+      // MUSIC
       case 'musical-notes':
-        return Icons.music_note_outlined;
+      case 'musical-note':
+        return Icons.music_note_outlined; // music
+
+      // ART
       case 'color-palette':
-        return Icons.palette_outlined;
-      case 'laptop':
-        return Icons.laptop_outlined;
+        return Icons.palette_outlined; // palette
+
+      // TECH
+      case 'code-slash':
+        return Icons.code_off_outlined; // "slash" feel
+      case 'hardware-chip':
+        return Icons.memory_outlined; // chip
+      case 'cube':
+        return Icons.view_in_ar_outlined; // cube-like
+      case 'flask':
+        return Icons.science_outlined; // flask
+
+      // FITNESS
       case 'barbell':
-        return Icons.fitness_center_outlined;
+        return Icons.fitness_center_outlined; // barbell
+
+      // FOOD/TRAVEL
       case 'restaurant':
-        return Icons.restaurant_outlined;
+        return Icons.restaurant_outlined; // food
+      case 'globe':
+        return Icons.public_outlined; // globe
       case 'airplane':
-        return Icons.flight_outlined;
+        return Icons.flight_outlined; // plane
+
+      // GAMING
       case 'game-controller':
-        return Icons.sports_esports_outlined;
+        return Icons.sports_esports_outlined; // controller
+
+      // THEATER
       case 'happy':
-        return Icons.emoji_emotions_outlined;
+      case 'happy-outline':
+        return Icons.emoji_emotions_outlined; // happy
+      case 'book':
+        return Icons.menu_book_outlined; // book
+
+      // LANGUAGE
       case 'language':
-        return Icons.language_outlined;
+        return Icons.language_outlined; // language
+      case 'mic':
+      case 'mic-circle':
+        return Icons.mic_none_outlined; // mic
+      case 'pencil':
+        return Icons.edit_outlined; // pencil
+
+      // PHOTO/VIDEO
       case 'camera':
-        return Icons.photo_camera_outlined;
+        return Icons.photo_camera_outlined; // camera
+      case 'videocam':
+        return Icons.videocam_outlined; // videocam
+
+      // DIY/BEAUTY/FINANCE/BIZ
       case 'construct':
-        return Icons.handyman_outlined;
-      case 'rose':
-        return Icons.local_florist_outlined;
-      case 'wallet':
-        return Icons.account_balance_wallet_outlined;
-      case 'star':
-        return Icons.star_border;
+        return Icons.handyman_outlined; // tools
+      case 'color-wand':
+        return Icons.auto_awesome_outlined; // magic wand feel
+      case 'stats-chart':
+        return Icons.query_stats_outlined; // chart
+      case 'briefcase':
+        return Icons.work_outline; // briefcase
+
+      // OTHER
+      case 'planet':
+        return Icons.public_outlined; // planet/globe
+      case 'people':
+        return Icons.people_outline; // people
+      case 'time':
+        return Icons.access_time; // clock
+      case 'search':
+        return Icons.search; // search
+      case 'grid':
+        return Icons.grid_view_outlined; // grid
+      case 'moon':
+        return Icons.dark_mode_outlined; // moon
+
+      // fallback for any unknown key
       default:
-        return Icons.category_outlined;
+        return Icons.category_outlined; // generic
     }
   }
 
-  // default for other libs (extend later)
-  return Icons.category_outlined; // generic
+  // Not Ionicons? Use a safe default (extend as needed)
+  return Icons.category_outlined; // generic icon
 }

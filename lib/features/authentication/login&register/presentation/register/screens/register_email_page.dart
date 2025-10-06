@@ -1,138 +1,192 @@
-// ===== Flutter 3.35.x =====
-// Email registration screen with remote interests (all strings from l10n)
+// ======================= register_email_page.dart — Flutter 3.35.x =======================
+// Email registration flow + camera/gallery image picker for user photo, business logo, banner.
+// Role is preserved via Navigator args. Image preview is reliable using FileImage and Bloc state.
 
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart';
-import 'package:hobby_sphere/features/authentication/login&register/presentation/login/widgets/password_input.dart';
-import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_bloc.dart';
-import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_event.dart';
-import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_state.dart';
-import 'package:hobby_sphere/features/authentication/login&register/presentation/register/widgets/interests_grid.dart';
+import 'dart:io'; // File for local image preview
+import 'package:flutter/material.dart'; // UI
+import 'package:flutter/services.dart'; // PlatformException for picker errors
+import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC
+import 'package:image_picker/image_picker.dart'; // Image picker
 
-import 'package:image_picker/image_picker.dart';
+// Usecases for interests
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart'; // interests
 
-// l10n + shared
-import 'package:hobby_sphere/l10n/app_localizations.dart';
-import 'package:hobby_sphere/shared/widgets/app_button.dart';
-import 'package:hobby_sphere/shared/widgets/app_text_field.dart';
-import 'package:hobby_sphere/shared/widgets/top_toast.dart';
+// Bloc + events + states
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_bloc.dart'; // bloc
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_event.dart'; // events
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/bloc/register_state.dart'; // state
 
-// DI (service + repos + usecases)
-import 'package:hobby_sphere/features/authentication/login&register/data/services/registration_service.dart';
-import 'package:hobby_sphere/features/authentication/login&register/data/repositories/registration_repository_impl.dart';
-import 'package:hobby_sphere/features/authentication/login&register/data/repositories/interests_repository_impl.dart';
+// Common small widgets
+import 'package:hobby_sphere/features/authentication/login&register/presentation/login/widgets/password_input.dart'; // password field
+import 'package:hobby_sphere/features/authentication/login&register/presentation/register/widgets/interests_grid.dart'; // interests grid
+import 'package:hobby_sphere/features/authentication/login&register/presentation/login/widgets/role_selector.dart'; // role pills
+import '../widgets/login_link.dart'; // login link
+import '../widgets/guidelines.dart'; // password rules
+import '../widgets/otp_boxes.dart'; // 6 code boxes
+import '../widgets/pill_field.dart'; // rounded text field
+import '../widgets/pick_box.dart'; // file picker tile
 
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/send_user_verification.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_user_email_code.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_user_phone_code.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/complete_user_profile.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/add_user_interests.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/resend_user_code.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/send_business_verification.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_business_email_code.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_business_phone_code.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/complete_business_profile.dart';
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/resend_business_code.dart';
+// l10n + shared UI
+import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
+import 'package:hobby_sphere/shared/widgets/app_button.dart'; // button
+import 'package:hobby_sphere/shared/widgets/app_text_field.dart'; // input
+import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // toast
 
-// Bloc
+// DI: services + repos
+import 'package:hobby_sphere/features/authentication/login&register/data/services/registration_service.dart'; // service
+import 'package:hobby_sphere/features/authentication/login&register/data/repositories/registration_repository_impl.dart'; // reg repo
+import 'package:hobby_sphere/features/authentication/login&register/data/repositories/interests_repository_impl.dart'; // interests repo
 
-// Small widgets
-import '../widgets/login_link.dart';
-import '../widgets/guidelines.dart';
-import '../widgets/otp_boxes.dart';
-import '../widgets/pill_field.dart';
-import '../widgets/pick_box.dart';
+// Usecases: user
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/send_user_verification.dart'; // send user code
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_user_email_code.dart'; // verify user email
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_user_phone_code.dart'; // verify user phone
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/complete_user_profile.dart'; // complete user
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/add_user_interests.dart'; // add interests
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/resend_user_code.dart'; // resend user
+
+// Usecases: business
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/send_business_verification.dart'; // send biz code
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_business_email_code.dart'; // verify biz email
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/verify_business_phone_code.dart'; // verify biz phone
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/complete_business_profile.dart'; // complete biz
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/resend_business_code.dart'; // resend biz
+
+// ======================= Public wrapper =======================
 
 class RegisterEmailPage extends StatelessWidget {
-  final RegistrationService service;
-  final int initialRoleIndex; // 0=user, 1=business
+  final RegistrationService service; // backend service
+  final int initialRoleIndex; // default role (0=user, 1=business)
 
   const RegisterEmailPage({
-    super.key,
-    required this.service,
-    this.initialRoleIndex = 0,
+    super.key, // key
+    required this.service, // inject service
+    this.initialRoleIndex = 0, // default to user if none passed
   });
 
   @override
   Widget build(BuildContext context) {
-    final regRepo = RegistrationRepositoryImpl(service);
-    final interestsRepo = InterestsRepositoryImpl(service);
+    final args = ModalRoute.of(context)?.settings.arguments; // read route args
+    final passedRoleIndex = (args is Map && args['roleIndex'] is int)
+        ? (args['roleIndex'] as int) // use passed role if any
+        : initialRoleIndex; // else fallback
+
+    final regRepo = RegistrationRepositoryImpl(service); // reg repo
+    final interestsRepo = InterestsRepositoryImpl(service); // interests repo
 
     return BlocProvider(
       create: (_) => RegisterBloc(
+        // user usecases
         sendUserVerification: SendUserVerification(regRepo),
         verifyUserEmail: VerifyUserEmailCode(regRepo),
         verifyUserPhone: VerifyUserPhoneCode(regRepo),
         completeUser: CompleteUserProfile(regRepo),
         addInterests: AddUserInterests(regRepo),
         resendUser: ResendUserCode(regRepo),
+        // business usecases
         sendBizVerification: SendBusinessVerification(regRepo),
         verifyBizEmail: VerifyBusinessEmailCode(regRepo),
         verifyBizPhone: VerifyBusinessPhoneCode(regRepo),
         completeBiz: CompleteBusinessProfile(regRepo),
         resendBiz: ResendBusinessCode(regRepo),
+        // interests
         getActivityTypes: GetActivityTypes(interestsRepo),
-      )..add(RegRoleChanged(initialRoleIndex)),
-      child: const _RegisterEmailView(),
+      )..add(RegRoleChanged(passedRoleIndex)), // set role immediately
+      child: const _RegisterEmailView(), // UI
     );
   }
 }
 
-class _RegisterEmailView extends StatefulWidget {
-  const _RegisterEmailView();
+// ======================= Internal stateful view =======================
 
+class _RegisterEmailView extends StatefulWidget {
+  const _RegisterEmailView(); // ctor
   @override
-  State<_RegisterEmailView> createState() => _RegisterEmailViewState();
+  State<_RegisterEmailView> createState() => _RegisterEmailViewState(); // state
 }
 
 class _RegisterEmailViewState extends State<_RegisterEmailView> {
   // Contact + password controllers
-  final _email = TextEditingController();
-  final _pwd = TextEditingController();
-  final _pwd2 = TextEditingController();
+  final _email = TextEditingController(); // email input
+  final _pwd = TextEditingController(); // password input
+  final _pwd2 = TextEditingController(); // confirm input
 
   // OTP controllers/nodes
-  final _otpCtrls = List.generate(6, (_) => TextEditingController());
-  final _otpNodes = List.generate(6, (_) => FocusNode());
+  final _otpCtrls = List.generate(6, (_) => TextEditingController()); // 6 boxes
+  final _otpNodes = List.generate(6, (_) => FocusNode()); // 6 nodes
 
   // User profile controllers
-  final _first = TextEditingController();
-  final _last = TextEditingController();
-  final _username = TextEditingController();
+  final _first = TextEditingController(); // first name
+  final _last = TextEditingController(); // last name
+  final _username = TextEditingController(); // username
 
   // Business profile controllers
-  final _bizName = TextEditingController();
-  final _bizDesc = TextEditingController();
-  final _bizWebsite = TextEditingController();
+  final _bizName = TextEditingController(); // business name
+  final _bizDesc = TextEditingController(); // business description
+  final _bizWebsite = TextEditingController(); // website
 
   // Local UI state
-  final _picker = ImagePicker();
-  bool _stagePassword = false;
-  bool _pwdObscure = true;
-  bool _pwd2Obscure = true;
-  bool _newsletterOptIn = false;
-  bool _showAllInterests = true;
+  final ImagePicker _picker = ImagePicker(); // one picker instance
+  bool _stagePassword = false; // show password stage
+  bool _pwdObscure = true; // hide/show pwd
+  bool _pwd2Obscure = true; // hide/show confirm
+  bool _newsletterOptIn = false; // remember info
+  bool _showAllInterests = true; // expand grid
+  bool _requestedInterests = false; // guard single fetch
 
-  bool _requestedInterests = false; // fire once on interests step
+  // ===== helper: choose Camera/Gallery then pick image =====
+  Future<XFile?> _chooseAndPick(
+    BuildContext context,
+    AppLocalizations t,
+  ) async {
+    // open bottom sheet to choose source
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context, // context for sheet
+      showDragHandle: true, // handle
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ), // rounded sheet
+      builder: (_) => _ImageSourceSheet(t: t), // our small sheet widget
+    ); // returns chosen ImageSource or null
+
+    if (source == null) return null; // user canceled
+
+    try {
+      // pick image with small compression and size limit
+      final picked = await _picker.pickImage(
+        source: source, // camera or gallery
+        imageQuality: 85, // compress a bit
+        maxWidth: 1600, // limit width
+        maxHeight: 1600, // limit height
+      ); // returns XFile? or null
+      return picked; // pass back
+    } on PlatformException catch (e) {
+      // show simple error toast
+      showTopToast(
+        context,
+        '${t.globalError}: ${e.code}',
+        type: ToastType.error,
+      );
+      return null; // fail safe
+    }
+  }
 
   @override
   void initState() {
-    super.initState();
-    // ensure EMAIL method
+    super.initState(); // super
+    // ensure we are in EMAIL mode (not phone)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final bloc = context.read<RegisterBloc>();
-      if (bloc.state.usePhone) {
-        bloc.add(RegToggleMethod());
-      }
+      final bloc = context.read<RegisterBloc>(); // bloc
+      if (bloc.state.usePhone) bloc.add(RegToggleMethod()); // switch
     });
-    _pwd.addListener(() => setState(() {}));
-    _pwd2.addListener(() => setState(() {}));
+    // revalidate on password changes
+    _pwd.addListener(() => setState(() {})); // refresh
+    _pwd2.addListener(() => setState(() {})); // refresh
   }
 
   @override
   void dispose() {
+    // dispose controllers/nodes
     _email.dispose();
     _pwd.dispose();
     _pwd2.dispose();
@@ -148,26 +202,26 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
   }
 
   bool _isValidEmail(String v) =>
-      RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim());
+      RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim()); // basic email
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final t = AppLocalizations.of(context)!; // i18n
+    final theme = Theme.of(context); // theme
+    final cs = theme.colorScheme; // colors
 
-    final emailReady = _isValidEmail(_email.text);
+    final emailReady = _isValidEmail(_email.text); // email ok
     final signUpReady =
-        emailReady && _pwd.text.length >= 8 && _pwd.text == _pwd2.text;
+        emailReady && _pwd.text.length >= 8 && _pwd.text == _pwd2.text; // valid
 
     return Scaffold(
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: theme.scaffoldBackgroundColor,
-        leading: const BackButton(),
+        elevation: 0, // flat
+        backgroundColor: theme.scaffoldBackgroundColor, // same bg
+        leading: const BackButton(), // back button
       ),
       body: BlocConsumer<RegisterBloc, RegisterState>(
-        listenWhen: (p, c) => p != c,
+        listenWhen: (p, c) => p != c, // listen on changes
         listener: (context, s) {
           if (s.error?.isNotEmpty == true) {
             showTopToast(
@@ -175,34 +229,38 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
               s.error!,
               type: ToastType.error,
               haptics: true,
-            );
+            ); // error toast
           }
           if (s.info?.isNotEmpty == true) {
-            showTopToast(context, s.info!, type: ToastType.info);
+            showTopToast(context, s.info!, type: ToastType.info); // info toast
           }
           if (s.step == RegStep.done) {
             final msg = s.roleIndex == 0
                 ? t.registerSuccessUser
-                : t.registerSuccessBusiness;
-            showTopToast(context, msg, type: ToastType.success);
+                : t.registerSuccessBusiness; // message
+            showTopToast(
+              context,
+              msg,
+              type: ToastType.success,
+            ); // success toast
           }
           if (s.code.length == 6) {
             for (int i = 0; i < 6; i++) {
-              _otpCtrls[i].text = s.code[i];
+              _otpCtrls[i].text = s.code[i]; // sync digits
             }
           }
         },
         builder: (context, s) {
-          final bloc = context.read<RegisterBloc>();
+          final bloc = context.read<RegisterBloc>(); // bloc
 
-          // interests auto-fetch
+          // lazy fetch interests when needed
           if (s.step == RegStep.interests &&
               !_requestedInterests &&
               !s.interestsLoading &&
               s.interestOptions.isEmpty) {
-            _requestedInterests = true;
+            _requestedInterests = true; // guard
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              bloc.add(RegFetchInterests());
+              bloc.add(RegFetchInterests()); // fetch
             });
           }
 
@@ -213,21 +271,35 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
-                  ),
+                  ), // page padding
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.stretch, // full width
                     children: [
-                      // Title switches between “enter email” and “create account”
+                      // ===== role selector (optional, keeps role visible) =====
+                      Center(
+                        child: RoleSelector(
+                          value: s.roleIndex, // current role
+                          onChanged: (i) =>
+                              bloc.add(RegRoleChanged(i)), // change role
+                        ),
+                      ),
+                      const SizedBox(height: 10), // space
+                      // ===== title =====
                       Padding(
-                        padding: const EdgeInsets.only(top: 8, bottom: 16),
+                        padding: const EdgeInsets.only(
+                          top: 8,
+                          bottom: 16,
+                        ), // padding
                         child: Text(
                           (!_stagePassword && s.step == RegStep.contact)
-                              ? t.emailRegistrationEnterEmail
-                              : t.registerTitle,
-                          textAlign: TextAlign.center,
+                              ? t
+                                    .emailRegistrationEnterEmail // initial title
+                              : t.registerTitle, // generic title
+                          textAlign: TextAlign.center, // center
                           style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w700,
-                          ),
+                          ), // bold
                         ),
                       ),
 
@@ -235,86 +307,90 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                       if (s.step == RegStep.contact) ...[
                         if (!_stagePassword) ...[
                           AppTextField(
-                            controller: _email,
-                            label: t.emailRegistrationEmailPlaceholder,
-                            hint: t.emailRegistrationEmailPlaceholder,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.done,
-                            borderRadius: 28,
-                            onChanged: (_) => setState(() {}),
+                            controller: _email, // email
+                            label: t.emailRegistrationEmailPlaceholder, // label
+                            hint: t.emailRegistrationEmailPlaceholder, // hint
+                            keyboardType:
+                                TextInputType.emailAddress, // keyboard
+                            textInputAction: TextInputAction.done, // action
+                            borderRadius: 28, // style
+                            onChanged: (_) => setState(() {}), // refresh
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 10), // space
                           Text(
                             t.emailRegistrationEmailDesc,
                             style: theme.textTheme.bodyMedium,
-                          ),
-                          const SizedBox(height: 16),
+                          ), // helper
+                          const SizedBox(height: 16), // space
                           AppButton(
                             onPressed: emailReady
                                 ? () => setState(() => _stagePassword = true)
-                                : null,
-                            label: t.emailRegistrationContinue,
-                            expand: true,
+                                : null, // continue
+                            label: t.emailRegistrationContinue, // label
+                            expand: true, // full width
                           ),
-                          const SizedBox(height: 12),
-                          const LoginLink(),
+                          const SizedBox(height: 12), // space
+                          const LoginLink(), // link
                         ] else ...[
                           // ===== PASSWORD STAGE =====
                           Text(
-                            t.emailRegistrationCreatePassword,
+                            t.emailRegistrationCreatePassword, // title
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
-                            ),
+                            ), // bold
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 8), // space
                           PasswordInput(
-                            controller: _pwd,
-                            obscure: _pwdObscure,
-                            onToggleObscure: () =>
-                                setState(() => _pwdObscure = !_pwdObscure),
+                            controller: _pwd, // password
+                            obscure: _pwdObscure, // hide
+                            onToggleObscure: () => setState(
+                              () => _pwdObscure = !_pwdObscure,
+                            ), // toggle
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 10), // space
                           AppTextField(
-                            controller: _pwd2,
-                            label: t.registerConfirmPassword,
-                            hint: t.emailRegistrationPasswordPlaceholder,
-                            prefix: const Icon(Icons.lock_outline),
+                            controller: _pwd2, // confirm
+                            label: t.registerConfirmPassword, // label
+                            hint:
+                                t.emailRegistrationPasswordPlaceholder, // hint
+                            prefix: const Icon(Icons.lock_outline), // icon
                             suffix: IconButton(
                               icon: Icon(
                                 _pwd2Obscure
                                     ? Icons.visibility_off
                                     : Icons.visibility,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _pwd2Obscure = !_pwd2Obscure),
+                              ), // eye
+                              onPressed: () => setState(
+                                () => _pwd2Obscure = !_pwd2Obscure,
+                              ), // toggle
                             ),
-                            obscure: _pwd2Obscure,
-                            textInputAction: TextInputAction.done,
-                            borderRadius: 28,
+                            obscure: _pwd2Obscure, // hide
+                            textInputAction: TextInputAction.done, // action
+                            borderRadius: 28, // style
                           ),
-                          const SizedBox(height: 10),
-                          const Guidelines(),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10), // space
+                          const Guidelines(), // rules
+                          const SizedBox(height: 8), // space
                           Row(
                             children: [
                               Checkbox(
-                                value: _newsletterOptIn,
+                                value: _newsletterOptIn, // flag
                                 onChanged: (v) => setState(
-                                  () => _newsletterOptIn = v ?? false,
-                                ),
+                                  () => _newsletterOptIn = (v ?? false),
+                                ), // toggle
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(6),
-                                ),
+                                ), // shape
                               ),
                               Expanded(
                                 child: Text(
                                   t.emailRegistrationSaveInfo,
                                   style: theme.textTheme.bodyMedium,
                                 ),
-                              ),
+                              ), // text
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 8), // space
                           AppButton(
                             onPressed: signUpReady
                                 ? () {
@@ -324,185 +400,206 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                                         t.emailRegistrationErrorGeneric,
                                         type: ToastType.error,
                                         haptics: true,
-                                      );
-                                      return;
+                                      ); // invalid email
+                                      return; // stop
                                     }
                                     if (s.usePhone)
                                       bloc.add(
                                         RegToggleMethod(),
                                       ); // ensure email mode
                                     bloc
-                                      ..add(RegEmailChanged(_email.text.trim()))
+                                      ..add(
+                                        RegEmailChanged(_email.text.trim()),
+                                      ) // set email
                                       ..add(
                                         RegPasswordChanged(_pwd.text.trim()),
-                                      )
-                                      ..add(RegSendVerification());
+                                      ) // set pwd
+                                      ..add(
+                                        RegSendVerification(),
+                                      ); // send code (role-aware)
                                   }
-                                : null,
-                            label: t.emailRegistrationSignUp,
-                            expand: true,
+                                : null, // disabled
+                            label: t.emailRegistrationSignUp, // label
+                            expand: true, // full
                           ),
-                          const SizedBox(height: 12),
-                          const LoginLink(),
+                          const SizedBox(height: 12), // space
+                          const LoginLink(), // link
                         ],
                       ],
 
                       // ===== OTP =====
                       if (s.step == RegStep.code) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 12), // space
                         Text(
-                          t.emailRegistrationVerificationSent, // "Verification code sent…"
-                          textAlign: TextAlign.center,
+                          t.emailRegistrationVerificationSent, // text
+                          textAlign: TextAlign.center, // center
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
-                          ),
+                          ), // bold
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 18), // space
                         OtpBoxes(
-                          ctrls: _otpCtrls,
-                          nodes: _otpNodes,
+                          ctrls: _otpCtrls, // ctrls
+                          nodes: _otpNodes, // nodes
                           onChanged: (code) => context.read<RegisterBloc>().add(
                             RegCodeChanged(code),
-                          ),
+                          ), // update
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 20), // space
                         AppButton(
-                          onPressed: () =>
-                              context.read<RegisterBloc>().add(RegVerifyCode()),
-                          label: t.verifyVerifyBtn, // "Verify"
-                          expand: true,
+                          onPressed: () => context.read<RegisterBloc>().add(
+                            RegVerifyCode(),
+                          ), // verify
+                          label: t.verifyVerifyBtn, // label
+                          expand: true, // full
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 10), // space
                         AppButton(
-                          onPressed: () =>
-                              context.read<RegisterBloc>().add(RegResendCode()),
-                          type: AppButtonType.outline,
-                          label: t.verifyResendBtn, // "Resend Code"
-                          expand: true,
+                          onPressed: () => context.read<RegisterBloc>().add(
+                            RegResendCode(),
+                          ), // resend
+                          type: AppButtonType.outline, // outline
+                          label: t.verifyResendBtn, // label
+                          expand: true, // full
                         ),
                       ],
 
                       // ===== USER: NAME =====
                       if (s.step == RegStep.name) ...[
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 16), // space
                         Text(
-                          t.registerCompleteStep1FirstNameQuestion,
-                          textAlign: TextAlign.center,
+                          t.registerCompleteStep1FirstNameQuestion, // title
+                          textAlign: TextAlign.center, // center
                           style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w700,
-                          ),
+                          ), // bold
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 12), // space
                         PillField(
-                          controller: _first,
-                          label: t.registerCompleteStep1FirstName,
+                          controller: _first, // first
+                          label: t.registerCompleteStep1FirstName, // label
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegFirstNameChanged(v),
-                          ),
+                          ), // update
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 12), // space
                         PillField(
-                          controller: _last,
-                          label: t.registerCompleteStep1LastName,
+                          controller: _last, // last
+                          label: t.registerCompleteStep1LastName, // label
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegLastNameChanged(v),
-                          ),
+                          ), // update
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 16), // space
                         AppButton(
                           onPressed: () => context.read<RegisterBloc>().emit(
                             s.copyWith(step: RegStep.username),
-                          ),
-                          label: t.registerCompleteButtonsContinue,
-                          expand: true,
+                          ), // next
+                          label: t.registerCompleteButtonsContinue, // label
+                          expand: true, // full
                         ),
                       ],
 
                       // ===== USER: USERNAME =====
                       if (s.step == RegStep.username) ...[
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 16), // space
                         Text(
-                          t.registerCompleteStep2ChooseUsername,
-                          textAlign: TextAlign.center,
+                          t.registerCompleteStep2ChooseUsername, // title
+                          textAlign: TextAlign.center, // center
                           style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w700,
-                          ),
+                          ), // bold
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 12), // space
                         PillField(
-                          controller: _username,
-                          label: t.registerCompleteStep2Username,
+                          controller: _username, // username
+                          label: t.registerCompleteStep2Username, // label
                           helper:
                               '${t.registerCompleteStep2UsernameHint1}\n'
                               '${t.registerCompleteStep2UsernameHint2}\n'
-                              '${t.registerCompleteStep2UsernameHint3}',
+                              '${t.registerCompleteStep2UsernameHint3}', // helper
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegUsernameChanged(v),
-                          ),
+                          ), // update
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 16), // space
                         AppButton(
                           onPressed: () => context.read<RegisterBloc>().emit(
                             s.copyWith(step: RegStep.profile),
-                          ),
-                          label: t.registerCompleteButtonsContinue,
-                          expand: true,
+                          ), // next
+                          label: t.registerCompleteButtonsContinue, // label
+                          expand: true, // full
                         ),
                       ],
 
-                      // ===== USER: PROFILE =====
+                      // ===== USER: PROFILE (with Camera/Gallery) =====
                       if (s.step == RegStep.profile) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 12), // space
                         Center(
                           child: GestureDetector(
                             onTap: () async {
-                              final img = await _picker.pickImage(
-                                source: ImageSource.gallery,
-                              );
+                              final img = await _chooseAndPick(
+                                context,
+                                t,
+                              ); // open sheet + pick
+                              if (img == null) return; // canceled
                               context.read<RegisterBloc>().add(
                                 RegPickUserImage(img),
-                              );
+                              ); // save in bloc
                               showTopToast(
                                 context,
                                 t.registerAddProfilePhoto,
                                 type: ToastType.info,
-                              );
+                              ); // info toast
                             },
                             child: Stack(
-                              clipBehavior: Clip.none,
+                              clipBehavior:
+                                  Clip.none, // allow clear button outside
                               children: [
                                 CircleAvatar(
-                                  radius: 56,
-                                  backgroundColor: cs.surfaceVariant,
-                                  backgroundImage: s.userImage != null
-                                      ? Image.file(
+                                  radius: 56, // size
+                                  backgroundColor: cs.surfaceVariant, // bg
+                                  // show image if present using FileImage to refresh properly
+                                  backgroundImage:
+                                      (s.userImage != null &&
+                                          s.userImage!.path.isNotEmpty)
+                                      ? FileImage(
                                           File(s.userImage!.path),
-                                        ).image
-                                      : null,
-                                  child: s.userImage == null
-                                      ? const Icon(Icons.person, size: 48)
-                                      : null,
+                                        ) // preview
+                                      : null, // else null
+                                  child:
+                                      (s.userImage == null ||
+                                          s.userImage!.path.isEmpty)
+                                      ? const Icon(
+                                          Icons.person,
+                                          size: 48,
+                                        ) // placeholder
+                                      : null, // else none
                                 ),
-                                if (s.userImage != null)
+                                if (s.userImage != null &&
+                                    s
+                                        .userImage!
+                                        .path
+                                        .isNotEmpty) // clear button
                                   Positioned(
                                     right: -4,
-                                    top: -4,
+                                    top: -4, // corner
                                     child: InkWell(
                                       onTap: () => context
                                           .read<RegisterBloc>()
-                                          .add(RegPickUserImage(null)),
+                                          .add(RegPickUserImage(null)), // clear
                                       child: Container(
                                         width: 26,
-                                        height: 26,
+                                        height: 26, // size
                                         decoration: BoxDecoration(
                                           color: cs.error,
                                           shape: BoxShape.circle,
-                                        ),
+                                        ), // red
                                         child: Icon(
                                           Icons.close,
                                           size: 16,
                                           color: cs.onError,
-                                        ),
+                                        ), // icon
                                       ),
                                     ),
                                   ),
@@ -510,197 +607,209 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 12), // space
                         SwitchListTile(
-                          value: s.userPublic,
+                          value: s.userPublic, // flag
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegUserPublicToggled(v),
-                          ),
-                          title: Text(t.registerCompleteStep3PublicProfile),
+                          ), // toggle
+                          title: Text(
+                            t.registerCompleteStep3PublicProfile,
+                          ), // label
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 8), // space
                         AppButton(
                           onPressed: () => context.read<RegisterBloc>().add(
                             RegSubmitUserProfile(),
-                          ),
-                          label: t.registerCompleteButtonsFinish,
-                          expand: true,
+                          ), // submit
+                          label: t.registerCompleteButtonsFinish, // label
+                          expand: true, // full
                         ),
                       ],
 
-                      // ===== USER: INTERESTS (remote) =====
+                      // ===== USER: INTERESTS (REMOTE) =====
                       if (s.step == RegStep.interests) ...[
                         if (s.interestsLoading) ...[
-                          const SizedBox(height: 24),
-                          const Center(child: CircularProgressIndicator()),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 24), // space
+                          const Center(
+                            child: CircularProgressIndicator(),
+                          ), // loader
+                          const SizedBox(height: 24), // space
                         ] else if ((s.interestsError ?? '').isNotEmpty) ...[
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 8), // space
                           Center(
                             child: Text(
-                              t.interestLoadError,
-                              textAlign: TextAlign.center,
+                              t.interestLoadError, // generic error
+                              textAlign: TextAlign.center, // center
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.error,
-                              ),
+                              ), // red
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 12), // space
                           AppButton(
                             onPressed: () => context.read<RegisterBloc>().add(
                               RegFetchInterests(),
-                            ),
-                            label: t.buttonsContinue, // generic retry text
-                            expand: true,
+                            ), // retry
+                            label: t.buttonsContinue, // "Continue"
+                            expand: true, // full
                           ),
                         ] else ...[
                           InterestsGridRemote(
-                            items: s.interestOptions,
-                            selected: s.interests,
-                            showAll: _showAllInterests,
+                            items: s.interestOptions, // options
+                            selected: s.interests, // selected ids
+                            showAll: _showAllInterests, // expand flag
                             onToggleShow: () => setState(
                               () => _showAllInterests = !_showAllInterests,
-                            ),
+                            ), // toggle
                             onToggle: (id) => context.read<RegisterBloc>().add(
                               RegToggleInterest(id),
-                            ),
+                            ), // toggle interest
                             onSubmit: () => context.read<RegisterBloc>().add(
                               RegSubmitInterests(),
-                            ),
+                            ), // submit
                           ),
                         ],
                       ],
 
                       // ===== BUSINESS: NAME =====
                       if (s.step == RegStep.bizName) ...[
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 16), // space
                         Text(
-                          t.registerCompleteStep1BusinessName,
-                          textAlign: TextAlign.center,
+                          t.registerCompleteStep1BusinessName, // title
+                          textAlign: TextAlign.center, // center
                           style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w700,
-                          ),
+                          ), // bold
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 12), // space
                         PillField(
-                          controller: _bizName,
-                          label: t.registerBusinessName,
+                          controller: _bizName, // name
+                          label: t.registerBusinessName, // label
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegBusinessNameChanged(v),
-                          ),
+                          ), // update
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 16), // space
                         AppButton(
                           onPressed: () => context.read<RegisterBloc>().emit(
                             s.copyWith(step: RegStep.bizDetails),
-                          ),
-                          label: t.registerCompleteButtonsContinue,
-                          expand: true,
+                          ), // next
+                          label: t.registerCompleteButtonsContinue, // label
+                          expand: true, // full
                         ),
                       ],
 
                       // ===== BUSINESS: DETAILS =====
                       if (s.step == RegStep.bizDetails) ...[
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 8), // space
                         Text(
-                          t.registerCompleteStep2BusinessDescription,
+                          t.registerCompleteStep2BusinessDescription, // title
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
-                          ),
+                          ), // bold
                         ),
                         AppTextField(
-                          controller: _bizDesc,
-                          label: t.registerDescription,
-                          maxLines: 4,
-                          borderRadius: 18,
+                          controller: _bizDesc, // desc
+                          label: t.registerDescription, // label
+                          maxLines: 4, // textarea
+                          borderRadius: 18, // round
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegBusinessDescChanged(v),
-                          ),
+                          ), // update
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 12), // space
                         Text(
-                          t.registerCompleteStep2WebsiteUrl,
+                          t.registerCompleteStep2WebsiteUrl, // title
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
-                          ),
+                          ), // bold
                         ),
                         PillField(
-                          controller: _bizWebsite,
-                          label: t.registerWebsite,
+                          controller: _bizWebsite, // url
+                          label: t.registerWebsite, // label
                           onChanged: (v) => context.read<RegisterBloc>().add(
                             RegBusinessWebsiteChanged(v),
-                          ),
+                          ), // update
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 16), // space
                         AppButton(
                           onPressed: () => context.read<RegisterBloc>().emit(
                             s.copyWith(step: RegStep.bizProfile),
-                          ),
-                          label: t.registerCompleteButtonsContinue,
-                          expand: true,
+                          ), // next
+                          label: t.registerCompleteButtonsContinue, // label
+                          expand: true, // full
                         ),
                       ],
 
-                      // ===== BUSINESS: PROFILE =====
+                      // ===== BUSINESS: PROFILE (Camera/Gallery for logo + banner) =====
                       if (s.step == RegStep.bizProfile) ...[
                         Text(
-                          t.registerSelectLogo,
+                          t.registerSelectLogo, // title
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
-                          ),
+                          ), // bold
                         ),
                         PickBox(
-                          label: t.registerSelectLogo,
+                          label: t.registerSelectLogo, // tile label
                           onPick: () async {
-                            final img = await _picker.pickImage(
-                              source: ImageSource.gallery,
-                            );
+                            final img = await _chooseAndPick(
+                              context,
+                              t,
+                            ); // choose source
+                            if (img == null) return; // canceled
                             context.read<RegisterBloc>().add(
                               RegPickBusinessLogo(img),
-                            );
+                            ); // save
                           },
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 12), // space
                         Text(
-                          t.registerSelectBanner,
+                          t.registerSelectBanner, // title
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
-                          ),
+                          ), // bold
                         ),
                         PickBox(
-                          label: t.registerSelectBanner,
+                          label: t.registerSelectBanner, // tile label
                           onPick: () async {
-                            final img = await _picker.pickImage(
-                              source: ImageSource.gallery,
-                            );
+                            final img = await _chooseAndPick(
+                              context,
+                              t,
+                            ); // choose source
+                            if (img == null) return; // canceled
                             context.read<RegisterBloc>().add(
                               RegPickBusinessBanner(img),
-                            );
+                            ); // save
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 16), // space
                         AppButton(
                           onPressed: () => context.read<RegisterBloc>().add(
                             RegSubmitBusinessProfile(),
-                          ),
-                          label: t.registerCompleteButtonsFinish,
-                          expand: true,
+                          ), // submit
+                          label: t.registerCompleteButtonsFinish, // label
+                          expand: true, // full
                         ),
                       ],
 
                       // ===== DONE =====
                       if (s.step == RegStep.done) ...[
-                        const SizedBox(height: 40),
-                        Icon(Icons.check_circle, size: 64, color: cs.primary),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 40), // space
+                        Icon(
+                          Icons.check_circle,
+                          size: 64,
+                          color: cs.primary,
+                        ), // big icon
+                        const SizedBox(height: 10), // space
                         Center(
                           child: Text(
                             s.roleIndex == 0
                                 ? t.registerSuccessUser
-                                : t.registerSuccessBusiness,
+                                : t.registerSuccessBusiness, // text
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
-                            ),
+                            ), // bold
                           ),
                         ),
                       ],
@@ -711,14 +820,14 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
                 // Loading overlay
                 if (context.watch<RegisterBloc>().state.loading)
                   Container(
-                    color: Colors.black.withOpacity(.12),
+                    color: Colors.black.withOpacity(.12), // dim
                     child: Center(
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisSize: MainAxisSize.min, // compact
                         children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 10),
-                          Text(t.emailRegistrationLoading),
+                          const CircularProgressIndicator(), // spinner
+                          const SizedBox(height: 10), // space
+                          Text(t.emailRegistrationLoading), // text
                         ],
                       ),
                     ),
@@ -727,6 +836,49 @@ class _RegisterEmailViewState extends State<_RegisterEmailView> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ======================= Bottom sheet for image source =======================
+class _ImageSourceSheet extends StatelessWidget {
+  final AppLocalizations t; // i18n
+  const _ImageSourceSheet({required this.t}); // ctor
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme; // colors
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16), // padding
+        child: Column(
+          mainAxisSize: MainAxisSize.min, // wrap content
+          children: [
+            Container(
+              width: 44,
+              height: 4, // small handle
+              decoration: BoxDecoration(
+                color: cs.outlineVariant, // muted
+                borderRadius: BorderRadius.circular(2), // rounded
+              ),
+            ),
+            const SizedBox(height: 12), // space
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined), // icon
+              title: Text(t.registerPickFromCamera), // "Take photo"
+              onTap: () =>
+                  Navigator.pop(context, ImageSource.camera), // choose camera
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_outlined), // icon
+              title: Text(t.registerPickFromGallery), // "Choose from gallery"
+              onTap: () =>
+                  Navigator.pop(context, ImageSource.gallery), // choose gallery
+            ),
+            const SizedBox(height: 4), // small space
+          ],
+        ),
       ),
     );
   }

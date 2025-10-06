@@ -2417,6 +2417,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get stripeConnectRequiredDesc => 'To publish an activity and receive payments, please connect your Stripe account first.';
 
   @override
+  String get registerPickFromCamera => 'take photo';
+
+  @override
+  String get registerPickFromGallery => 'choose from gallery';
+
+  @override
   String get interestSaved => 'Centres d’intérêt enregistrés avec succès';
 
   @override

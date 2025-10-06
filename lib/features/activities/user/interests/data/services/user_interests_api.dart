@@ -1,48 +1,74 @@
-// small HTTP helper for user interests
-import 'package:dio/dio.dart'; // http
+// user_interests_api.dart
+import 'package:dio/dio.dart';
 
 class UserInterestsApi {
-  final Dio dio; // http client
-  UserInterestsApi(this.dio); // inject
+  final Dio dio;
+  UserInterestsApi(this.dio);
 
-  // build Authorization header safely
   Options _auth(String token) {
-    final t = token.trim(); // trim spaces
-    final bearer =
-        t.startsWith('Bearer ') // ensure "Bearer "
-        ? t
-        : 'Bearer $t';
+    final t = token.trim();
     return Options(
       headers: {
-        'Authorization': bearer, // auth header
-        'Accept': 'application/json', // expect json
+        'Authorization': t.startsWith('Bearer ') ? t : 'Bearer $t',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
       },
     );
   }
 
-  // GET: /api/users/{userId}/interests  -> List<String> (names)
+  // Prefer the new categories endpoint; keep safe fallback chain
   Future<List<String>> getUserInterestNames(String token, int userId) async {
-    final res = await dio.get(
-      '/users/$userId/interests', // endpoint
-      options: _auth(token), // auth
-    );
-    final data = res.data; // body
-    if (data is List) {
-      return data.map((e) => '$e').toList(); // normalize to List<String>
+    final paths = <String>[
+      '/users/$userId/categories', // new read endpoint
+      '/users/$userId/interests', // old read endpoint (if you add alias)
+    ];
+
+    DioException? lastError;
+    for (final p in paths) {
+      try {
+        final res = await dio.get(p, options: _auth(token));
+        final data = res.data;
+        if (data is List) return data.map((e) => '$e').toList();
+        if (data is Map && data['data'] is List) {
+          return (data['data'] as List).map((e) => '$e').toList();
+        }
+      } on DioException catch (e) {
+        lastError = e;
+        final sc = e.response?.statusCode ?? 0;
+        if (!(sc == 404 || sc == 405)) rethrow;
+      }
     }
-    return const <String>[]; // fallback
+    if (lastError != null) throw lastError;
+    return const <String>[];
   }
 
-  // POST: /api/users/{userId}/UpdateInterest  -> body: List<int> (ids)
+  // Replace all categories for a user in one shot
   Future<void> replaceUserInterests(
     String token,
     int userId,
     List<int> ids,
   ) async {
-    await dio.post(
-      '/users/$userId/UpdateInterest', // endpoint
-      data: ids, // send ids
-      options: _auth(token), // auth
-    );
+    final paths = <String>[
+      '/users/$userId/UpdateCategory', // canonical
+      '/users/$userId/categoriess', // typo'ed alternate
+      '/users/$userId/UpdateInterest', // legacy
+    ];
+
+    DioException? lastError;
+    for (final p in paths) {
+      try {
+        final res = await dio.post(p, data: ids, options: _auth(token));
+        if (res.statusCode != null &&
+            res.statusCode! >= 200 &&
+            res.statusCode! < 300)
+          return;
+      } on DioException catch (e) {
+        lastError = e;
+        final sc = e.response?.statusCode ?? 0;
+        if (!(sc == 404 || sc == 405)) rethrow;
+      }
+    }
+    if (lastError != null) throw lastError;
+    throw Exception('No user categories endpoint found.');
   }
 }
