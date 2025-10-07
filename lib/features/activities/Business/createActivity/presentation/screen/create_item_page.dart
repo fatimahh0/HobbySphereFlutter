@@ -40,42 +40,43 @@ import 'package:hobby_sphere/app/router/router.dart'; // Routes + args
 
 class CreateItemPage extends StatelessWidget {
   final int businessId; // business id
+  final String token; // ✅ auth token
   final GetItemTypes getItemTypes; // types uc
   final GetCurrentCurrency getCurrentCurrency; // currency uc
 
   const CreateItemPage({
     super.key,
-    required this.businessId, // required
-    required this.getItemTypes, // required
-    required this.getCurrentCurrency, // required
+    required this.businessId, // require id
+    required this.token, // ✅ require token
+    required this.getItemTypes, // require types
+    required this.getCurrentCurrency, // require currency
   });
 
   @override
   Widget build(BuildContext context) {
-    // Build create use case (same as before)
+    // build usecases/repo like before
     final createUsecase = CreateItem(
-      CreateItemRepositoryImpl(CreateItemService()), // repo
+      CreateItemRepositoryImpl(CreateItemService()),
     );
+    final businessRepo = BusinessRepositoryImpl(BusinessService());
 
-    // ✅ Use the SAME BusinessRepository stack used in BusinessProfile
-    final businessRepo = BusinessRepositoryImpl(BusinessService()); // repo
-
-    // Provide BLoC
     return BlocProvider(
       create: (_) => CreateItemBloc(
-        createItem: createUsecase, // create uc
-        getItemTypes: getItemTypes, // types uc
-        getCurrentCurrency: getCurrentCurrency, // currency uc
-        businessRepo: businessRepo, // ✅ stripe source
-        businessId: businessId, // id
-      )..add(CreateItemBootstrap()), // bootstrap
-      child: const _CreateItemView(), // child view
+        createItem: createUsecase,
+        getItemTypes: getItemTypes,
+        getCurrentCurrency: getCurrentCurrency,
+        businessRepo: businessRepo,
+        businessId: businessId,
+      )..add(CreateItemBootstrap()),
+      child: _CreateItemView(token: token), // ✅ give token to view
     );
   }
 }
 
 class _CreateItemView extends StatefulWidget {
-  const _CreateItemView();
+  final String token; // ✅ keep token locally
+  const _CreateItemView({required this.token});
+
   @override
   State<_CreateItemView> createState() => _CreateItemViewState();
 }
@@ -149,13 +150,13 @@ class _CreateItemViewState extends State<_CreateItemView> {
   Future<void> _goConnectStripe(BuildContext context, int businessId) async {
     await Navigator.pushNamed(
       context,
-      Routes.businessProfile, // your route
+      Routes.businessProfile, // target profile
       arguments: BusinessProfileRouteArgs(
-        token: '', // profile reads its own token
-        businessId: businessId, // pass id
+        token: widget.token, // ✅ real token
+        businessId: businessId, // id
       ),
-    ); // wait for return
-    if (!mounted) return; // guard
+    );
+    if (!mounted) return;
     context.read<CreateItemBloc>().add(CreateItemRecheckStripe()); // recheck
   }
 
@@ -202,12 +203,25 @@ class _CreateItemViewState extends State<_CreateItemView> {
 
         return Scaffold(
           appBar: AppBar(title: Text(t.createActivityTitle)), // title
+          resizeToAvoidBottomInset: true, // let scaffold move for keyboard
           body: SafeArea(
             child: AbsorbPointer(
               absorbing: state.loading, // block when loading
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16), // page padding
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag, // swipe to hide
+                padding: EdgeInsets.fromLTRB(
+                  16, // left
+                  16, // top
+                  16, // right
+                  16 +
+                      MediaQuery.of(
+                        context,
+                      ).viewInsets.bottom, // bottom grows with keyboard
+                ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment
+                      .stretch, // make children fill width (prevents tight rows)
                   children: [
                     // ===== Stripe blocker (only if NOT connected) =====
                     if (!state.stripeConnected)

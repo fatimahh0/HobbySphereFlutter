@@ -1,162 +1,185 @@
-// register_bloc.dart
-// Flutter 3.35.x
-// Bloc that drives the registration flow.
-// We make sure to store REAL userId after profile and use it when saving interests.
-// Every block of code is commented simply.
+// Flutter 3.35.x — simple & clean
+// Every line has a short, simple comment.
 
-import 'dart:io'; // for HttpException
-import 'package:dio/dio.dart'; // Dio errors
-import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc base
-import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart';
+import 'dart:io'; // HttpException
+import 'package:dio/dio.dart'; // DioException
+import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
+import 'package:hobby_sphere/features/authentication/login&register/domain/usecases/register/get_activity_types.dart'; // interests usecase
 
-// usecases (your existing domain layer)
-import '../../../domain/usecases/register/send_user_verification.dart';
-import '../../../domain/usecases/register/verify_user_email_code.dart';
-import '../../../domain/usecases/register/verify_user_phone_code.dart';
-import '../../../domain/usecases/register/complete_user_profile.dart';
-import '../../../domain/usecases/register/add_user_interests.dart';
-import '../../../domain/usecases/register/resend_user_code.dart';
-import '../../../domain/usecases/register/send_business_verification.dart';
-import '../../../domain/usecases/register/verify_business_email_code.dart';
-import '../../../domain/usecases/register/verify_business_phone_code.dart';
-import '../../../domain/usecases/register/complete_business_profile.dart';
-import '../../../domain/usecases/register/resend_business_code.dart';
+// usecases (domain layer)
+import '../../../domain/usecases/register/send_user_verification.dart'; // send code (user)
+import '../../../domain/usecases/register/verify_user_email_code.dart'; // verify email (user)
+import '../../../domain/usecases/register/verify_user_phone_code.dart'; // verify phone (user)
+import '../../../domain/usecases/register/complete_user_profile.dart'; // complete profile (user)
+import '../../../domain/usecases/register/add_user_interests.dart'; // add interests (user)
+import '../../../domain/usecases/register/resend_user_code.dart'; // resend (user)
+
+import '../../../domain/usecases/register/send_business_verification.dart'; // send code (biz)
+import '../../../domain/usecases/register/verify_business_email_code.dart'; // verify email (biz)
+import '../../../domain/usecases/register/verify_business_phone_code.dart'; // verify phone (biz)
+import '../../../domain/usecases/register/complete_business_profile.dart'; // complete profile (biz)
+import '../../../domain/usecases/register/resend_business_code.dart'; // resend (biz)
 
 // bloc parts
 import 'register_event.dart'; // events
 import 'register_state.dart'; // state
 
-// helper to convert exceptions to friendly text
+// ===== small helpers =====
+
+// convert exceptions to readable text
 String _friendlyError(Object err) {
   if (err is DioException) {
-    // dio error?
-    final res = err.response; // get response
+    final res = err.response; // response
     final data = res?.data; // body
     if (data is Map) {
-      // json body
       final msg =
-          (data['error'] ?? data['message'] ?? data['detail']); // message field
+          (data['error'] ?? data['message'] ?? data['detail']); // known fields
       if (msg is String && msg.trim().isNotEmpty)
-        return msg.trim(); // return if present
+        return msg.trim(); // return if exists
     }
     if (data is String && data.trim().isNotEmpty)
-      return data.trim(); // plain string fallback
-    final code = res?.statusCode ?? 0; // status code
-    if (code == 409) return 'Username already in use'; // conflict hint
+      return data.trim(); // string body
+    final code = res?.statusCode ?? 0; // status
+    if (code == 409) return 'Already in use'; // conflict hint
     if (code == 400) return 'Something went wrong'; // bad request
-    if (code == 401) return 'Unauthorized'; // unauthorized
-    if (code == 403) return 'Forbidden'; // forbidden
-    if (code == 404) return 'Not found'; // not found
-    if (code >= 500) return 'Server error, please try again'; // server error
-    return err.message ?? 'Something went wrong'; // generic dio message
+    if (code == 401) return 'Unauthorized'; // 401
+    if (code == 403) return 'Forbidden'; // 403
+    if (code == 404) return 'Not found'; // 404
+    if (code >= 500) return 'Server error, please try again'; // 5xx
+    return err.message ?? 'Something went wrong'; // dio generic
   }
-  if (err is HttpException) return err.message; // http exception text
-  return 'Something went wrong'; // last fallback
+  if (err is HttpException) return err.message; // http exception
+  return 'Something went wrong'; // fallback
 }
 
-// main bloc
+// map user error message to the correct UI step
+RegStep _stepForUserError(String msg) {
+  final m = msg.toLowerCase(); // lowercase
+  if (m.contains('username')) return RegStep.username; // username problems
+  if (m.contains('first')) return RegStep.name; // first name invalid
+  if (m.contains('last')) return RegStep.name; // last name invalid
+  if (m.contains('image') || m.contains('photo'))
+    return RegStep.profile; // image issues
+  return RegStep.profile; // default for user profile
+}
+
+// map business error message to the correct UI step
+RegStep _stepForBusinessError(String msg) {
+  final m = msg.toLowerCase(); // lowercase
+  if (m.contains('name'))
+    return RegStep.bizName; // e.g., "Business name already in use"
+  if (m.contains('description') || m.contains('website') || m.contains('url')) {
+    return RegStep.bizDetails; // details fields
+  }
+  if (m.contains('logo') ||
+      m.contains('banner') ||
+      m.contains('image') ||
+      m.contains('file')) {
+    return RegStep.bizProfile; // media fields
+  }
+  return RegStep.bizDetails; // safe default
+}
+
+// ===== main bloc =====
 class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
-  // usecases (injected)
-  final SendUserVerification sendUserVerification; // send code (user)
-  final VerifyUserEmailCode verifyUserEmail; // verify email (user)
-  final VerifyUserPhoneCode verifyUserPhone; // verify phone (user)
-  final CompleteUserProfile completeUser; // complete profile (user)
-  final AddUserInterests addInterests; // add interests (user)
-  final ResendUserCode resendUser; // resend code (user)
+  // user usecases
+  final SendUserVerification sendUserVerification; // send code
+  final VerifyUserEmailCode verifyUserEmail; // verify email
+  final VerifyUserPhoneCode verifyUserPhone; // verify phone
+  final CompleteUserProfile completeUser; // complete profile
+  final AddUserInterests addInterests; // add interests
+  final ResendUserCode resendUser; // resend
 
-  final SendBusinessVerification sendBizVerification; // send code (biz)
-  final VerifyBusinessEmailCode verifyBizEmail; // verify email (biz)
-  final VerifyBusinessPhoneCode verifyBizPhone; // verify phone (biz)
-  final CompleteBusinessProfile completeBiz; // complete profile (biz)
-  final ResendBusinessCode resendBiz; // resend code (biz)
+  // business usecases
+  final SendBusinessVerification sendBizVerification; // send code
+  final VerifyBusinessEmailCode verifyBizEmail; // verify email
+  final VerifyBusinessPhoneCode verifyBizPhone; // verify phone
+  final CompleteBusinessProfile completeBiz; // complete profile
+  final ResendBusinessCode resendBiz; // resend
 
+  // interests
   final GetActivityTypes getActivityTypes; // load interest options
 
   RegisterBloc({
-    required this.sendUserVerification,
-    required this.verifyUserEmail,
-    required this.verifyUserPhone,
-    required this.completeUser,
-    required this.addInterests,
-    required this.resendUser,
-    required this.sendBizVerification,
-    required this.verifyBizEmail,
-    required this.verifyBizPhone,
-    required this.completeBiz,
-    required this.resendBiz,
-    required this.getActivityTypes,
+    required this.sendUserVerification, // inject
+    required this.verifyUserEmail, // inject
+    required this.verifyUserPhone, // inject
+    required this.completeUser, // inject
+    required this.addInterests, // inject
+    required this.resendUser, // inject
+    required this.sendBizVerification, // inject
+    required this.verifyBizEmail, // inject
+    required this.verifyBizPhone, // inject
+    required this.completeBiz, // inject
+    required this.resendBiz, // inject
+    required this.getActivityTypes, // inject
   }) : super(const RegisterState()) {
-    // initial state
-
-    // simple setters for small fields
+    // ===== tiny setters / toggles =====
     on<RegRoleChanged>(
       (e, emit) => emit(
-        // change role
         state.copyWith(
-          roleIndex: e.index,
-          step: RegStep.contact,
-          error: null,
-          info: null,
+          roleIndex: e.index, // change role
+          step: RegStep.contact, // restart flow at contact
+          error: null, // clear error
+          info: null, // clear info
         ),
       ),
     );
+
     on<RegToggleMethod>(
       (e, emit) => emit(
-        // toggle phone/email
         state.copyWith(usePhone: !state.usePhone, error: null, info: null),
       ),
-    );
-    on<RegEmailChanged>(
-      (e, emit) => emit(state.copyWith(email: e.v)),
-    ); // set email
-    on<RegPhoneChanged>(
-      (e, emit) => emit(state.copyWith(phone: e.v)),
-    ); // set phone
+    ); // phone/email
+
+    on<RegEmailChanged>((e, emit) => emit(state.copyWith(email: e.v))); // email
+    on<RegPhoneChanged>((e, emit) => emit(state.copyWith(phone: e.v))); // phone
     on<RegPasswordChanged>(
       (e, emit) => emit(state.copyWith(password: e.v)),
-    ); // set password
-    on<RegCodeChanged>(
-      (e, emit) => emit(state.copyWith(code: e.v)),
-    ); // set otp code
+    ); // password
+    on<RegCodeChanged>((e, emit) => emit(state.copyWith(code: e.v))); // otp
+
     on<RegFirstNameChanged>(
       (e, emit) => emit(state.copyWith(firstName: e.v)),
-    ); // set first name
+    ); // first
     on<RegLastNameChanged>(
       (e, emit) => emit(state.copyWith(lastName: e.v)),
-    ); // set last name
+    ); // last
     on<RegUsernameChanged>(
       (e, emit) => emit(state.copyWith(username: e.v)),
-    ); // set username
+    ); // username
     on<RegUserPublicToggled>(
       (e, emit) => emit(state.copyWith(userPublic: e.v)),
-    ); // set public flag
+    ); // public
+
     on<RegPickUserImage>(
       (e, emit) => emit(state.copyWith(userImage: e.f)),
-    ); // set image
+    ); // avatar
+
     on<RegBusinessNameChanged>(
       (e, emit) => emit(state.copyWith(bizName: e.v)),
-    ); // set biz name
+    ); // biz name
     on<RegBusinessDescChanged>(
       (e, emit) => emit(state.copyWith(bizDesc: e.v)),
-    ); // set biz desc
+    ); // biz desc
     on<RegBusinessWebsiteChanged>(
       (e, emit) => emit(state.copyWith(bizWebsite: e.v)),
-    ); // set biz site
+    ); // site
     on<RegPickBusinessLogo>(
       (e, emit) => emit(state.copyWith(bizLogo: e.f)),
-    ); // set logo
+    ); // logo
     on<RegPickBusinessBanner>(
       (e, emit) => emit(state.copyWith(bizBanner: e.f)),
-    ); // set banner
+    ); // banner
 
-    // toggle an interest id in a Set<int>
+    // toggle interest ids inside a Set<int>
     on<RegToggleInterest>((e, emit) {
       final s = {...state.interests}; // copy set
-      s.contains(e.id) ? s.remove(e.id) : s.add(e.id); // toggle id
+      s.contains(e.id) ? s.remove(e.id) : s.add(e.id); // toggle
       emit(state.copyWith(interests: s)); // save
     });
 
-    // load remote interest options
+    // load interest options from backend
     on<RegFetchInterests>((e, emit) async {
       emit(
         state.copyWith(interestsLoading: true, interestsError: null),
@@ -174,7 +197,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
         emit(
           state.copyWith(
             interestsLoading: false, // stop
-            interestsError: _friendlyError(err), // show friendly error
+            interestsError: _friendlyError(err), // show error
           ),
         );
       }
@@ -182,14 +205,16 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
 
     // wire main actions
     on<RegSendVerification>(_sendVerification); // send code
-    on<RegResendCode>(_resend); // resend code
-    on<RegVerifyCode>(_verifyCode); // verify code
+    on<RegResendCode>(_resend); // resend
+    on<RegVerifyCode>(_verifyCode); // verify
     on<RegSubmitUserProfile>(_submitUserProfile); // complete user profile
     on<RegSubmitInterests>(_submitInterests); // save interests
     on<RegSubmitBusinessProfile>(
       _submitBusinessProfile,
-    ); // complete biz profile
+    ); // complete business profile
   }
+
+  // ===== handlers =====
 
   // send verification based on role + method
   Future<void> _sendVerification(
@@ -201,41 +226,37 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
       if (state.roleIndex == 0) {
         // user role
         await sendUserVerification(
-          // send code
           email: state.usePhone
               ? null
-              : state.email.trim(), // pass email if email mode
+              : state.email.trim(), // email if email mode
           phone: state.usePhone
               ? state.phone.trim()
-              : null, // pass phone if phone mode
-          password: state.password.trim(), // pass password
+              : null, // phone if phone mode
+          password: state.password.trim(), // password
         );
       } else {
         // business role
         final id = await sendBizVerification(
-          // send code for business
           email: state.usePhone
               ? null
-              : state.email.trim(), // pass email if email mode
+              : state.email.trim(), // email if email mode
           phone: state.usePhone
               ? state.phone.trim()
-              : null, // pass phone if phone mode
-          password: state.password.trim(), // pass password
+              : null, // phone if phone mode
+          password: state.password.trim(), // password
         );
-        emit(state.copyWith(pendingId: id)); // store pendingId for business
+        emit(state.copyWith(pendingId: id)); // store pendingId
       }
+
       emit(
         state.copyWith(
-          // go to code step
-          loading: false, // stop loading
-          step: RegStep.code, // next step
-          info: 'Verification code sent', // info text
+          loading: false, // stop
+          step: RegStep.code, // next
+          info: 'Verification code sent', // info
         ),
       );
     } catch (err) {
-      emit(
-        state.copyWith(loading: false, error: _friendlyError(err)),
-      ); // show error
+      emit(state.copyWith(loading: false, error: _friendlyError(err))); // error
     }
   }
 
@@ -245,13 +266,11 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
     try {
       final contact = state.usePhone
           ? state.phone.trim()
-          : state.email.trim(); // decide contact
+          : state.email.trim(); // pick contact
       if (state.roleIndex == 0) {
-        // user
-        await resendUser(contact); // resend for user
+        await resendUser(contact); // user
       } else {
-        // business
-        await resendBiz(contact); // resend for business
+        await resendBiz(contact); // business
       }
       emit(state.copyWith(loading: false, info: 'Code resent')); // ok
     } catch (err) {
@@ -259,50 +278,45 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
     }
   }
 
-  // verify otp code
+  // verify otp code and move to next step
   Future<void> _verifyCode(RegVerifyCode e, Emitter<RegisterState> emit) async {
     emit(state.copyWith(loading: true, error: null, info: null)); // start
     try {
       if (state.roleIndex == 0) {
         // user role
-        // use email/phone verify to get PENDING id
         final id = state.usePhone
             ? await verifyUserPhone(
                 state.phone.trim(),
                 state.code.trim(),
-              ) // verify phone
+              ) // phone
             : await verifyUserEmail(
                 state.email.trim(),
                 state.code.trim(),
-              ); // verify email
+              ); // email
 
         emit(
           state.copyWith(
             loading: false, // stop
-            pendingId: id, // store pending id
-            step: RegStep.name, // go to names step
+            pendingId: id, // store
+            step: RegStep.name, // to names
           ),
         );
       } else {
         // business role
-        // for business, you might already have pendingId
         final id = state.pendingId != 0
             ? state.pendingId
             : (state.usePhone
-                  ? await verifyBizPhone(
-                      state.phone.trim(),
-                      state.code.trim(),
-                    ) // verify phone
+                  ? await verifyBizPhone(state.phone.trim(), state.code.trim())
                   : await verifyBizEmail(
                       state.email.trim(),
                       state.code.trim(),
-                    )); // verify email
+                    ));
 
         emit(
           state.copyWith(
             loading: false, // stop
-            pendingId: id, // store id
-            step: RegStep.bizName, // go to biz name step
+            pendingId: id, // store
+            step: RegStep.bizName, // to biz name
           ),
         );
       }
@@ -311,7 +325,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
     }
   }
 
-  // complete user profile (creates REAL user), store REAL userId, then go to interests
+  // complete user profile -> returns REAL user -> then go to interests
   Future<void> _submitUserProfile(
     RegSubmitUserProfile e,
     Emitter<RegisterState> emit,
@@ -319,54 +333,46 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
     emit(state.copyWith(loading: true, error: null)); // start
     try {
       final user = await completeUser(
-        // call usecase -> service
-        pendingId: state.pendingId, // send pendingId
-        username: state.username.trim(), // send username
-        firstName: state.firstName.trim(), // send first name
-        lastName: state.lastName.trim(), // send last name
-        isPublic: state.userPublic, // send visibility flag
-        image: state.userImage, // optional image
+        pendingId: state.pendingId, // pending id
+        username: state.username.trim(), // username
+        firstName: state.firstName.trim(), // first name
+        lastName: state.lastName.trim(), // last name
+        isPublic: state.userPublic, // public flag
+        image: state.userImage, // avatar (optional)
       );
 
       emit(
         state.copyWith(
           loading: false, // stop
           step: RegStep.interests, // to interests
-          userId: user.id, // ✅ store REAL user id for next call
+          userId: user.id, // store REAL user id
         ),
       );
     } catch (err) {
-      final msg = _friendlyError(err); // message
-      final shouldBackToUsername = msg.toLowerCase().contains(
-        'username',
-      ); // check for username issue
+      final msg = _friendlyError(err); // readable
+      final step = _stepForUserError(msg); // map to step
       emit(
         state.copyWith(
           loading: false, // stop
           error: msg, // show error
-          step: shouldBackToUsername
-              ? RegStep.username
-              : state.step, // go back if username problem
+          step: step, // rewind to field
         ),
       );
     }
   }
 
-  // save selected interests using REAL userId
+  // save selected interests using REAL user id
   Future<void> _submitInterests(
     RegSubmitInterests e,
     Emitter<RegisterState> emit,
   ) async {
     emit(state.copyWith(loading: true, error: null)); // start
     try {
-      await addInterests(
-        state.userId,
-        state.interests.toList(),
-      ); // ✅ use REAL user id
+      await addInterests(state.userId, state.interests.toList()); // call
       emit(
         state.copyWith(
           loading: false, // stop
-          step: RegStep.done, // finished
+          step: RegStep.done, // done
           info: 'Registration complete', // info
         ),
       );
@@ -375,7 +381,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
     }
   }
 
-  // complete business profile
+  // complete business profile (handles media + fields)
   Future<void> _submitBusinessProfile(
     RegSubmitBusinessProfile e,
     Emitter<RegisterState> emit,
@@ -383,27 +389,35 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
     emit(state.copyWith(loading: true, error: null)); // start
     try {
       await completeBiz(
-        // call usecase
-        pendingId: state.pendingId, // business id/pending id
+        pendingId: state.pendingId, // pending id
         name: state.bizName.trim(), // business name
         description: state.bizDesc.trim().isEmpty
             ? null
-            : state.bizDesc.trim(), // optional desc
+            : state.bizDesc.trim(), // desc optional
         websiteUrl: state.bizWebsite.trim().isEmpty
             ? null
-            : state.bizWebsite.trim(), // optional site
-        logo: state.bizLogo, // optional logo
-        banner: state.bizBanner, // optional banner
+            : state.bizWebsite.trim(), // url optional
+        logo: state.bizLogo, // logo (optional)
+        banner: state.bizBanner, // banner (optional)
       );
+
       emit(
         state.copyWith(
           loading: false, // stop
-          step: RegStep.done, // finished
+          step: RegStep.done, // done
           info: 'Registration complete', // info
         ),
       );
     } catch (err) {
-      emit(state.copyWith(loading: false, error: _friendlyError(err))); // error
+      final msg = _friendlyError(err); // readable
+      final step = _stepForBusinessError(msg); // map to step
+      emit(
+        state.copyWith(
+          loading: false, // stop
+          error: msg, // show
+          step: step, // rewind to correct form
+        ),
+      );
     }
   }
 }

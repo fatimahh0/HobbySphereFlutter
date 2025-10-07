@@ -310,9 +310,15 @@ class BusinessUsersRouteArgs {
   });
 }
 
+// router.dart
+// simple data holder for create page
 class CreateActivityRouteArgs {
-  final int businessId;
-  const CreateActivityRouteArgs({required this.businessId});
+  final int businessId; // business id
+  final String token; // auth token
+  const CreateActivityRouteArgs({
+    required this.businessId, // set id
+    required this.token, // set token
+  });
 }
 
 class BusinessNotificationsRouteArgs {
@@ -1200,13 +1206,17 @@ class AppRouter {
                 },
               ),
             ],
+
             child: BusinessHomeScreen(
-              token: bhmArgs.token,
-              businessId: bhmArgs.businessId,
+              token: bhmArgs.token, // keep token
+              businessId: bhmArgs.businessId, // keep id
               onCreate: (ctx, bid) {
                 navigatorKey.currentState?.pushNamed(
-                  Routes.createBusinessActivity,
-                  arguments: CreateActivityRouteArgs(businessId: bid),
+                  Routes.createBusinessActivity, // route
+                  arguments: CreateActivityRouteArgs(
+                    businessId: bid, // pass id
+                    token: bhmArgs.token, // ✅ pass token
+                  ),
                 );
               },
             ),
@@ -1239,14 +1249,18 @@ class AppRouter {
         );
 
       // ===== Create Activity =====
+    // router.dart (inside Routes.createBusinessActivity case)
       case Routes.createBusinessActivity:
-        final caArgs = args is CreateActivityRouteArgs ? args : null;
+        final caArgs = args is CreateActivityRouteArgs
+            ? args
+            : null; // safe cast
         if (caArgs == null) return _error("Missing CreateActivityRouteArgs");
 
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => CreateItemPage(
-            businessId: caArgs.businessId,
+            businessId: caArgs.businessId, // id
+            token: caArgs.token, // ✅ token
             getItemTypes: GetItemTypes(
               ItemTypeRepositoryImpl(ItemTypesService()),
             ),
@@ -1255,6 +1269,7 @@ class AppRouter {
             ),
           ),
         );
+
 
       // ===== Edit Activity =====
       case Routes.editBusinessActivity:

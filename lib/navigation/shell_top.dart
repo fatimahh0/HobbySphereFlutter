@@ -359,7 +359,7 @@ class ShellTop extends StatelessWidget {
             Navigator.pushNamed(
               ctx,
               Routes.createBusinessActivity,
-              arguments: CreateActivityRouteArgs(businessId: bid),
+              arguments: CreateActivityRouteArgs(businessId: bid, token: token),
             );
           },
         ),
@@ -403,7 +403,7 @@ class ShellTop extends StatelessWidget {
       ),
 
       // 4) Profile
-     // 4) Profile — inject Stripe connect usecase so the button can open the link
+      // 4) Profile — inject Stripe connect usecase so the button can open the link
       BlocProvider(
         create: (ctx) {
           final businessRepo = BusinessRepositoryImpl(
@@ -434,7 +434,6 @@ class ShellTop extends StatelessWidget {
           onChangeLocale: onChangeLocale, // pass locale callback
         ),
       ),
-
     ];
   }
 

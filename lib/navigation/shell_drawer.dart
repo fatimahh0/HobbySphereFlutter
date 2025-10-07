@@ -338,7 +338,7 @@ class _ShellDrawerState extends State<ShellDrawer> {
           Navigator.pushNamed(
             ctx,
             Routes.createBusinessActivity,
-            arguments: CreateActivityRouteArgs(businessId: bid),
+            arguments: CreateActivityRouteArgs(businessId: bid, token: widget.token),
           );
         },
       ),

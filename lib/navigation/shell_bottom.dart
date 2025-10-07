@@ -327,7 +327,7 @@ class _ShellBottomState extends State<ShellBottom> {
           Navigator.pushNamed(
             ctx,
             Routes.createBusinessActivity,
-            arguments: CreateActivityRouteArgs(businessId: bid),
+            arguments: CreateActivityRouteArgs(businessId: bid, token: widget.token)
           );
         },
       ),

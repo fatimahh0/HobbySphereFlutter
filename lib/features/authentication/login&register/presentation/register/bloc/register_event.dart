@@ -1,105 +1,125 @@
-import 'package:image_picker/image_picker.dart';
+// Flutter 3.35.x — simple & clean
+// Every line has a short, simple comment.
 
-abstract class RegisterEvent {}
+import 'package:image_picker/image_picker.dart'; // XFile from image_picker
 
-class RegRoleChanged extends RegisterEvent {
-  final int index;
-  RegRoleChanged(this.index);
+// Base class for all registration events
+abstract class RegisterEvent {
+  const RegisterEvent(); // base ctor
 }
 
-class RegToggleMethod extends RegisterEvent {}
+// ===== flow switches / small setters =====
+class RegRoleChanged extends RegisterEvent {
+  final int index; // 0 = user, 1 = business
+  const RegRoleChanged(this.index); // ctor
+}
+
+class RegToggleMethod extends RegisterEvent {
+  const RegToggleMethod(); // toggle between phone/email
+}
 
 class RegEmailChanged extends RegisterEvent {
-  final String v;
-  RegEmailChanged(this.v);
+  final String v; // new email
+  const RegEmailChanged(this.v); // ctor
 }
 
 class RegPhoneChanged extends RegisterEvent {
-  final String v;
-  RegPhoneChanged(this.v);
+  final String v; // new phone
+  const RegPhoneChanged(this.v); // ctor
 }
 
 class RegPasswordChanged extends RegisterEvent {
-  final String v;
-  RegPasswordChanged(this.v);
+  final String v; // new password
+  const RegPasswordChanged(this.v); // ctor
 }
 
-class RegSendVerification extends RegisterEvent {}
+class RegSendVerification extends RegisterEvent {
+  const RegSendVerification(); // send code
+}
 
-class RegResendCode extends RegisterEvent {}
+class RegResendCode extends RegisterEvent {
+  const RegResendCode(); // resend code
+}
 
 class RegCodeChanged extends RegisterEvent {
-  final String v;
-  RegCodeChanged(this.v);
+  final String v; // new code
+  const RegCodeChanged(this.v); // ctor
 }
 
-class RegVerifyCode extends RegisterEvent {}
+class RegVerifyCode extends RegisterEvent {
+  const RegVerifyCode(); // verify otp
+}
 
-// user steps
+// ===== user profile steps =====
 class RegFirstNameChanged extends RegisterEvent {
-  final String v;
-  RegFirstNameChanged(this.v);
+  final String v; // first name
+  const RegFirstNameChanged(this.v); // ctor
 }
 
 class RegLastNameChanged extends RegisterEvent {
-  final String v;
-  RegLastNameChanged(this.v);
+  final String v; // last name
+  const RegLastNameChanged(this.v); // ctor
 }
 
 class RegUsernameChanged extends RegisterEvent {
-  final String v;
-  RegUsernameChanged(this.v);
+  final String v; // username
+  const RegUsernameChanged(this.v); // ctor
 }
 
 class RegUserPublicToggled extends RegisterEvent {
-  final bool v;
-  RegUserPublicToggled(this.v);
+  final bool v; // public flag
+  const RegUserPublicToggled(this.v); // ctor
 }
 
 class RegPickUserImage extends RegisterEvent {
-  final XFile? f;
-  RegPickUserImage(this.f);
+  final XFile? f; // selected image file (nullable)
+  const RegPickUserImage(this.f); // ctor
 }
 
-class RegSubmitUserProfile extends RegisterEvent {}
+class RegSubmitUserProfile extends RegisterEvent {
+  const RegSubmitUserProfile(); // submit user profile
+}
 
+// interests
 class RegToggleInterest extends RegisterEvent {
-  final int id;
-  RegToggleInterest(this.id);
+  final int id; // interest id
+  const RegToggleInterest(this.id); // ctor
 }
 
-class RegSubmitInterests extends RegisterEvent {}
+class RegFetchInterests extends RegisterEvent {
+  const RegFetchInterests(); // load options
+}
 
-// business steps
+class RegSubmitInterests extends RegisterEvent {
+  const RegSubmitInterests(); // submit selection
+}
+
+// ===== business profile steps =====
 class RegBusinessNameChanged extends RegisterEvent {
-  final String v;
-  RegBusinessNameChanged(this.v);
+  final String v; // business name
+  const RegBusinessNameChanged(this.v); // ctor
 }
 
 class RegBusinessDescChanged extends RegisterEvent {
-  final String v;
-  RegBusinessDescChanged(this.v);
+  final String v; // business description
+  const RegBusinessDescChanged(this.v); // ctor
 }
 
 class RegBusinessWebsiteChanged extends RegisterEvent {
-  final String v;
-  RegBusinessWebsiteChanged(this.v);
+  final String v; // website url
+  const RegBusinessWebsiteChanged(this.v); // ctor
 }
 
 class RegPickBusinessLogo extends RegisterEvent {
-  final XFile? f;
-  RegPickBusinessLogo(this.f);
+  final XFile? f; // selected logo (nullable)
+  const RegPickBusinessLogo(this.f); // ctor
 }
 
 class RegPickBusinessBanner extends RegisterEvent {
-  final XFile? f;
-  RegPickBusinessBanner(this.f);
+  final XFile? f; // selected banner (nullable)
+  const RegPickBusinessBanner(this.f); // ctor
 }
 
-// load interests from backend
-// load interests from backend
-class RegFetchInterests extends RegisterEvent {
-  RegFetchInterests(); // make it NON-const  ✅
+class RegSubmitBusinessProfile extends RegisterEvent {
+  const RegSubmitBusinessProfile(); // submit business profile
 }
-
-class RegSubmitBusinessProfile extends RegisterEvent {}
