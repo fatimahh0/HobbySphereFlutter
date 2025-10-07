@@ -79,6 +79,7 @@ import 'package:hobby_sphere/features/activities/user/social/domain/entities/use
 import 'package:hobby_sphere/features/activities/user/social/domain/usecases/chat_usecases.dart';
 import 'package:hobby_sphere/features/activities/user/social/domain/usecases/friends_usecases.dart';
 import 'package:hobby_sphere/features/activities/user/social/presentation/bloc/chat/chat_bloc.dart';
+import 'package:hobby_sphere/features/activities/user/social/presentation/bloc/chat/chat_event.dart';
 import 'package:hobby_sphere/features/activities/user/social/presentation/bloc/friends/friends_bloc.dart';
 import 'package:hobby_sphere/features/activities/user/social/presentation/screens/add_friend_screen.dart';
 import 'package:hobby_sphere/features/activities/user/social/presentation/screens/chat_home_screen.dart';
@@ -400,6 +401,14 @@ class RegisterRouteArgs {
 class UserNotificationsRouteArgs {
   final String token;
   const UserNotificationsRouteArgs({required this.token});
+}
+
+// Open a single conversation with a peer.
+// We pass *myId* so ChatBloc knows who is the sender.
+class ConversationRouteArgs {
+  final int myId; // current logged-in user id
+  final UserMin peer; // the contact to chat with
+  const ConversationRouteArgs({required this.myId, required this.peer});
 }
 
 /// Global navigator key (for programmatic navigation)
@@ -822,37 +831,37 @@ class AppRouter {
 
       case Routes.friendship:
         {
-          final baseUrl = g.appServerRoot ?? ''; // API base
+          final baseUrl = g.appServerRoot ?? ''; // API base for services
 
-          // If you pass a UserMin → open a direct conversation.
-          if (args is UserMin) {
-            final peer = args; // chat partner
-            final meId = 0; // if you have it, pass real id via screen push
+          // ---- A) Direct conversation mode (open dialog with one peer) ----
+          if (args is ConversationRouteArgs) {
+            final meId = args.myId; // my user id (required)
+            final peer = args.peer; // who I'm chatting with
 
-            // services + repos
+            // Wire repos/services
             final friendsRepo = FriendsRepositoryImpl(FriendsService(baseUrl));
             final chatRepo = ChatRepositoryImpl(
               MessageService(baseUrl),
               meId: meId,
             );
 
-            // friends UCs (badge counts, quick actions from header)
+            // Friends UCs (optional header actions)
             final getFriends = GetFriendsUC(friendsRepo);
             final acceptUC = AcceptUC(friendsRepo);
             final rejectUC = RejectUC(friendsRepo);
             final unfriendUC = UnfriendUC(friendsRepo);
 
-            // chat UCs
-            final conversation = ConversationUC(chatRepo); // load messages
-            final send = SendMessageUC(chatRepo); // send text/image
-            final markRead = MarkReadUC(chatRepo); // mark read
-            final deleteMsg = DeleteMessageUC(chatRepo); // delete mine
+            // Chat UCs
+            final conversation = ConversationUC(chatRepo);
+            final send = SendMessageUC(chatRepo);
+            final markRead = MarkReadUC(chatRepo);
+            final deleteMsg = DeleteMessageUC(chatRepo);
 
             return MaterialPageRoute(
               settings: settings,
               builder: (_) => MultiBlocProvider(
-                // provide both blocs
                 providers: [
+                  // Friends (for block/unfriend in menu)
                   BlocProvider(
                     create: (_) => FriendsBloc(
                       getAll: GetAllUsersUC(friendsRepo),
@@ -869,34 +878,33 @@ class AppRouter {
                       unblockUC: UnblockUC(friendsRepo),
                     ),
                   ),
+                  // Chat (NOW passes myId ✅)
                   BlocProvider(
                     create: (_) => ChatBloc(
+                      myId: meId, // ✅ important
                       getConversation: conversation,
                       sendMessage: send,
                       markRead: markRead,
                       deleteMessage: deleteMsg,
-                    ),
+                    )..add(LoadConversation(peer.id)), // load history
                   ),
                 ],
-                child: ConversationScreen(
-                  peer: peer as UserMin,
-                ), // open dialog screen
+                child: ConversationScreen(peer: peer), // the dialog UI
               ),
             );
           }
 
-          // Else → open Chat Home (friends list + unread counters).
+          // ---- B) Chat home mode (friends list / recent) ----
           final meId = (args is int)
               ? args
-              : (args is UserHomeRouteArgs ? args.userId : 0); // read my id
-
-          final friendsRepo = FriendsRepositoryImpl(
-            FriendsService(baseUrl),
-          ); // friends repo
+              : (args is UserHomeRouteArgs
+                    ? args.userId
+                    : 0); // try to read myId
+          final friendsRepo = FriendsRepositoryImpl(FriendsService(baseUrl));
           final chatRepo = ChatRepositoryImpl(
             MessageService(baseUrl),
             meId: meId,
-          ); // chat repo
+          );
 
           return MaterialPageRoute(
             settings: settings,
@@ -918,8 +926,10 @@ class AppRouter {
                     unblockUC: UnblockUC(friendsRepo),
                   ),
                 ),
+                // Chat home also needs myId for optimistic bubbles ✅
                 BlocProvider(
                   create: (_) => ChatBloc(
+                    myId: meId, // ✅ important
                     getConversation: ConversationUC(chatRepo),
                     sendMessage: SendMessageUC(chatRepo),
                     markRead: MarkReadUC(chatRepo),
@@ -927,7 +937,7 @@ class AppRouter {
                   ),
                 ),
               ],
-              child: ChatHomeScreen(meId: meId), // chat home screen
+              child: ChatHomeScreen(meId: meId),
             ),
           );
         }

@@ -1,12 +1,14 @@
-// 💡 Chat state.
+// 💡 Chat state — Flutter 3.35.x
+// Small, equatable, immutable.
+
 import 'package:equatable/equatable.dart'; // equality
 import '../../../domain/entities/chat_message.dart'; // entity
 
 class ChatState extends Equatable {
   final bool isLoading; // busy flag
-  final String? error; // error msg
-  final int? withUserId; // current peer id
-  final List<ChatMessage> messages; // messages
+  final String? error; // error text
+  final int? withUserId; // current peer
+  final List<ChatMessage> messages; // list
 
   const ChatState({
     required this.isLoading, // loading
@@ -15,23 +17,25 @@ class ChatState extends Equatable {
     required this.messages, // list
   });
 
+  // initial state
   factory ChatState.initial() => const ChatState(
     isLoading: false, // idle
-    error: null, // no error
+    error: null, // none
     withUserId: null, // none
-    messages: [], // empty
+    messages: <ChatMessage>[], // empty
   );
 
+  // copy with overrides
   ChatState copyWith({
-    bool? isLoading, // loading
-    String? error, // error
-    int? withUserId, // peer
-    List<ChatMessage>? messages, // list
+    bool? isLoading, // new loading
+    String? error, // new error
+    int? withUserId, // new peer
+    List<ChatMessage>? messages, // new list
   }) => ChatState(
-    isLoading: isLoading ?? this.isLoading, // keep/override
+    isLoading: isLoading ?? this.isLoading, // keep
     error: error, // override (can be null)
-    withUserId: withUserId ?? this.withUserId, // keep/override
-    messages: messages ?? this.messages, // keep/override
+    withUserId: withUserId ?? this.withUserId, // keep
+    messages: messages ?? this.messages, // keep
   );
 
   @override

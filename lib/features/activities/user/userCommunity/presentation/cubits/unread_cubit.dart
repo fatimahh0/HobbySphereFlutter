@@ -31,7 +31,7 @@ class UnreadCubit extends Cubit<UnreadState> {
   // 👇 realtime subscription
   StreamSubscription<RealtimeEvent>? _rt;
 
-  UnreadCubit(this.getUnread, {bool enableRealtime = true})
+  UnreadCubit(this.getUnread, {bool enableRealtime = true, required Future<Map<int, int>> Function() loadAll})
     : super(const UnreadState()) {
     if (enableRealtime) {
       _rt = RealtimeBus.I.stream.listen((e) async {
