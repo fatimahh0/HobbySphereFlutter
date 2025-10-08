@@ -66,33 +66,31 @@ class RegisterEmailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments; // read route args
-    final passedRoleIndex = (args is Map && args['roleIndex'] is int)
-        ? (args['roleIndex'] as int) // use passed role if any
-        : initialRoleIndex; // else fallback
-
-    final regRepo = RegistrationRepositoryImpl(service); // reg repo
-    final interestsRepo = InterestsRepositoryImpl(service); // interests repo
+    final regRepo = RegistrationRepositoryImpl(service);
+    final interestsRepo = InterestsRepositoryImpl(service);
 
     return BlocProvider(
-      create: (_) => RegisterBloc(
-        // user usecases
-        sendUserVerification: SendUserVerification(regRepo),
-        verifyUserEmail: VerifyUserEmailCode(regRepo),
-        verifyUserPhone: VerifyUserPhoneCode(regRepo),
-        completeUser: CompleteUserProfile(regRepo),
-        addInterests: AddUserInterests(regRepo),
-        resendUser: ResendUserCode(regRepo),
-        // business usecases
-        sendBizVerification: SendBusinessVerification(regRepo),
-        verifyBizEmail: VerifyBusinessEmailCode(regRepo),
-        verifyBizPhone: VerifyBusinessPhoneCode(regRepo),
-        completeBiz: CompleteBusinessProfile(regRepo),
-        resendBiz: ResendBusinessCode(regRepo),
-        // interests
-        getActivityTypes: GetActivityTypes(interestsRepo),
-      )..add(RegRoleChanged(passedRoleIndex)), // set role immediately
-      child: const _RegisterEmailView(), // UI
+      create: (_) =>
+          RegisterBloc(
+            // user usecases...
+            sendUserVerification: SendUserVerification(regRepo),
+            verifyUserEmail: VerifyUserEmailCode(regRepo),
+            verifyUserPhone: VerifyUserPhoneCode(regRepo),
+            completeUser: CompleteUserProfile(regRepo),
+            addInterests: AddUserInterests(regRepo),
+            resendUser: ResendUserCode(regRepo),
+            // business usecases...
+            sendBizVerification: SendBusinessVerification(regRepo),
+            verifyBizEmail: VerifyBusinessEmailCode(regRepo),
+            verifyBizPhone: VerifyBusinessPhoneCode(regRepo),
+            completeBiz: CompleteBusinessProfile(regRepo),
+            resendBiz: ResendBusinessCode(regRepo),
+            // interests
+            getActivityTypes: GetActivityTypes(interestsRepo),
+          )..add(
+            RegRoleChanged(initialRoleIndex),
+          ), // ✅ role comes from GoRoute.extra
+      child: const _RegisterEmailView(),
     );
   }
 }

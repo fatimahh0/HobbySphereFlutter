@@ -14,7 +14,7 @@ import '../widgets/header_icon.dart';
 import '../widgets/post_card.dart';
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
-
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/screens/comment_screen.dart';
 import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/screens/create_post_screen.dart';
 import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/bloc/posts_bloc.dart';
@@ -147,24 +147,29 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     HeaderIcon(
                       icon: Icons.add_circle_outline,
                       label: tr.socialAddPost,
-                      onTap: () => Navigator.of(context).pushNamed(
+                      onTap: () => LegacyNav.pushNamed(
+                        context,
                         Routes.createPost,
                         arguments: CreatePostArgs(token: widget.token),
                       ),
                     ),
-                    HeaderIcon(
+                   HeaderIcon(
                       icon: Icons.search_rounded,
                       label: tr.socialSearchFriend,
-                      onTap: () => Navigator.of(
+                      onTap: () => LegacyNav.pushNamed(
                         context,
-                      ).pushNamed(Routes.addFriend, arguments: widget.userId),
+                        Routes.addFriend,
+                        arguments: widget
+                            .userId, // or a proper args object if you made one
+                      ),
                     ),
                     HeaderIcon(
                       icon: Icons.library_books_outlined,
                       label: tr.socialMyPosts,
                       onTap: () {
                         final base = widget.imageBaseUrl ?? '';
-                        Navigator.of(context).pushNamed(
+                        LegacyNav.pushNamed(
+                          context,
                           Routes.myPosts,
                           arguments: MyPostsRouteArgs(
                             token: widget.token,
@@ -178,7 +183,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       icon: Icons.chat_bubble_outline_rounded,
                       label: tr.socialChat,
                       onTap: () {
-                        Navigator.of(context).pushNamed(
+                        LegacyNav.pushNamed(
+                          context,
                           Routes.friendship,
                           arguments: UserHomeRouteArgs(
                             token: widget.token,
@@ -193,7 +199,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       builder: (ctx, s) => HeaderIcon(
                         icon: Icons.notifications_none_rounded,
                         label: tr.socialNotifications,
-                        onTap: () => Navigator.of(context).pushNamed(
+                        onTap: () => LegacyNav.pushNamed(
+                          context,
                           Routes.userNotifications,
                           arguments: UserNotificationsRouteArgs(
                             token: widget.token,

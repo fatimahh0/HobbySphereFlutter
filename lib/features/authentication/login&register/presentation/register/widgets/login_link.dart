@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart'; // UI
 import 'package:hobby_sphere/app/router/router.dart' show Routes; // routes
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 
 class LoginLink extends StatelessWidget {
   const LoginLink({super.key});
@@ -15,7 +16,7 @@ class LoginLink extends StatelessWidget {
           children: [
             const Text('Already have an account? '), // static text
             InkWell(
-              onTap: () => Navigator.of(context).pushNamed(Routes.login),
+              onTap: () => LegacyNav.pushNamed(context, Routes.login),
               child: Text(
                 'Log in', // link text
                 style: TextStyle(

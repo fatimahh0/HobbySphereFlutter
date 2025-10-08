@@ -1,7 +1,4 @@
 // lib/core/network/api_fetch.dart
-// ===== Flutter 3.35.x =====
-// Simple wrapper around Dio. Adds optional `responseType`.
-
 import 'package:dio/dio.dart';
 import 'package:hobby_sphere/core/network/api_methods.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
@@ -10,7 +7,14 @@ class ApiFetch {
   final Dio _dio;
   CancelToken? _token;
 
-  ApiFetch([Dio? dio]) : _dio = dio ?? g.appDio!;
+  ApiFetch([Dio? dio])
+    : _dio =
+          dio ??
+          (g.appDio ??
+              (throw StateError(
+                'Api not initialized: g.appDio is null. '
+                'Call _initNetworking() before using ApiFetch, or pass a Dio to ApiFetch().',
+              )));
 
   void cancel() {
     _token?.cancel('Cancelled');
@@ -34,12 +38,12 @@ class ApiFetch {
     dynamic data,
     Map<String, String>? headers,
     Duration? receiveTimeoutOverride,
-    ResponseType? responseType, // ⬅ NEW
+    ResponseType? responseType,
   }) async {
     final opts = Options(
       headers: headers,
       receiveTimeout: receiveTimeoutOverride,
-      responseType: responseType, // ⬅ NEW
+      responseType: responseType,
     );
 
     switch (method) {

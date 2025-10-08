@@ -1,139 +1,157 @@
-// lib/app.dart — minimal additions to load backend colors and rebuild UI.
+// lib/app.dart
+// Hosts MaterialApp.router using your GoRouter builder, i18n, themes,
+// a live connection banner, and a runtime color Palette fetched once.
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// your i18n and routing (unchanged)
+import 'package:hobby_sphere/core/network/globals.dart' as g;
+
+// i18n + themes
 import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
 import 'package:hobby_sphere/shared/theme/app_theme.dart' show AppTheme;
-import 'router/router.dart';
 
-// connection banner (unchanged)
+// GoRouter config (your builder)
+import 'router/router.dart' as app_router;
+
+// Connection banner infrastructure
 import 'package:hobby_sphere/shared/network/connection_cubit.dart';
 import 'package:hobby_sphere/shared/widgets/connection_banner.dart';
 
-// server config (unchanged)
-import 'package:hobby_sphere/core/network/api_config.dart';
-
-// >>> NEW: imports for theme fetch + palette <<<
-import 'package:hobby_sphere/features/activities/common/data/services/theme_service.dart'; // fetch JSON
-import 'package:hobby_sphere/shared/theme/palette.dart'; // Palette.I (runtime colors)
+// Runtime theme palette loader (optional)
+import 'package:hobby_sphere/features/activities/common/data/services/theme_service.dart';
+import 'package:hobby_sphere/shared/theme/palette.dart';
 
 class App extends StatefulWidget {
-  final ApiConfig config; // has baseUrl + serverRoot
-  const App({super.key, required this.config});
+  const App({super.key});
 
   @override
   State<App> createState() => _AppState();
 }
 
 class _AppState extends State<App> {
-  static const _kThemeKey = 'themeMode'; // saved theme
-  static const _kLocaleKey = 'locale'; // saved locale
+  static const _kThemeKey = 'themeMode';
+  static const _kLocaleKey = 'locale';
 
-  ThemeMode _themeMode = ThemeMode.light; // default
-  Locale _locale = const Locale('en'); // default
+  ThemeMode _themeMode = ThemeMode.light;
+  Locale _locale = const Locale('en');
 
-  late final AppRouter _router = AppRouter(
-    onToggleTheme: _toggleTheme, // pass toggle
-    onChangeLocale: _changeLocale, // pass change
-    getCurrentLocale: () => _locale, // pass getter
-  );
-
+  // Server health probe for ConnectionCubit (strip trailing /api).
   late final String _serverProbeUrl =
-      '${widget.config.serverRoot}/actuator/health'; // for ConnectionCubit
+      (g.appServerRoot).replaceFirst(RegExp(r'/api/?$'), '') +
+      '/actuator/health';
 
-  // >>> NEW: create service once <<<
-  final _themeService = ThemeService(); // backend theme service
+  // Optional: fetch a server-provided palette once.
+  final _themeService = ThemeService();
 
   @override
   void initState() {
-    super.initState(); // base init
-    _restorePrefs(); // keep your prefs
-    _loadThemeFromBackendOnce(); // >>> NEW: fetch and apply colors
+    super.initState();
+    _restorePrefs();
+    _loadThemeFromBackendOnce();
   }
 
   Future<void> _restorePrefs() async {
-    final sp = await SharedPreferences.getInstance(); // prefs
-    final t = sp.getString(_kThemeKey); // theme saved
-    final l = sp.getString(_kLocaleKey); // locale saved
-    if (t != null)
-      _themeMode = (t == 'dark') ? ThemeMode.dark : ThemeMode.light; // restore
-    if (l != null) _locale = Locale(l); // restore
-    if (mounted) setState(() {}); // rebuild
+    final sp = await SharedPreferences.getInstance();
+    final t = sp.getString(_kThemeKey);
+    final l = sp.getString(_kLocaleKey);
+    if (t != null) {
+      _themeMode = (t == 'dark') ? ThemeMode.dark : ThemeMode.light;
+    }
+    if (l != null) {
+      _locale = Locale(l);
+    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _persistTheme(ThemeMode mode) async {
-    final sp = await SharedPreferences.getInstance(); // prefs
-    await sp.setString(
-      _kThemeKey,
-      mode == ThemeMode.dark ? 'dark' : 'light',
-    ); // save
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(_kThemeKey, mode == ThemeMode.dark ? 'dark' : 'light');
   }
 
   Future<void> _persistLocale(Locale locale) async {
-    final sp = await SharedPreferences.getInstance(); // prefs
-    await sp.setString(_kLocaleKey, locale.languageCode); // save
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(_kLocaleKey, locale.languageCode);
   }
 
   void _toggleTheme() {
     setState(() {
       _themeMode = _themeMode == ThemeMode.light
           ? ThemeMode.dark
-          : ThemeMode.light; // flip
+          : ThemeMode.light;
     });
-    _persistTheme(_themeMode); // save
+    _persistTheme(_themeMode);
   }
 
   void _changeLocale(Locale locale) {
-    setState(() => _locale = locale); // set
-    _persistLocale(locale); // save
+    setState(() => _locale = locale);
+    _persistLocale(locale);
   }
 
-  // >>> NEW: call backend and apply to Palette.I
   Future<void> _loadThemeFromBackendOnce() async {
     try {
-      final json = await _themeService.getActiveMobileTheme(); // GET
-      Palette.I.applyMobileThemeJson(json); // update colors
-      // MaterialApp will rebuild thanks to AnimatedBuilder below.
+      final json = await _themeService.getActiveMobileTheme();
+      Palette.I.applyMobileThemeJson(json); // triggers AnimatedBuilder rebuild
     } catch (_) {
-      // ignore errors: keep safe defaults
+      // Swallow quietly: keep defaults on failure.
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Provide ConnectionCubit globally (your existing logic)
+    // Build your GoRouter with callbacks (theme/locale toggles if some screens need them).
+    final routerConfig = app_router.AppRouter.build(
+      enabledFeatures: const ['activity'],
+      onToggleTheme: _toggleTheme,
+      onChangeLocale: _changeLocale,
+      getCurrentLocale: () => _locale,
+    );
+
     return BlocProvider(
       create: (_) => ConnectionCubit(serverProbeUrl: _serverProbeUrl),
-      // >>> NEW: AnimatedBuilder listens to Palette.I; rebuilds MaterialApp when colors change
+      // Rebuild MaterialApp when the runtime palette changes.
       child: AnimatedBuilder(
-        animation: Palette.I, // listen to runtime color changes
+        animation: Palette.I,
         builder: (_, __) {
-          return MaterialApp(
-            debugShowCheckedModeBanner: false, // clean
-            title: 'Hobby Sphere', // app title
-            navigatorKey: navigatorKey, // router key
-            initialRoute: Routes.splash, // start route
-            onGenerateRoute: _router.onGenerateRoute, // routing
-            themeMode: _themeMode, // user pref
-            theme: AppTheme.light, // uses runtime AppColors
-            darkTheme: AppTheme.dark, // dark theme
-            locale: _locale, // current language
-            localizationsDelegates:
-                AppLocalizations.localizationsDelegates, // i18n
-            supportedLocales: AppLocalizations.supportedLocales, // i18n
+          return MaterialApp.router(
+            debugShowCheckedModeBanner: false,
+            title: 'Hobby Sphere',
+
+            routerConfig: routerConfig, // GoRouter config
+            // i18n
+            locale: _locale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+
+            // theming
+            themeMode: _themeMode,
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+
+            // Keep a global connection banner on top of every page.
             builder: (context, child) {
-              // keep your connection banner on top
+              // OPTIONAL: If you’re still migrating old LegacyNav.pushNamed(...)
+              // screens, you can wrap `child` with LegacyNavHost to forward
+              // those calls to GoRouter without rewriting every screen at once:
+              //
+              // return LegacyNavHost(child: Stack(
+              //   children: [
+              //     if (child != null) child,
+              //     const Positioned(top: 0, left: 0, right: 0, child: ConnectionBanner()),
+              //   ],
+              // ));
+              //
+              // If you don’t need that bridge, keep the plain Stack below.
+
               return Stack(
                 children: [
-                  if (child != null) child, // current page
+                  if (child != null) child,
                   const Positioned(
                     top: 0,
                     left: 0,
                     right: 0,
-                    child: ConnectionBanner(), // server status banner
+                    child: ConnectionBanner(),
                   ),
                 ],
               );

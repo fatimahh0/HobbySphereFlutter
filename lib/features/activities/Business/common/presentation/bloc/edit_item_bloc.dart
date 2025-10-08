@@ -2,7 +2,7 @@
 // Emit a local realtime event after successful update.
 
 import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
-import 'package:hobby_sphere/services/token_store.dart'; // token
+import 'package:hobby_sphere/features/authentication/login&register/data/services/token_store.dart'; // token
 
 // ⬇️ NEW: realtime bus + event model
 import 'package:hobby_sphere/core/realtime/realtime_bus.dart'; // send realtime events

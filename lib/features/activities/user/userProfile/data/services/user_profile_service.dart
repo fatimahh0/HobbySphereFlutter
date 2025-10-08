@@ -4,7 +4,7 @@ import 'package:hobby_sphere/core/network/globals.dart' as g; // global Dio/base
 
 class UserProfileService {
   final Dio _dio = g.appDio!; // shared Dio
-  String get _base => '${g.appServerRoot}/api/users'; // /api/users
+  String get _base => '${g.appServerRoot}/users'; // /api/users
 
   // GET /api/users/{id}
   Future<Map<String, dynamic>> fetchProfileMap({

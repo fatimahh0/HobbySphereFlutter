@@ -7,7 +7,7 @@ import 'package:hobby_sphere/core/realtime/event_models.dart';
 import 'package:hobby_sphere/core/realtime/realtime_bus.dart';
 import 'package:http/http.dart' as http; // Download image
 import 'package:hobby_sphere/core/network/globals.dart' as g; // server root
-import 'package:hobby_sphere/services/token_store.dart'; // token
+import 'package:hobby_sphere/features/authentication/login&register/data/services/token_store.dart'; // token
 
 // Lookups
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';

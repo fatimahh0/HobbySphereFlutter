@@ -5,7 +5,7 @@ import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
-
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 // Card
 import 'package:hobby_sphere/features/activities/user/common/presentation/widgets/activity_card.dart';
 
@@ -96,7 +96,7 @@ class InterestSection extends StatelessWidget {
               final title = (it.title ?? '').toLowerCase();
               final loc = (it.location ?? '').toLowerCase();
 
-              return title.contains(q) || loc.contains(q) ;
+              return title.contains(q) || loc.contains(q);
             }).toList();
 
             // Cap for HOME (unchanged behavior)
@@ -132,14 +132,15 @@ class InterestSection extends StatelessWidget {
                     variant: ActivityCardVariant.compact,
                     currencyCode: code ?? currencyCode,
                     imageBaseUrl: imageBaseUrl,
-                   onPressed: () {
+                    onPressed: () {
                       // build a proper Bearer token or pass null if empty              // comment
                       final bearer = token.startsWith('Bearer ')
                           ? token
                           : 'Bearer $token';
 
                       // navigate to the details screen                                 // comment
-                      Navigator.of(context).pushNamed(
+                      LegacyNav.pushNamed(
+                        context,
                         Routes.userActivityDetail, // route name
                         arguments: UserActivityDetailRouteArgs(
                           // typed args
@@ -155,7 +156,6 @@ class InterestSection extends StatelessWidget {
                       // still notify optional callback if caller wants it               // comment
                       onItemTap?.call(it.id);
                     },
-
                   );
                 },
               );

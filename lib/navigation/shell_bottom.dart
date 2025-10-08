@@ -1,17 +1,24 @@
 // ===== Flutter 3.35.x =====
 // ShellBottom — one shell for guest + logged-in users.
-// Simple: token == ''  => guest mode. Home/Explore work. Others show a gate.
-// Clean comments on (almost) every line.
+// Simple rule: token == ''  => guest mode. Home/Explore work. Others show a gate.
+// Uses go_router (context.pushNamed) — no Navigator.pushNamed.
+// English comments throughout.
 
-import 'dart:ui' show ImageFilter;                           // blur for glass bar
-import 'dart:convert' show base64Url, jsonDecode, utf8;      // decode JWT payload
-import 'package:flutter/material.dart';                      // Flutter UI
-import 'package:flutter/services.dart';                      // haptics + sys UI
-import 'package:flutter_bloc/flutter_bloc.dart';             // BLoC providers
+import 'dart:ui' show ImageFilter; // blur for glass bar
+import 'dart:convert' show base64Url, jsonDecode, utf8; // decode JWT payload
+import 'package:flutter/material.dart'; // Flutter UI
+import 'package:flutter/services.dart'; // haptics + sys UI
+import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC providers
+import 'package:go_router/go_router.dart'; // go_router navigation
 
-import 'package:hobby_sphere/app/router/router.dart';        // app routes
-import 'package:hobby_sphere/core/constants/app_role.dart';  // role enum
-import 'package:hobby_sphere/core/network/globals.dart' as g;// server root util
+// Routes + names
+import 'package:hobby_sphere/app/router/router.dart'; // Routes.*
+// We also need the arg models (e.g., CreateActivityRouteArgs)
+import 'package:hobby_sphere/features/activities/routes_activity.dart';
+
+// Role + server root
+import 'package:hobby_sphere/core/constants/app_role.dart';
+import 'package:hobby_sphere/core/network/globals.dart' as g;
 
 // ===== Business blocs/usecases/data =====
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
@@ -64,7 +71,8 @@ import 'package:hobby_sphere/features/activities/common/domain/usecases/get_curr
 
 // ===== User screens =====
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/screens/user_home_screen.dart';
-import 'package:hobby_sphere/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart' show ExploreScreen;
+import 'package:hobby_sphere/features/activities/user/exploreScreen/presentation/screens/user_explore_screen.dart'
+    show ExploreScreen;
 import 'package:hobby_sphere/features/activities/user/userCommunity/presentation/screens/community_screen.dart';
 import 'package:hobby_sphere/features/activities/user/tickets/presentation/screens/user_tickets_screen.dart';
 
@@ -97,16 +105,16 @@ import 'package:hobby_sphere/features/activities/user/userProfile/presentation/s
 import 'package:hobby_sphere/shared/widgets/not_logged_in_gate.dart';
 
 // ===== L10n =====
-import 'package:hobby_sphere/l10n/app_localizations.dart';       // localization
+import 'package:hobby_sphere/l10n/app_localizations.dart';
 
 class ShellBottom extends StatefulWidget {
-  final AppRole role;                                           // current role
-  final String token;                                           // JWT ('' => guest)
-  final int businessId;                                         // business id
-  final void Function(Locale) onChangeLocale;                   // change language
-  final VoidCallback onToggleTheme;                             // toggle theme
-  final int bookingsBadge;                                      // business badge
-  final int ticketsBadge;                                       // user badge
+  final AppRole role; // current role
+  final String token; // JWT ('' => guest)
+  final int businessId; // business id
+  final void Function(Locale) onChangeLocale; // change language
+  final VoidCallback onToggleTheme; // toggle theme
+  final int bookingsBadge; // business badge
+  final int ticketsBadge; // user badge
 
   const ShellBottom({
     super.key,
@@ -120,110 +128,129 @@ class ShellBottom extends StatefulWidget {
   });
 
   @override
-  State<ShellBottom> createState() => _ShellBottomState();       // create state
+  State<ShellBottom> createState() => _ShellBottomState();
 }
 
 class _ShellBottomState extends State<ShellBottom> {
-  int _index = 0;                                               // selected tab
+  int _index = 0; // selected tab index
 
   // ---- quick helper ----
-  bool get _isGuest => widget.token.trim().isEmpty;             // guest if no token
+  bool get _isGuest => widget.token.trim().isEmpty; // guest if no token
 
   // ---- remove '/api' from server root ----
-  String _serverRoot() {
-    final base = (g.appServerRoot ?? '');                       // get base string
-    return base.replaceFirst(RegExp(r'/api/?$'), '');           // strip /api suffix
-  }
+  String _serverRoot() =>
+      (g.appServerRoot ?? '').replaceFirst(RegExp(r'/api/?$'), '');
 
   // ---- parse JWT payload safely ----
   Map<String, dynamic>? _jwtPayload(String token) {
     try {
-      final parts = token.split('.');                           // split header.payload.sig
-      if (parts.length != 3) return null;                       // not a jwt
-      final decoded = utf8.decode(                              // decode base64url
+      final parts = token.split('.'); // header.payload.signature
+      if (parts.length != 3) return null; // not a JWT
+      final decoded = utf8.decode(
         base64Url.decode(base64Url.normalize(parts[1])),
-      );
-      final obj = jsonDecode(decoded);                          // parse json
-      return (obj is Map<String, dynamic>) ? obj : null;        // ensure map
+      ); // base64url decode payload
+      final obj = jsonDecode(decoded); // to Map
+      return (obj is Map<String, dynamic>) ? obj : null;
     } catch (_) {
-      return null;                                              // any error => null
+      return null; // any error => null
     }
   }
 
   // ---- extract id from jwt ----
   int? _extractUserId(String token) {
-    final p = _jwtPayload(token);                               // payload map
-    if (p == null) return null;                                 // none
-    final raw = p['id'] ?? p['userId'];                         // common keys
-    if (raw is num) return raw.toInt();                         // numeric id
-    return int.tryParse('$raw');                                // string id
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final decoded = utf8.decode(
+        base64Url.decode(base64Url.normalize(parts[1])),
+      );
+      final p = (jsonDecode(decoded) as Map?)?.map((k, v) => MapEntry('$k', v));
+      if (p == null) return null;
+
+      // Try common claim names, in order.
+      final candidates = [
+        p['id'],
+        p['userId'],
+        p['user_id'],
+        p['sub'], // very common in JWTs
+        p['uid'],
+      ];
+
+      for (final raw in candidates) {
+        if (raw == null) continue;
+        if (raw is num) return raw.toInt();
+        final parsed = int.tryParse(raw.toString());
+        if (parsed != null) return parsed;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   // ---- extract first/last name from jwt ----
   String? _extractFirstName(String token) {
-    final p = _jwtPayload(token);                               // payload map
-    if (p == null) return null;                                 // none
-    final fn = (p['firstName'] ?? p['given_name'])?.toString(); // common keys
-    if (fn != null && fn.trim().isNotEmpty) return fn.trim();   // ready
-    final name = p['name']?.toString();                         // full name fallback
+    final p = _jwtPayload(token);
+    final fn = (p?['firstName'] ?? p?['given_name'])?.toString();
+    if (fn != null && fn.trim().isNotEmpty) return fn.trim();
+    final name = p?['name']?.toString(); // fallback to full name
     if (name != null && name.trim().isNotEmpty) {
-      final parts = name.trim().split(RegExp(r'\s+'));          // split words
-      if (parts.isNotEmpty) return parts.first;                 // first word
+      final parts = name.trim().split(RegExp(r'\s+'));
+      if (parts.isNotEmpty) return parts.first;
     }
-    return null;                                                // nothing
+    return null;
   }
 
   String? _extractLastName(String token) {
-    final p = _jwtPayload(token);                               // payload map
-    if (p == null) return null;                                 // none
-    final ln = (p['lastName'] ?? p['family_name'])?.toString(); // common keys
-    if (ln != null && ln.trim().isNotEmpty) return ln.trim();   // ready
-    final name = p['name']?.toString();                         // full name fallback
+    final p = _jwtPayload(token);
+    final ln = (p?['lastName'] ?? p?['family_name'])?.toString();
+    if (ln != null && ln.trim().isNotEmpty) return ln.trim();
+    final name = p?['name']?.toString(); // fallback to full name
     if (name != null && name.trim().isNotEmpty) {
-      final parts = name.trim().split(RegExp(r'\s+'));          // split words
-      if (parts.length > 1) return parts.sublist(1).join(' ');  // rest as last
+      final parts = name.trim().split(RegExp(r'\s+'));
+      if (parts.length > 1) return parts.sublist(1).join(' ');
     }
-    return null;                                                // nothing
+    return null;
   }
 
   // ---- DI for User Home/Explore ----
-  late final _homeRepo = HomeRepositoryImpl(HomeService());     // repo for home
-  late final _getInterest = GetInterestBasedItems(_homeRepo);   // UC interest
-  late final _getUpcoming = GetUpcomingGuestItems(_homeRepo);   // UC upcoming
-  late final _getItemTypes = GetItemTypes(                      // UC types
+  late final _homeRepo = HomeRepositoryImpl(HomeService());
+  late final _getInterest = GetInterestBasedItems(_homeRepo);
+  late final _getUpcoming = GetUpcomingGuestItems(_homeRepo);
+  late final _getItemTypes = GetItemTypes(
     ItemTypeRepositoryImpl(ItemTypesService()),
   );
-  late final _getItemsByType = GetItemsByType(                  // UC items by type
+  late final _getItemsByType = GetItemsByType(
     ItemsRepositoryImpl(ItemsService()),
   );
 
   // ---- parsed info from token (safe for guest) ----
-  late final int _userId = _extractUserId(widget.token) ?? 0;   // 0 for guest
+  late final int _userId = _extractUserId(widget.token) ?? 0; // 0 for guest
   late final String? _firstName = _extractFirstName(widget.token);
   late final String? _lastName = _extractLastName(widget.token);
 
-  // ===== User Profile screen builder (service -> repo -> UCs -> bloc -> screen) =====
+  // ===== User Profile tab builder (service -> repo -> UCs -> bloc -> screen) =====
   Widget _buildUserProfilePage() {
-    final service = svc.UserProfileService();                   // API service
-    final repo = UserProfileRepositoryImpl(service);            // repo impl
-    final getUser = GetUserProfile(repo);                       // UC get user
-    final toggleVis = ToggleUserVisibility(repo);               // UC toggle vis
-    final setStatus = UpdateUserStatus(repo);                   // UC set status
+    final service = svc.UserProfileService(); // API service
+    final repo = UserProfileRepositoryImpl(service); // repo impl
+    final getUser = GetUserProfile(repo); // UC: get user
+    final toggleVis = ToggleUserVisibility(repo); // UC: toggle vis
+    final setStatus = UpdateUserStatus(repo); // UC: set status
 
     return MultiRepositoryProvider(
       providers: [
-        RepositoryProvider.value(value: setStatus),             // expose UC
+        RepositoryProvider.value(value: setStatus), // expose UC
       ],
       child: BlocProvider(
         create: (_) => UserProfileBloc(
-          getUser: getUser,                                     // inject UCs
+          getUser: getUser,
           toggleVisibility: toggleVis,
           updateStatus: setStatus,
-        )..add(LoadUserProfile(widget.token, _userId)),         // initial load
+        )..add(LoadUserProfile(widget.token, _userId)), // initial load
         child: UserProfileScreen(
-          token: widget.token,                                  // pass token
-          userId: _userId,                                      // pass id
-          onChangeLocale: widget.onChangeLocale,                // language
+          token: widget.token,
+          userId: _userId,
+          onChangeLocale: widget.onChangeLocale,
         ),
       ),
     );
@@ -231,37 +258,35 @@ class _ShellBottomState extends State<ShellBottom> {
 
   // ===== USER PAGES (guest-aware) =====
   late final List<Widget> _userPages = <Widget>[
-    // 0) Home — interest section will auto-hide for guest (token='')
+    // 0) Home — interest section auto-hides for guest (token='')
     UserHomeScreen(
-      firstName: _isGuest ? null : _firstName,                  // hide for guest
-      lastName:  _isGuest ? null : _lastName,                   // hide for guest
-      token: widget.token,                                      // '' in guest
-      userId: _isGuest ? 0 : _userId,                           // 0 in guest
-      getInterestBased: _getInterest,                           // UC
-      getUpcomingGuest: _getUpcoming,                           // UC
-      getItemTypes: _getItemTypes,                              // UC
-      getItemsByType: _getItemsByType,                          // UC
+      firstName: _isGuest ? null : _firstName,
+      lastName: _isGuest ? null : _lastName,
+      token: widget.token, // '' in guest mode
+      userId: _isGuest ? 0 : _userId, // 0 in guest mode
+      getInterestBased: _getInterest,
+      getUpcomingGuest: _getUpcoming,
+      getItemTypes: _getItemTypes,
+      getItemsByType: _getItemsByType,
     ),
 
-    // 1) Explore — always open for guest
+    // 1) Explore — always open (guest or logged-in)
     ExploreScreen(
-      token: widget.token,                                      // '' in guest
-      getItemTypes: _getItemTypes,                              // UC
-      getItemsByType: _getItemsByType,                          // UC
-      getUpcomingGuest: _getUpcoming,                           // UC
-      getCurrencyCode: () async =>                              // currency code
-          (await GetCurrentCurrency(
-            CurrencyRepositoryImpl(CurrencyService()),
-          )(widget.token))
-              .code,
-      imageBaseUrl: _serverRoot(),                              // absolute URLs
+      token: widget.token,
+      getItemTypes: _getItemTypes,
+      getItemsByType: _getItemsByType,
+      getUpcomingGuest: _getUpcoming,
+      getCurrencyCode: () async => (await GetCurrentCurrency(
+        CurrencyRepositoryImpl(CurrencyService()),
+      )(widget.token)).code,
+      imageBaseUrl: _serverRoot(), // absolute URLs for images
     ),
 
     // 2) Community — gate if guest
     _isGuest
         ? NotLoggedInGate(
-            onLogin: () => Navigator.pushNamed(context, Routes.login),
-            onRegister: () => Navigator.pushNamed(context, Routes.register),
+            onLogin: () => context.pushNamed(Routes.login), // ✅ go_router
+            onRegister: () => context.pushNamed(Routes.register), // ✅ go_router
           )
         : CommunityScreen(
             token: widget.token,
@@ -272,23 +297,23 @@ class _ShellBottomState extends State<ShellBottom> {
     // 3) Tickets — gate if guest
     _isGuest
         ? NotLoggedInGate(
-            onLogin: () => Navigator.pushNamed(context, Routes.login),
-            onRegister: () => Navigator.pushNamed(context, Routes.register),
+            onLogin: () => context.pushNamed(Routes.login),
+            onRegister: () => context.pushNamed(Routes.register),
           )
         : UserTicketsScreen(token: widget.token),
 
-    // 4) Profile — gate if guest
+    // 4) Profile — gate if guest, real profile if logged-in
     _isGuest
         ? NotLoggedInGate(
-            onLogin: () => Navigator.pushNamed(context, Routes.login),
-            onRegister: () => Navigator.pushNamed(context, Routes.register),
+            onLogin: () => context.pushNamed(Routes.login),
+            onRegister: () => context.pushNamed(Routes.register),
           )
         : _buildUserProfilePage(),
   ];
 
-  // ===== BUSINESS PAGES (unchanged) =====
+  // ===== BUSINESS PAGES =====
   late final List<Widget> _businessPages = <Widget>[
-    // 0. Home
+    // 0. Home (+ notifications bloc)
     MultiBlocProvider(
       providers: [
         BlocProvider(
@@ -324,10 +349,13 @@ class _ShellBottomState extends State<ShellBottom> {
         token: widget.token,
         businessId: widget.businessId,
         onCreate: (ctx, bid) {
-          Navigator.pushNamed(
-            ctx,
+          // ✅ go_router with extra args
+          ctx.pushNamed(
             Routes.createBusinessActivity,
-            arguments: CreateActivityRouteArgs(businessId: bid, token: widget.token)
+            extra: CreateActivityRouteArgs(
+              businessId: bid,
+              token: widget.token,
+            ),
           );
         },
       ),
@@ -354,11 +382,11 @@ class _ShellBottomState extends State<ShellBottom> {
           getActivities: GetBusinessActivities(repo),
           deleteActivity: DeleteBusinessActivity(repo),
         )..add(
-            LoadBusinessActivities(
-              token: widget.token,
-              businessId: widget.businessId,
-            ),
-          );
+          LoadBusinessActivities(
+            token: widget.token,
+            businessId: widget.businessId,
+          ),
+        );
       },
       child: BusinessActivitiesScreen(
         token: widget.token,
@@ -368,16 +396,17 @@ class _ShellBottomState extends State<ShellBottom> {
 
     // 3. Analytics
     BlocProvider(
-      create: (_) => BusinessAnalyticsBloc(
-        getBusinessAnalytics: GetBusinessAnalytics(
-          BusinessAnalyticsRepositoryImpl(BusinessAnalyticsService()),
-        ),
-      )..add(
-          LoadBusinessAnalytics(
-            token: widget.token,
-            businessId: widget.businessId,
+      create: (_) =>
+          BusinessAnalyticsBloc(
+            getBusinessAnalytics: GetBusinessAnalytics(
+              BusinessAnalyticsRepositoryImpl(BusinessAnalyticsService()),
+            ),
+          )..add(
+            LoadBusinessAnalytics(
+              token: widget.token,
+              businessId: widget.businessId,
+            ),
           ),
-        ),
       child: BusinessAnalyticsScreen(
         token: widget.token,
         businessId: widget.businessId,
@@ -385,59 +414,53 @@ class _ShellBottomState extends State<ShellBottom> {
     ),
 
     // 4. Profile
-   // 4. Profile
     BlocProvider(
       create: (_) {
         // create the HTTP service for business profile
-        final businessService = BusinessService(); // simple service
-
+        final businessService = BusinessService(); // low-level API
         // wrap service in repository
-        final businessRepo = BusinessRepositoryImpl(businessService); // repo
+        final businessRepo = BusinessRepositoryImpl(businessService);
 
         // build the bloc with all needed usecases
         return BusinessProfileBloc(
-            getBusinessById: GetBusinessById(businessRepo), // load profile
-            updateBusinessVisibility: UpdateBusinessVisibility(
-              businessRepo,
-            ), // toggle public/private
-            updateBusinessStatus: UpdateBusinessStatus(
-              businessRepo,
-            ), // change status
-            deleteBusiness: DeleteBusiness(businessRepo), // delete account
-            checkStripeStatus: CheckStripeStatus(
-              businessRepo,
-            ), // check stripe connected
-            createStripeConnectLink: CreateStripeConnectLink(
-              businessRepo,
-            ), // NEW: create onboarding link
-          )
-          // immediately load the profile data when the bloc is created
-          ..add(
-            LoadBusinessProfile(widget.token, widget.businessId),
-          ); // initial load
+          getBusinessById: GetBusinessById(businessRepo), // load profile
+          updateBusinessVisibility: UpdateBusinessVisibility(businessRepo),
+          updateBusinessStatus: UpdateBusinessStatus(businessRepo),
+          deleteBusiness: DeleteBusiness(businessRepo),
+          checkStripeStatus: CheckStripeStatus(businessRepo),
+          createStripeConnectLink: CreateStripeConnectLink(businessRepo),
+        )..add(
+          LoadBusinessProfile(widget.token, widget.businessId),
+        ); // initial load
       },
       child: BusinessProfileScreen(
-        token: widget.token, // pass token to screen
-        businessId: widget.businessId, // pass business id to screen
+        token: widget.token,
+        businessId: widget.businessId,
         onTabChange: (i) => setState(() => _index = i), // allow tab change
         onChangeLocale: widget.onChangeLocale, // pass locale callback
       ),
     ),
-
   ];
 
   // ===== helpers: pick pages/labels/icons by role =====
   List<Widget> _pagesFor(AppRole role) =>
-      role == AppRole.business ? _businessPages : _userPages;    // choose pages
+      role == AppRole.business ? _businessPages : _userPages;
 
   List<String> _labelsFor(BuildContext context, AppRole role) {
-    final t = AppLocalizations.of(context)!;                     // localized labels
+    final t = AppLocalizations.of(context)!; // localized labels
     return role == AppRole.business
-        ? [t.tabHome, t.tabBookings, t.tabActivities, t.tabAnalytics, t.tabProfile]
+        ? [
+            t.tabHome,
+            t.tabBookings,
+            t.tabActivities,
+            t.tabAnalytics,
+            t.tabProfile,
+          ]
         : [t.tabHome, t.tabExplore, t.tabSocial, t.tabTickets, t.tabProfile];
   }
 
-  List<(IconData, IconData)> _iconsFor(AppRole role) {           // unselected/selected
+  // (unselected icon, selected icon) pairs
+  List<(IconData, IconData)> _iconsFor(AppRole role) {
     return role == AppRole.business
         ? const [
             (Icons.home_outlined, Icons.home),
@@ -458,45 +481,50 @@ class _ShellBottomState extends State<ShellBottom> {
   @override
   Widget build(BuildContext context) {
     // make system nav bar translucent
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarDividerColor: Colors.transparent,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+      ),
+    );
 
-    final pages = _pagesFor(widget.role);                        // pick pages
-    final labels = _labelsFor(context, widget.role);             // pick labels
-    final icons = _iconsFor(widget.role);                        // pick icons
-    if (_index >= pages.length) _index = pages.length - 1;       // bound index
+    final pages = _pagesFor(widget.role); // pick pages
+    final labels = _labelsFor(context, widget.role); // pick labels
+    final icons = _iconsFor(widget.role); // pick icons
+    if (_index >= pages.length) _index = pages.length - 1; // bound index
 
     return Scaffold(
-      extendBody: false,                                         // normal body
+      extendBody: false,
       body: SafeArea(
-        top: true, bottom: false,                                // avoid overlap
-        child: IndexedStack(                                     // keep tab states
-          index: _index,                                         // active index
-          children: pages,                                       // tab bodies
+        top: true,
+        bottom: false, // let bottom bar own the bottom inset
+        child: IndexedStack(
+          index: _index, // preserve tab states
+          children: pages,
         ),
       ),
       bottomNavigationBar: SafeArea(
-        top: false,                                              // only bottom inset
+        top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),     // outer padding
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(22),             // rounded glass
+            borderRadius: BorderRadius.circular(22),
             child: _GlassNavBar(
-              index: _index,                                     // selected tab
-              labels: labels,                                    // text labels
-              icons: icons,                                      // icons pair
-              onChanged: (i) {                                   // tab change
+              index: _index,
+              labels: labels,
+              icons: icons,
+              onChanged: (i) {
                 if (i != _index) {
-                  HapticFeedback.selectionClick();               // small haptic
-                  setState(() => _index = i);                    // update index
+                  HapticFeedback.selectionClick();
+                  setState(() => _index = i);
                 }
               },
-              badgeIndex: widget.role == AppRole.business ? 1 : 3,   // which tab
-              badgeCount: widget.role == AppRole.business              
-                  ? widget.bookingsBadge                          // business badge
-                  : widget.ticketsBadge,                          // user badge
+              badgeIndex: widget.role == AppRole.business
+                  ? 1
+                  : 3, // which tab shows badge
+              badgeCount: widget.role == AppRole.business
+                  ? widget.bookingsBadge
+                  : widget.ticketsBadge,
             ),
           ),
         ),
@@ -507,12 +535,12 @@ class _ShellBottomState extends State<ShellBottom> {
 
 // ===== Glass Navigation Bar (tiny animation) =====
 class _GlassNavBar extends StatelessWidget {
-  final int index;                                              // selected tab
-  final List<String> labels;                                    // labels
-  final List<(IconData, IconData)> icons;                       // (off,on)
-  final ValueChanged<int> onChanged;                            // callback
-  final int badgeIndex;                                         // badge tab
-  final int badgeCount;                                         // badge value
+  final int index; // selected tab
+  final List<String> labels; // tab labels
+  final List<(IconData, IconData)> icons; // (off,on)
+  final ValueChanged<int> onChanged; // tab changed callback
+  final int badgeIndex; // which tab shows badge
+  final int badgeCount; // badge value
 
   const _GlassNavBar({
     required this.index,
@@ -526,23 +554,24 @@ class _GlassNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 64,                                               // bar height
+      height: 64,
       child: Stack(
-        fit: StackFit.expand,                                   // fill width
+        fit: StackFit.expand,
         children: [
-          BackdropFilter(                                       // blur bg
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),   // glass blur
-            child: const SizedBox.expand(),                     // filler
+          // Frosted glass background
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: const SizedBox.expand(),
           ),
-          NavigationBar(                                        // Material 3 bar
-            height: 64,                                         // same height
-            elevation: 0,                                       // flat
-            backgroundColor: Colors.transparent,                // glass look
-            selectedIndex: index,                               // current tab
-            onDestinationSelected: onChanged,                   // change tab
-            destinations: List.generate(labels.length, (i) {    // build items
-              final (un, sel) = icons[i];                       // pick icons
-              final icon = _AnimatedNavIcon(                     // animated icon
+          NavigationBar(
+            height: 64,
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            selectedIndex: index,
+            onDestinationSelected: onChanged,
+            destinations: List.generate(labels.length, (i) {
+              final (un, sel) = icons[i];
+              final icon = _AnimatedNavIcon(
                 unselected: un,
                 selected: sel,
                 isSelected: index == i,
@@ -551,16 +580,19 @@ class _GlassNavBar extends StatelessWidget {
                     : Colors.black.withOpacity(0.70),
                 activeColor: Theme.of(context).colorScheme.primary,
               );
-              final wrapped = (i == badgeIndex && badgeCount > 0) // add badge
+              final wrapped = (i == badgeIndex && badgeCount > 0)
                   ? Badge(
                       label: Text(
-                        badgeCount > 99 ? '99+' : '$badgeCount', // cap 99+
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+                        badgeCount > 99 ? '99+' : '$badgeCount',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       child: icon,
                     )
                   : icon;
-              return NavigationDestination(icon: wrapped, label: labels[i]); // item
+              return NavigationDestination(icon: wrapped, label: labels[i]);
             }),
           ),
         ],
@@ -569,13 +601,13 @@ class _GlassNavBar extends StatelessWidget {
   }
 }
 
-// ===== Small select animation =====
+// ===== Small select animation for icons =====
 class _AnimatedNavIcon extends StatelessWidget {
-  final IconData unselected;                                    // outline icon
-  final IconData selected;                                      // filled icon
-  final bool isSelected;                                        // is active
-  final Color color;                                            // base color
-  final Color activeColor;                                      // active color
+  final IconData unselected; // outline icon
+  final IconData selected; // filled icon
+  final bool isSelected; // active?
+  final Color color; // base color
+  final Color activeColor; // active color
 
   const _AnimatedNavIcon({
     required this.unselected,
@@ -588,16 +620,16 @@ class _AnimatedNavIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 220),              // quick anim
-      curve: Curves.easeOutCubic,                               // smooth
-      tween: Tween<double>(begin: 0, end: isSelected ? 1 : 0),  // 0..1
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      tween: Tween<double>(begin: 0, end: isSelected ? 1 : 0), // 0..1
       builder: (context, t, _) {
-        final scale = 1.0 + 0.10 * t;                           // grow a bit
-        final iconData = t > 0.5 ? selected : unselected;       // swap mid-way
-        final iconColor = Color.lerp(color, activeColor, t)!;   // fade color
+        final scale = 1.0 + 0.10 * t; // grow a bit on select
+        final iconData = t > 0.5 ? selected : unselected;
+        final iconColor = Color.lerp(color, activeColor, t)!;
         return Transform.scale(
-          scale: scale,                                         // apply scale
-          child: Icon(iconData, color: iconColor, size: 26),    // draw icon
+          scale: scale,
+          child: Icon(iconData, color: iconColor, size: 26),
         );
       },
     );

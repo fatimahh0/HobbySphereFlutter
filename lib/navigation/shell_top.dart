@@ -1,15 +1,20 @@
 // ===== Flutter 3.35.x =====
 // ShellTop — top tabs with guest gating (user + business).
-// Guest: token == '' → Community/Tickets/Profile show NotLoggedInGate.
+// Rule: token == '' → Community / Tickets / Profile show NotLoggedInGate.
+// Uses go_router for navigation from tab content and quick actions.
 
 import 'dart:convert' show base64Url, jsonDecode, utf8; // parse JWT
 import 'package:flutter/material.dart'; // UI
 import 'package:flutter/services.dart'; // status/nav bars
 import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC
+import 'package:go_router/go_router.dart'; // go_router
 
-import 'package:hobby_sphere/app/router/router.dart'; // routes
+import 'package:hobby_sphere/app/router/router.dart'; // route names + navigatorKey
 import 'package:hobby_sphere/core/constants/app_role.dart'; // roles
 import 'package:hobby_sphere/core/network/globals.dart' as g; // server root
+
+// Typed route args used by Business create activity flow
+import 'package:hobby_sphere/features/activities/routes_activity.dart';
 
 // ===== Business stacks =====
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
@@ -83,7 +88,7 @@ import 'package:hobby_sphere/features/activities/common/data/services/currency_s
 import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
 
-// ===== User Profile feature (so Profile tab is real) =====
+// ===== User Profile feature =====
 import 'package:hobby_sphere/features/activities/user/userProfile/data/services/user_profile_service.dart'
     as upsvc;
 import 'package:hobby_sphere/features/activities/user/userProfile/data/repositories/user_profile_repository_impl.dart';
@@ -104,14 +109,14 @@ class ShellTop extends StatelessWidget {
   // role + auth
   final AppRole role; // current role
   final String token; // JWT ('' => guest)
-  final int businessId; // biz id if needed
+  final int businessId; // business id if needed
 
   // app actions
   final void Function(Locale) onChangeLocale; // change language
   final VoidCallback onToggleTheme; // toggle theme
 
   // badges
-  final int bookingsBadge; // biz badge
+  final int bookingsBadge; // business badge
   final int ticketsBadge; // user badge
 
   const ShellTop({
@@ -126,10 +131,10 @@ class ShellTop extends StatelessWidget {
   });
 
   // ----- helpers -----
-  bool get _isGuest => token.trim().isEmpty; // guest flag
+  bool get _isGuest => token.trim().isEmpty;
 
   Map<String, dynamic>? _jwtPayload(String tkn) {
-    // parse payload
+    // parse payload (safe)
     try {
       final parts = tkn.split('.');
       if (parts.length != 3) return null;
@@ -144,7 +149,7 @@ class ShellTop extends StatelessWidget {
   }
 
   int _userIdFromToken() {
-    if (_isGuest) return 0; // guest => 0
+    if (_isGuest) return 0;
     final p = _jwtPayload(token);
     final raw = p?['id'] ?? p?['userId'];
     if (raw is num) return raw.toInt();
@@ -152,7 +157,7 @@ class ShellTop extends StatelessWidget {
   }
 
   String? _firstNameFromToken() {
-    if (_isGuest) return null; // guest => null
+    if (_isGuest) return null;
     final p = _jwtPayload(token);
     final fn = (p?['firstName'] ?? p?['given_name'])?.toString();
     if (fn != null && fn.trim().isNotEmpty) return fn.trim();
@@ -164,7 +169,7 @@ class ShellTop extends StatelessWidget {
   }
 
   String? _lastNameFromToken() {
-    if (_isGuest) return null; // guest => null
+    if (_isGuest) return null;
     final p = _jwtPayload(token);
     final ln = (p?['lastName'] ?? p?['family_name'])?.toString();
     if (ln != null && ln.trim().isNotEmpty) return ln.trim();
@@ -179,7 +184,7 @@ class ShellTop extends StatelessWidget {
   String _serverRoot() =>
       (g.appServerRoot ?? '').replaceFirst(RegExp(r'/api/?$'), '');
 
-  // labels
+  // labels for tabs
   List<String> _labels(BuildContext ctx) {
     final t = AppLocalizations.of(ctx)!;
     return role == AppRole.business
@@ -194,29 +199,28 @@ class ShellTop extends StatelessWidget {
   }
 
   // ----- build USER pages (guest-aware) -----
-  List<Widget> _userViews() {
+  List<Widget> _userViews(BuildContext context) {
     final userId = _userIdFromToken(); // 0 if guest
-    final firstName = _firstNameFromToken(); // null if guest
-    final lastName = _lastNameFromToken(); // null if guest
+    final firstName = _firstNameFromToken();
+    final lastName = _lastNameFromToken();
 
     // DI (services/repos/usecases)
-    final homeRepo = HomeRepositoryImpl(HomeService()); // repo
-    final getInterest = GetInterestBasedItems(homeRepo); // UC
-    final getUpcoming = GetUpcomingGuestItems(homeRepo); // UC
+    final homeRepo = HomeRepositoryImpl(HomeService());
+    final getInterest = GetInterestBasedItems(homeRepo);
+    final getUpcoming = GetUpcomingGuestItems(homeRepo);
     final getItemTypes = GetItemTypes(
       ItemTypeRepositoryImpl(ItemTypesService()),
-    ); // UC
-    final getItemsByType = GetItemsByType(
-      ItemsRepositoryImpl(ItemsService()),
-    ); // UC
+    );
+    final getItemsByType = GetItemsByType(ItemsRepositoryImpl(ItemsService()));
 
-    // helper to build Profile screen when logged-in
+    // Helper: Profile screen for logged-in users
     Widget _buildUserProfilePage() {
-      final svc = upsvc.UserProfileService(); // api
-      final repo = UserProfileRepositoryImpl(svc); // repo
-      final getUser = GetUserProfile(repo); // uc
-      final toggleVis = ToggleUserVisibility(repo); // uc
-      final setStatus = UpdateUserStatus(repo); // uc
+      final svc = upsvc.UserProfileService();
+      final repo = UserProfileRepositoryImpl(svc);
+      final getUser = GetUserProfile(repo);
+      final toggleVis = ToggleUserVisibility(repo);
+      final setStatus = UpdateUserStatus(repo);
+
       return MultiRepositoryProvider(
         providers: [RepositoryProvider.value(value: setStatus)],
         child: BlocProvider(
@@ -235,51 +239,43 @@ class ShellTop extends StatelessWidget {
     }
 
     return [
-      // 0) Home (guest-safe UserHomeScreen)
+      // 0) Home (guest-safe)
       UserHomeScreen(
-        firstName: _isGuest ? null : firstName, // hide for guest
-        lastName: _isGuest ? null : lastName, // hide for guest
-        token: token, // '' in guest
-        userId: _isGuest ? 0 : userId, // 0 in guest
-        getInterestBased: getInterest, // UCs
+        firstName: _isGuest ? null : firstName,
+        lastName: _isGuest ? null : lastName,
+        token: token,
+        userId: _isGuest ? 0 : userId,
+        getInterestBased: getInterest,
         getUpcomingGuest: getUpcoming,
         getItemTypes: getItemTypes,
         getItemsByType: getItemsByType,
       ),
 
-      // 1) Explore (open in guest)
+      // 1) Explore (open for guest)
       ExploreScreen(
-        token: token, // '' ok
-        getUpcomingGuest: getUpcoming, // UC
-        getItemTypes: getItemTypes, // UC
-        getItemsByType: getItemsByType, // UC
+        token: token,
+        getUpcomingGuest: getUpcoming,
+        getItemTypes: getItemTypes,
+        getItemsByType: getItemsByType,
         getCurrencyCode: () async {
-          // guard in guest
+          // Don’t break in guest mode
           try {
             final uc = GetCurrentCurrency(
               CurrencyRepositoryImpl(CurrencyService()),
             );
             return (await uc(token)).code;
           } catch (_) {
-            return null; // fallback to null
+            return null;
           }
         },
-        imageBaseUrl: _serverRoot(), // absolute URLs
+        imageBaseUrl: _serverRoot(),
       ),
 
       // 2) Social (Community) — gate for guest
       _isGuest
           ? NotLoggedInGate(
-              onLogin: () => Navigator.pushNamed(
-                // go login
-                navigatorKey.currentContext ?? (throw 'No context'),
-                Routes.login,
-              ),
-              onRegister: () => Navigator.pushNamed(
-                // go register
-                navigatorKey.currentContext ?? (throw 'No context'),
-                Routes.register,
-              ),
+              onLogin: () => context.pushNamed(Routes.login),
+              onRegister: () => context.pushNamed(Routes.register),
             )
           : CommunityScreen(
               token: token,
@@ -290,37 +286,25 @@ class ShellTop extends StatelessWidget {
       // 3) Tickets — gate for guest
       _isGuest
           ? NotLoggedInGate(
-              onLogin: () => Navigator.pushNamed(
-                navigatorKey.currentContext ?? (throw 'No context'),
-                Routes.login,
-              ),
-              onRegister: () => Navigator.pushNamed(
-                navigatorKey.currentContext ?? (throw 'No context'),
-                Routes.register,
-              ),
+              onLogin: () => context.pushNamed(Routes.login),
+              onRegister: () => context.pushNamed(Routes.register),
             )
           : UserTicketsScreen(token: token),
 
       // 4) Profile — gate for guest, real profile for logged-in
       _isGuest
           ? NotLoggedInGate(
-              onLogin: () => Navigator.pushNamed(
-                navigatorKey.currentContext ?? (throw 'No context'),
-                Routes.login,
-              ),
-              onRegister: () => Navigator.pushNamed(
-                navigatorKey.currentContext ?? (throw 'No context'),
-                Routes.register,
-              ),
+              onLogin: () => context.pushNamed(Routes.login),
+              onRegister: () => context.pushNamed(Routes.register),
             )
           : _buildUserProfilePage(),
     ];
   }
 
-  // ----- build BUSINESS pages (unchanged) -----
-  List<Widget> _businessViews() {
+  // ----- build BUSINESS pages -----
+  List<Widget> _businessViews(BuildContext context) {
     return [
-      // 0) Home (+ notifications bloc)
+      // 0) Home (+ notifications bloc); create button uses go_router
       MultiBlocProvider(
         providers: [
           BlocProvider(
@@ -356,10 +340,9 @@ class ShellTop extends StatelessWidget {
           token: token,
           businessId: businessId,
           onCreate: (ctx, bid) {
-            Navigator.pushNamed(
-              ctx,
+            ctx.pushNamed(
               Routes.createBusinessActivity,
-              arguments: CreateActivityRouteArgs(businessId: bid, token: token),
+              extra: CreateActivityRouteArgs(businessId: bid, token: token),
             );
           },
         ),
@@ -402,34 +385,22 @@ class ShellTop extends StatelessWidget {
         child: BusinessActivitiesScreen(token: token, businessId: businessId),
       ),
 
-      // 4) Profile
-      // 4) Profile — inject Stripe connect usecase so the button can open the link
+      // 4) Profile — Stripe connect usecase injected
       BlocProvider(
         create: (ctx) {
-          final businessRepo = BusinessRepositoryImpl(
-            // repo wrapper
-            BusinessService(), // low-level API service
-          );
+          final businessRepo = BusinessRepositoryImpl(BusinessService());
           return BusinessProfileBloc(
-            getBusinessById: GetBusinessById(businessRepo), // load profile
-            updateBusinessVisibility: UpdateBusinessVisibility(
-              businessRepo,
-            ), // toggle public/private
-            updateBusinessStatus: UpdateBusinessStatus(
-              businessRepo,
-            ), // set ACTIVE/INACTIVE
-            deleteBusiness: DeleteBusiness(businessRepo), // delete business
-            checkStripeStatus: CheckStripeStatus(
-              businessRepo,
-            ), // check Stripe connected
-            createStripeConnectLink: CreateStripeConnectLink(
-              businessRepo,
-            ), // NEW: get onboarding URL
-          )..add(LoadBusinessProfile(token, businessId)); // initial load event
+            getBusinessById: GetBusinessById(businessRepo),
+            updateBusinessVisibility: UpdateBusinessVisibility(businessRepo),
+            updateBusinessStatus: UpdateBusinessStatus(businessRepo),
+            deleteBusiness: DeleteBusiness(businessRepo),
+            checkStripeStatus: CheckStripeStatus(businessRepo),
+            createStripeConnectLink: CreateStripeConnectLink(businessRepo),
+          )..add(LoadBusinessProfile(token, businessId));
         },
         child: BusinessProfileScreen(
-          token: token, // pass token to screen
-          businessId: businessId, // pass business id to screen
+          token: token,
+          businessId: businessId,
           onTabChange: (_) {}, // keep existing callback
           onChangeLocale: onChangeLocale, // pass locale callback
         ),
@@ -439,7 +410,7 @@ class ShellTop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // transparent system bars
+    // transparent system bars to match top tabs
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -448,40 +419,38 @@ class ShellTop extends StatelessWidget {
       ),
     );
 
-    final scheme = Theme.of(context).colorScheme; // colors
-    final labels = _labels(context); // tab titles
+    final scheme = Theme.of(context).colorScheme;
+    final labels = _labels(context);
     final pages = role == AppRole.business
-        ? _businessViews()
-        : _userViews(); // views by role
+        ? _businessViews(context)
+        : _userViews(context);
 
-    final badgeIndex = role == AppRole.business ? 1 : 3; // which tab has badge
+    // Which tab shows a badge and what value
+    final badgeIndex = role == AppRole.business ? 1 : 3;
     final badgeCount = role == AppRole.business
         ? bookingsBadge
-        : (_isGuest ? 0 : ticketsBadge); // hide user badge in guest
+        : (_isGuest ? 0 : ticketsBadge);
 
     return DefaultTabController(
       length: labels.length, // 5 tabs
       child: Builder(
         builder: (tabCtx) {
-          final controller = DefaultTabController.of(tabCtx); // tab controller
+          final controller = DefaultTabController.of(tabCtx);
           return Scaffold(
             appBar: AppBar(
-              // keep clean title; optional app name if you want
-              title: const Text(''),
+              title: const Text(''), // keep clean
               centerTitle: true,
               actions: [
-                // Quick action only for logged-in users (avoid guest nav)
+                // Quick action only for logged-in users
                 if (role != AppRole.business && !_isGuest)
                   IconButton(
                     tooltip: AppLocalizations.of(context)!.socialMyPosts,
                     icon: const Icon(Icons.library_books_outlined),
                     onPressed: () {
-                      Navigator.of(context).pushNamed(
+                      // go_router to "My Posts" screen, pass extras
+                      context.pushNamed(
                         Routes.myPosts,
-                        arguments: {
-                          'token': token,
-                          'imageBaseUrl': _serverRoot(),
-                        },
+                        extra: {'token': token, 'imageBaseUrl': _serverRoot()},
                       );
                     },
                   ),

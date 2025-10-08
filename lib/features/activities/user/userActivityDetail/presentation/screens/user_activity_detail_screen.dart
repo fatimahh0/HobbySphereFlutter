@@ -334,7 +334,7 @@ class UserActivityDetailScreen extends StatelessWidget {
                               t.authNotLoggedInMessage,
                               type: ToastType.info,
                             );
-                            // TODO: Navigator.pushNamed(context, Routes.login);
+                            // TODO: LegacyNav.pushNamed(context, Routes.login);
                           },
                         ),
                       );

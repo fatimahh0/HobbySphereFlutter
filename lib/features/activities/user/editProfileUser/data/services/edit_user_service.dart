@@ -3,8 +3,8 @@ import 'package:hobby_sphere/core/network/globals.dart' as g;
 
 class EditUserService {
   final Dio _dio = g.appDio!;
-  String get _baseUsers => '${g.appServerRoot}/api/users';
-  String get _baseAuth => '${g.appServerRoot}/api/auth';
+  String get _baseUsers => '${g.appServerRoot}/users';
+  String get _baseAuth => '${g.appServerRoot}/auth';
 
   Future<Map<String, dynamic>> getUserMap({
     required String token,
@@ -20,7 +20,6 @@ class EditUserService {
     );
     return (res.data as Map).cast<String, dynamic>();
   }
-
 
   /// Backend: PUT /api/auth/{id} (multipart)
   Future<void> putUserMultipartAuth({

@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
@@ -113,7 +114,8 @@ class ActivitiesByTypeScreen extends StatelessWidget {
                         currencyCode: resolvedCurrency, // ✅ now resolved
                         imageBaseUrl: resolvedBase, // ✅ ensure absolute URL
                         onPressed: () {
-                          Navigator.of(context).pushNamed(
+                          LegacyNav.pushNamed(
+                            context,
                             Routes.userActivityDetail,
                             arguments: UserActivityDetailRouteArgs(
                               itemId: it.id,

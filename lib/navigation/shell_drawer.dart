@@ -1,15 +1,20 @@
 // ===== Flutter 3.35.x =====
 // ShellDrawer — guest-aware drawer navigation (user + business).
-// Guest: token == '' → only Home/Explore open; others show NotLoggedInGate.
+// Rule: token == '' → only Home/Explore open; others show NotLoggedInGate.
+// Uses go_router; replaces Navigator.pushNamed with context.pushNamed.
 
 import 'dart:convert' show base64Url, jsonDecode, utf8; // parse JWT
 import 'package:flutter/material.dart'; // Flutter UI
 import 'package:flutter/services.dart'; // Haptics + sys UI
 import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC
+import 'package:go_router/go_router.dart'; // go_router
 
-import 'package:hobby_sphere/app/router/router.dart'; // routes
-import 'package:hobby_sphere/core/constants/app_role.dart'; // role enum
-import 'package:hobby_sphere/core/network/globals.dart' as g; // base url
+import 'package:hobby_sphere/app/router/router.dart'; // route names + navigatorKey
+import 'package:hobby_sphere/core/constants/app_role.dart';
+import 'package:hobby_sphere/core/network/globals.dart' as g;
+
+// If your routes carry typed args via `extra`, import them here:
+import 'package:hobby_sphere/features/activities/routes_activity.dart';
 
 // ==== Business Activity ====
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
@@ -104,7 +109,7 @@ import 'package:hobby_sphere/features/activities/user/userProfile/presentation/s
 import 'package:hobby_sphere/shared/widgets/not_logged_in_gate.dart';
 
 // ==== Localization ====
-import 'package:hobby_sphere/l10n/app_localizations.dart'; // l10n
+import 'package:hobby_sphere/l10n/app_localizations.dart';
 
 class ShellDrawer extends StatefulWidget {
   final AppRole role; // role
@@ -127,109 +132,102 @@ class ShellDrawer extends StatefulWidget {
   });
 
   @override
-  State<ShellDrawer> createState() => _ShellDrawerState(); // state
+  State<ShellDrawer> createState() => _ShellDrawerState();
 }
 
 class _ShellDrawerState extends State<ShellDrawer> {
   int _index = 0; // selected tab
 
   // quick guest flag
-  bool get _isGuest => widget.token.trim().isEmpty; // guest if empty
+  bool get _isGuest => widget.token.trim().isEmpty;
 
   // server root without /api
-  String _serverRoot() {
-    final base = (g.appServerRoot ?? ''); // base
-    return base.replaceFirst(RegExp(r'/api/?$'), ''); // strip
-  }
+  String _serverRoot() =>
+      (g.appServerRoot ?? '').replaceFirst(RegExp(r'/api/?$'), '');
 
   // decode jwt payload safely
   Map<String, dynamic>? _jwtPayload(String token) {
     try {
       final parts = token.split('.'); // header.payload.sig
-      if (parts.length != 3) return null; // invalid
+      if (parts.length != 3) return null;
       final decoded = utf8.decode(
         base64Url.decode(base64Url.normalize(parts[1])),
-      ); // decode
-      final obj = jsonDecode(decoded); // json
-      return (obj is Map<String, dynamic>) ? obj : null; // map
+      );
+      final obj = jsonDecode(decoded);
+      return (obj is Map<String, dynamic>) ? obj : null;
     } catch (_) {
-      return null; // error
+      return null;
     }
   }
 
-  // extract id
+  // extract id / names
   int? _extractUserId(String token) {
-    final p = _jwtPayload(token); // payload
-    if (p == null) return null; // none
-    final raw = p['id'] ?? p['userId']; // keys
-    if (raw is num) return raw.toInt(); // number
-    return int.tryParse('$raw'); // string
+    final p = _jwtPayload(token);
+    final raw = p?['id'] ?? p?['userId'];
+    if (raw is num) return raw.toInt();
+    return int.tryParse('$raw');
   }
 
-  // extract names
   String? _extractFirstName(String token) {
-    final p = _jwtPayload(token); // payload
-    if (p == null) return null; // none
-    final fn = (p['firstName'] ?? p['given_name'])?.toString(); // keys
-    if (fn != null && fn.trim().isNotEmpty) return fn.trim(); // value
-    final name = p['name']?.toString(); // fallback
+    final p = _jwtPayload(token);
+    final fn = (p?['firstName'] ?? p?['given_name'])?.toString();
+    if (fn != null && fn.trim().isNotEmpty) return fn.trim();
+    final name = p?['name']?.toString();
     if (name != null && name.trim().isNotEmpty) {
-      final parts = name.trim().split(RegExp(r'\s+')); // split
-      if (parts.isNotEmpty) return parts.first; // first
+      final parts = name.trim().split(RegExp(r'\s+'));
+      if (parts.isNotEmpty) return parts.first;
     }
-    return null; // none
+    return null;
   }
 
   String? _extractLastName(String token) {
-    final p = _jwtPayload(token); // payload
-    if (p == null) return null; // none
-    final ln = (p['lastName'] ?? p['family_name'])?.toString(); // keys
-    if (ln != null && ln.trim().isNotEmpty) return ln.trim(); // value
-    final name = p['name']?.toString(); // fallback
+    final p = _jwtPayload(token);
+    final ln = (p?['lastName'] ?? p?['family_name'])?.toString();
+    if (ln != null && ln.trim().isNotEmpty) return ln.trim();
+    final name = p?['name']?.toString();
     if (name != null && name.trim().isNotEmpty) {
-      final parts = name.trim().split(RegExp(r'\s+')); // split
-      if (parts.length > 1) return parts.sublist(1).join(' '); // rest
+      final parts = name.trim().split(RegExp(r'\s+'));
+      if (parts.length > 1) return parts.sublist(1).join(' ');
     }
-    return null; // none
+    return null;
   }
 
   // ---- DI for User Home / Explore ----
-  late final _homeRepo = HomeRepositoryImpl(HomeService()); // repo
-  late final _getInterest = GetInterestBasedItems(_homeRepo); // UC
-  late final _getUpcoming = GetUpcomingGuestItems(_homeRepo); // UC
+  late final _homeRepo = HomeRepositoryImpl(HomeService());
+  late final _getInterest = GetInterestBasedItems(_homeRepo);
+  late final _getUpcoming = GetUpcomingGuestItems(_homeRepo);
   late final _getItemTypes = GetItemTypes(
     ItemTypeRepositoryImpl(ItemTypesService()),
-  ); // UC
+  );
   late final _getItemsByType = GetItemsByType(
     ItemsRepositoryImpl(ItemsService()),
-  ); // UC
+  );
 
   // parsed identity (safe if guest)
-  late final int _userId = _extractUserId(widget.token) ?? 0; // id or 0
-  late final String? _firstName = _extractFirstName(widget.token); // fn
-  late final String? _lastName = _extractLastName(widget.token); // ln
+  late final int _userId = _extractUserId(widget.token) ?? 0;
+  late final String? _firstName = _extractFirstName(widget.token);
+  late final String? _lastName = _extractLastName(widget.token);
 
   // ===== Build user profile page (service -> repo -> UCs -> bloc -> screen) =====
   Widget _buildUserProfilePage() {
-    final service = upsvc.UserProfileService(); // svc
-    final repo = UserProfileRepositoryImpl(service); // repo
-    final getUser = GetUserProfile(repo); // uc
-    final toggleVis = ToggleUserVisibility(repo); // uc
-    final setStatus = UpdateUserStatus(repo); // uc
+    final service = upsvc.UserProfileService();
+    final repo = UserProfileRepositoryImpl(service);
+    final getUser = GetUserProfile(repo);
+    final toggleVis = ToggleUserVisibility(repo);
+    final setStatus = UpdateUserStatus(repo);
 
     return MultiRepositoryProvider(
-      providers: [RepositoryProvider.value(value: setStatus)], // expose UC
+      providers: [RepositoryProvider.value(value: setStatus)],
       child: BlocProvider(
         create: (_) => UserProfileBloc(
-          // bloc
           getUser: getUser,
           toggleVisibility: toggleVis,
           updateStatus: setStatus,
-        )..add(LoadUserProfile(widget.token, _userId)), // initial load
+        )..add(LoadUserProfile(widget.token, _userId)),
         child: UserProfileScreen(
-          token: widget.token, // token
-          userId: _userId, // id
-          onChangeLocale: widget.onChangeLocale, // i18n
+          token: widget.token,
+          userId: _userId,
+          onChangeLocale: widget.onChangeLocale,
         ),
       ),
     );
@@ -237,67 +235,68 @@ class _ShellDrawerState extends State<ShellDrawer> {
 
   // ===== USER PAGES (guest-aware) =====
   late final List<Widget> _userPages = <Widget>[
-    // 0) Home — your UserHomeScreen already handles guest safely (no unread cubit)
+    // 0) Home — UserHomeScreen already handles guest safely
     UserHomeScreen(
-      firstName: _isGuest ? null : _firstName, // hide if guest
-      lastName: _isGuest ? null : _lastName, // hide if guest
-      token: widget.token, // '' in guest
-      userId: _isGuest ? 0 : _userId, // 0 in guest
-      getInterestBased: _getInterest, // UC
-      getUpcomingGuest: _getUpcoming, // UC
-      getItemTypes: _getItemTypes, // UC
-      getItemsByType: _getItemsByType, // UC
+      firstName: _isGuest ? null : _firstName,
+      lastName: _isGuest ? null : _lastName,
+      token: widget.token,
+      userId: _isGuest ? 0 : _userId,
+      getInterestBased: _getInterest,
+      getUpcomingGuest: _getUpcoming,
+      getItemTypes: _getItemTypes,
+      getItemsByType: _getItemsByType,
     ),
 
     // 1) Explore — open for guest
     ExploreScreen(
-      token: widget.token, // '' in guest
-      getItemTypes: _getItemTypes, // UC
-      getItemsByType: _getItemsByType, // UC
-      getUpcomingGuest: _getUpcoming, // UC
+      token: widget.token,
+      getItemTypes: _getItemTypes,
+      getItemsByType: _getItemsByType,
+      getUpcomingGuest: _getUpcoming,
       // currency getter wrapped in try/catch to avoid auth crash in guest
       getCurrencyCode: () async {
         try {
           final uc = GetCurrentCurrency(
             CurrencyRepositoryImpl(CurrencyService()),
           );
-          return (await uc(widget.token)).code; // code
+          return (await uc(widget.token)).code;
         } catch (_) {
-          return null; // fallback null
+          return null;
         }
       },
-      imageBaseUrl: _serverRoot(), // absolute base
+      imageBaseUrl: _serverRoot(),
     ),
 
     // 2) Community — gate for guest
     _isGuest
         ? NotLoggedInGate(
-            onLogin: () => Navigator.pushNamed(context, Routes.login),
-            onRegister: () => Navigator.pushNamed(context, Routes.register),
+            onLogin: () => context.pushNamed(Routes.login),
+            onRegister: () => context.pushNamed(Routes.register),
           )
         : CommunityScreen(
-            token: widget.token, // token
-            userId: _userId, // id
-            imageBaseUrl: _serverRoot(), // base
+            token: widget.token,
+            userId: _userId,
+            imageBaseUrl: _serverRoot(),
           ),
 
     // 3) Tickets — gate for guest
     _isGuest
         ? NotLoggedInGate(
-            onLogin: () => Navigator.pushNamed(context, Routes.login),
-            onRegister: () => Navigator.pushNamed(context, Routes.register),
+            onLogin: () => context.pushNamed(Routes.login),
+            onRegister: () => context.pushNamed(Routes.register),
           )
-        : UserTicketsScreen(token: widget.token), // tickets
+        : UserTicketsScreen(token: widget.token),
+
     // 4) Profile — gate for guest
     _isGuest
         ? NotLoggedInGate(
-            onLogin: () => Navigator.pushNamed(context, Routes.login),
-            onRegister: () => Navigator.pushNamed(context, Routes.register),
+            onLogin: () => context.pushNamed(Routes.login),
+            onRegister: () => context.pushNamed(Routes.register),
           )
-        : _buildUserProfilePage(), // profile
+        : _buildUserProfilePage(),
   ];
 
-  // ===== BUSINESS PAGES (same as your latest) =====
+  // ===== BUSINESS PAGES (with go_router for navigation) =====
   late final List<Widget> _businessPages = <Widget>[
     // 0) Business Home with notifications
     MultiBlocProvider(
@@ -335,10 +334,13 @@ class _ShellDrawerState extends State<ShellDrawer> {
         token: widget.token,
         businessId: widget.businessId,
         onCreate: (ctx, bid) {
-          Navigator.pushNamed(
-            ctx,
+          // go_router: pass typed args in `extra`
+          ctx.pushNamed(
             Routes.createBusinessActivity,
-            arguments: CreateActivityRouteArgs(businessId: bid, token: widget.token),
+            extra: CreateActivityRouteArgs(
+              businessId: bid,
+              token: widget.token,
+            ),
           );
         },
       ),
@@ -397,45 +399,27 @@ class _ShellDrawerState extends State<ShellDrawer> {
     ),
 
     // 4) Profile
-   // 4. Profile
     BlocProvider(
       create: (_) {
-        // create the HTTP service for business profile
-        final businessService = BusinessService(); // simple service
+        final businessService = BusinessService(); // low-level API
+        final businessRepo = BusinessRepositoryImpl(businessService);
 
-        // wrap service in repository
-        final businessRepo = BusinessRepositoryImpl(businessService); // repo
-
-        // build the bloc with all needed usecases
         return BusinessProfileBloc(
-            getBusinessById: GetBusinessById(businessRepo), // load profile
-            updateBusinessVisibility: UpdateBusinessVisibility(
-              businessRepo,
-            ), // toggle public/private
-            updateBusinessStatus: UpdateBusinessStatus(
-              businessRepo,
-            ), // change status
-            deleteBusiness: DeleteBusiness(businessRepo), // delete account
-            checkStripeStatus: CheckStripeStatus(
-              businessRepo,
-            ), // check stripe connected
-            createStripeConnectLink: CreateStripeConnectLink(
-              businessRepo,
-            ), // NEW: create onboarding link
-          )
-          // immediately load the profile data when the bloc is created
-          ..add(
-            LoadBusinessProfile(widget.token, widget.businessId),
-          ); // initial load
+          getBusinessById: GetBusinessById(businessRepo),
+          updateBusinessVisibility: UpdateBusinessVisibility(businessRepo),
+          updateBusinessStatus: UpdateBusinessStatus(businessRepo),
+          deleteBusiness: DeleteBusiness(businessRepo),
+          checkStripeStatus: CheckStripeStatus(businessRepo),
+          createStripeConnectLink: CreateStripeConnectLink(businessRepo),
+        )..add(LoadBusinessProfile(widget.token, widget.businessId));
       },
       child: BusinessProfileScreen(
-        token: widget.token, // pass token to screen
-        businessId: widget.businessId, // pass business id to screen
-        onTabChange: (i) => setState(() => _index = i), // allow tab change
-        onChangeLocale: widget.onChangeLocale, // pass locale callback
+        token: widget.token,
+        businessId: widget.businessId,
+        onTabChange: (i) => setState(() => _index = i),
+        onChangeLocale: widget.onChangeLocale,
       ),
     ),
-
   ];
 
   // ===== Drawer menu models (labels + icons + pages + optional badges) =====
@@ -528,23 +512,19 @@ class _ShellDrawerState extends State<ShellDrawer> {
       ),
     );
 
-    final scheme = Theme.of(context).colorScheme; // colors
-    final menu =
-        widget.role ==
-            AppRole
-                .business // choose menu
+    final scheme = Theme.of(context).colorScheme;
+    final menu = widget.role == AppRole.business
         ? _businessMenu(context)
         : _userMenu(context);
 
-    _index = _index.clamp(0, menu.length - 1); // clamp index
+    _index = _index.clamp(0, menu.length - 1);
 
     return Scaffold(
-      drawerScrimColor: Colors.black.withOpacity(0.35), // dim bg
+      drawerScrimColor: Colors.black.withOpacity(0.35),
       drawer: Drawer(
-        width: 304, // drawer width
-        backgroundColor: scheme.surface, // bg color
+        width: 304,
+        backgroundColor: scheme.surface,
         shape: const RoundedRectangleBorder(
-          // rounded edge
           borderRadius: BorderRadius.only(
             topRight: Radius.circular(24),
             bottomRight: Radius.circular(24),
@@ -552,19 +532,18 @@ class _ShellDrawerState extends State<ShellDrawer> {
         ),
         child: SafeArea(
           child: _DrawerContent(
-            // list builder
-            items: menu, // items
-            index: _index, // selected
+            items: menu,
+            index: _index,
             onTap: (i) {
               Navigator.pop(context); // close drawer
-              if (i == _index) return; // ignore same
-              HapticFeedback.selectionClick(); // haptic
+              if (i == _index) return; // ignore if same
+              HapticFeedback.selectionClick(); // small haptic
               setState(() => _index = i); // change page
             },
             iconBaseColor: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.88) // dark color
-                : Colors.black.withOpacity(0.72), // light color
-            activeColor: scheme.primary, // active color
+                ? Colors.white.withOpacity(0.88)
+                : Colors.black.withOpacity(0.72),
+            activeColor: scheme.primary,
           ),
         ),
       ),
@@ -576,16 +555,15 @@ class _ShellDrawerState extends State<ShellDrawer> {
               alignment: Alignment.centerLeft,
               child: Builder(
                 builder: (ctx) => IconButton(
-                  icon: const Icon(Icons.menu), // menu icon
-                  onPressed: () => Scaffold.of(ctx).openDrawer(), // open drawer
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
                 ),
               ),
             ),
             Expanded(
               child: IndexedStack(
-                // keep state
-                index: _index, // active
-                children: menu.map((m) => m.page).toList(), // pages
+                index: _index, // keep state
+                children: menu.map((m) => m.page).toList(),
               ),
             ),
           ],
@@ -597,12 +575,11 @@ class _ShellDrawerState extends State<ShellDrawer> {
 
 // ===== Drawer content =====
 class _DrawerContent extends StatelessWidget {
-  final List<({String title, IconData icon, Widget page, int? badge})>
-  items; // items
-  final int index; // selected
-  final ValueChanged<int> onTap; // tap callback
-  final Color iconBaseColor; // base icon
-  final Color activeColor; // active color
+  final List<({String title, IconData icon, Widget page, int? badge})> items;
+  final int index;
+  final ValueChanged<int> onTap;
+  final Color iconBaseColor;
+  final Color activeColor;
 
   const _DrawerContent({
     required this.items,
@@ -615,26 +592,26 @@ class _DrawerContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scrollbar(
-      thumbVisibility: true, // always visible
-      radius: const Radius.circular(12), // rounded thumb
-      thickness: 4, // width
+      thumbVisibility: true,
+      radius: const Radius.circular(12),
+      thickness: 4,
       child: ListView(
-        padding: EdgeInsets.zero, // no extra padding
+        padding: EdgeInsets.zero,
         children: [
-          const Divider(height: 1), // top line
+          const Divider(height: 1),
           ...List.generate(items.length, (i) {
-            final it = items[i]; // item
+            final it = items[i];
             return _AnimatedDrawerTile(
-              icon: it.icon, // icon
-              label: it.title, // title
-              selected: i == index, // is selected
-              onTap: () => onTap(i), // choose
-              iconBaseColor: iconBaseColor, // color
-              activeColor: activeColor, // active color
-              badge: it.badge, // optional badge
+              icon: it.icon,
+              label: it.title,
+              selected: i == index,
+              onTap: () => onTap(i),
+              iconBaseColor: iconBaseColor,
+              activeColor: activeColor,
+              badge: it.badge,
             );
           }),
-          const Divider(height: 1), // bottom line
+          const Divider(height: 1),
         ],
       ),
     );
@@ -643,13 +620,13 @@ class _DrawerContent extends StatelessWidget {
 
 // ===== Drawer tile with tiny animation =====
 class _AnimatedDrawerTile extends StatelessWidget {
-  final IconData icon; // icon
-  final String label; // label
-  final bool selected; // selected?
-  final VoidCallback onTap; // tap
-  final Color iconBaseColor; // base icon color
-  final Color activeColor; // active color
-  final int? badge; // optional badge
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color iconBaseColor;
+  final Color activeColor;
+  final int? badge;
 
   const _AnimatedDrawerTile({
     required this.icon,
@@ -663,58 +640,46 @@ class _AnimatedDrawerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const duration = Duration(milliseconds: 220); // anim speed
+    const duration = Duration(milliseconds: 220);
 
     return InkWell(
-      onTap: onTap, // select
+      onTap: onTap,
       child: TweenAnimationBuilder<double>(
-        duration: duration, // timing
-        curve: Curves.easeOutCubic, // easing
-        tween: Tween<double>(begin: 0, end: selected ? 1 : 0), // 0..1
+        duration: duration,
+        curve: Curves.easeOutCubic,
+        tween: Tween<double>(begin: 0, end: selected ? 1 : 0),
         builder: (context, t, _) {
-          final Color ic = Color.lerp(
-            iconBaseColor,
+          final Color ic = Color.lerp(iconBaseColor, activeColor, t)!;
+          final Color textColor = Color.lerp(
+            Theme.of(context).colorScheme.onSurface,
             activeColor,
             t,
-          )!; // icon color
-          final Color textColor = Color.lerp(
-            Theme.of(context).colorScheme.onSurface, // base text
-            activeColor, // active text
-            t, // mix
           )!;
 
           return Container(
-            margin: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 6,
-            ), // outer
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ), // inner
+            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14), // rounded
-              color: activeColor.withOpacity(0.08 * t), // active tint
+              borderRadius: BorderRadius.circular(14),
+              color: activeColor.withOpacity(0.08 * t),
             ),
             child: Row(
               children: [
-                Icon(icon, color: ic), // icon
-                const SizedBox(width: 12), // gap
+                Icon(icon, color: ic),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    label, // title
+                    label,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: textColor, // color
-                      fontWeight: t > 0
-                          ? FontWeight.w600
-                          : FontWeight.w500, // weight
+                      color: textColor,
+                      fontWeight: t > 0 ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
                 ),
-                if (badge != null && badge! > 0) // show badge if any
+                if (badge != null && badge! > 0)
                   Badge(
                     label: Text(
-                      badge! > 99 ? '99+' : '$badge', // cap 99+
+                      badge! > 99 ? '99+' : '$badge',
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,

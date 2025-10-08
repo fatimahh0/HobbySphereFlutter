@@ -1,6 +1,6 @@
-// ===== Flutter 3.35.x =====
-// NavBootstrap: load theme → decide navigation type (bottom/top/drawer)
-// → build the matching shell and PASS role + token + businessId + callbacks.
+// lib/navigation/nav_bootstrap.dart
+// Loads remote theme / chooses nav type (bottom/top/drawer), then builds the shell.
+// Receives real callbacks from AppRouter and forwards them to the shell widgets.
 
 import 'package:flutter/material.dart';
 import 'package:hobby_sphere/features/activities/common/data/services/theme_service.dart';
@@ -18,7 +18,7 @@ class NavBootstrap extends StatefulWidget {
   final String token;
   final int businessId;
 
-  // 👇 NEW: callbacks injected from AppRouter
+  // callbacks injected from router
   final void Function(Locale) onChangeLocale;
   final VoidCallback onToggleTheme;
 
@@ -27,8 +27,8 @@ class NavBootstrap extends StatefulWidget {
     required this.role,
     required this.token,
     required this.businessId,
-    required this.onChangeLocale, // 👈 required
-    required this.onToggleTheme, // 👈 required
+    required this.onChangeLocale,
+    required this.onToggleTheme,
   });
 
   @override
@@ -73,10 +73,9 @@ class _NavBootstrapState extends State<NavBootstrap> {
               role: widget.role,
               token: widget.token,
               businessId: widget.businessId,
-              onChangeLocale: widget.onChangeLocale, // 👈 forward
-              onToggleTheme: widget.onToggleTheme, // 👈 forward
+              onChangeLocale: widget.onChangeLocale,
+              onToggleTheme: widget.onToggleTheme,
             );
-
           case AppNavType.drawer:
             return ShellDrawer(
               role: widget.role,
@@ -85,7 +84,6 @@ class _NavBootstrapState extends State<NavBootstrap> {
               onChangeLocale: widget.onChangeLocale,
               onToggleTheme: widget.onToggleTheme,
             );
-
           case AppNavType.bottom:
           default:
             return ShellBottom(

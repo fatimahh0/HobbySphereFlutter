@@ -13,7 +13,7 @@ import '../bloc/friends/friends_event.dart'; // friends events
 import '../bloc/friends/friends_state.dart'; // friends state
 import '../widgets/user_tile.dart'; // friend row tile
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
-
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 import 'add_friend_screen.dart'; // add friends page
 
 class ChatHomeScreen extends StatefulWidget {
@@ -141,7 +141,8 @@ class _ChatHomeScreenState extends State<ChatHomeScreen> {
                         subtitle: l10.friendChat, // small hint
                         onTap: () {
                           // ✅ open conversation and PASS myId + peer together
-                          Navigator.of(context).pushNamed(
+                          LegacyNav.pushNamed(
+                            context,
                             Routes.friendship, // route name
                             arguments: ConversationRouteArgs(
                               myId: widget

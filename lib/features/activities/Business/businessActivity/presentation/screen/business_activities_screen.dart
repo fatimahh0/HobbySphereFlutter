@@ -10,7 +10,7 @@ import 'package:hobby_sphere/features/activities/Business/businessActivity/prese
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
 import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_state';
 import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/ReopenItemPage.dart';
-
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
@@ -200,7 +200,7 @@ class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
                           location: a.location,
                           imageUrl: imgUrl,
                           onView: () async {
-                            final result = await Navigator.pushNamed(
+                            final result = await LegacyNav.pushNamed(
                               context,
                               Routes.businessActivityDetails,
                               arguments: BusinessActivityDetailsRouteArgs(
@@ -220,7 +220,7 @@ class _BusinessActivitiesScreenState extends State<BusinessActivitiesScreen> {
                           },
 
                           onEdit: () {
-                            Navigator.pushNamed(
+                            LegacyNav.pushNamed(
                               context,
                               Routes.editBusinessActivity,
                               arguments: EditActivityRouteArgs(

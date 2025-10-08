@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/core/network/globals.dart'
     as g; // + add: to resolve absolute image URLs
-
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 // Bloc details
 import 'package:hobby_sphere/features/activities/Business/BusinessActivityDetails/presentation/bloc/business_activity_details_bloc.dart';
 import 'package:hobby_sphere/features/activities/Business/BusinessActivityDetails/presentation/bloc/business_activity_details_event.dart';
@@ -263,7 +263,7 @@ class _DetailsView extends StatelessWidget {
                       child: AppButton(
                         label: t.activityDetailsEdit, // edit
                         onPressed: () {
-                          Navigator.pushNamed(
+                          LegacyNav.pushNamed(
                             context,
                             Routes.editBusinessActivity,
                             arguments: EditActivityRouteArgs(
@@ -281,7 +281,7 @@ class _DetailsView extends StatelessWidget {
                       child: AppButton(
                         label: t.activityDetailsViewInsights, // insights
                         onPressed: () {
-                          Navigator.pushNamed(
+                          LegacyNav.pushNamed(
                             context,
                             Routes.businessInsights,
                             arguments: BusinessInsightsRouteArgs(

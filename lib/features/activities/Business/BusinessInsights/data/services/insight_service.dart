@@ -6,14 +6,14 @@ class InsightService {
 
   Future<Response> fetchBusinessBookings(String token, {int? itemId}) {
     return _dio.get(
-      "${g.appServerRoot}/api/bookings/mybusinessbookings",
+      "${g.appServerRoot}/bookings/mybusinessbookings",
       options: Options(headers: {"Authorization": "Bearer $token"}),
     );
   }
 
   Future<Response> markBookingPaid(String token, int bookingId) {
     return _dio.put(
-      "${g.appServerRoot}/api/bookings/mark-paid/$bookingId",
+      "${g.appServerRoot}/bookings/mark-paid/$bookingId",
       options: Options(headers: {"Authorization": "Bearer $token"}),
     );
   }

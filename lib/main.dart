@@ -1,54 +1,117 @@
 // lib/main.dart
-import 'dart:async'; // zone
-import 'dart:io'; // Platform check (Android/iOS)
-import 'package:flutter/foundation.dart'; // debugPrint
-import 'package:flutter/material.dart'; // UI
-import 'package:flutter/services.dart';
-import 'package:flutter_stripe/flutter_stripe.dart'; // Stripe SDK
+// Flutter 3.35.x — single entrypoint (no duplicates).
+// - Initializes Stripe (safe try/catch).
+// - Builds Dio based on Env.apiBaseUrl or ApiConfig.load() fallback.
+// - Exposes Dio + base URLs in globals (g.*) for the rest of the app.
+// - Boots the app inside runZonedGuarded and logs uncaught errors.
 
-import 'package:shared_preferences/shared_preferences.dart'; // prefs
-import 'package:hobby_sphere/core/network/api_config.dart'; // cfg
-import 'package:hobby_sphere/core/network/api_client.dart'; // dio client
-import 'package:hobby_sphere/core/network/globals.dart' as g; // globals
-import 'app/app.dart'; // root widget
+import 'dart:async';
+import 'dart:io'; // (optional) if you need Platform checks later
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:hobby_sphere/config/env.dart';
+import 'package:hobby_sphere/core/network/api_config.dart';
+import 'package:hobby_sphere/core/network/globals.dart' as g;
+
+import 'app/app.dart'; // Root widget (MaterialApp.router lives there)
+
+Future<void> _initStripe() async {
+  try {
+    // TODO: replace with your live/test keys & merchant id as needed.
+    Stripe.publishableKey =
+        'pk_test_51RnLY8ROH9W55MgTYuuYpaStORtbLEggQMGOYxzYacMiDUpbfifBgThEzcMgFnvyMaskalQ0WUcQv08aByizug1I00Wcq3XHll';
+    Stripe.urlScheme = 'flutterstripe'; // Android intent / iOS URL types
+    Stripe.merchantIdentifier = 'merchant.com.hobbysphere'; // iOS merchant ID
+    await Stripe.instance.applySettings();
+    debugPrint('[Stripe] Initialized');
+  } on PlatformException catch (e, st) {
+    debugPrint(
+      '[Stripe] PlatformException code=${e.code} msg=${e.message} det=${e.details}',
+    );
+    debugPrint('$st');
+  } catch (e, st) {
+    debugPrint('[Stripe] Unexpected init error: $e');
+    debugPrint('$st');
+  }
+}
+
+Future<void> _initNetworking() async {
+  // 1) Resolve server root (prefer Env.apiBaseUrl, fallback to ApiConfig.load()).
+  String serverRoot;
+  if (Env.apiBaseUrl.trim().isNotEmpty) {
+    var s = Env.apiBaseUrl.trim();
+    // Normalize: remove trailing /api and final slashes; ensure protocol.
+    if (s.endsWith('/api')) s = s.substring(0, s.length - 4);
+    s = s.replaceAll(RegExp(r'/+$'), '');
+    if (!s.startsWith('http://') && !s.startsWith('https://')) {
+      s = 'http://$s';
+    }
+    serverRoot = s; // e.g. http://192.168.1.10:8080
+  } else {
+    final cfg = await ApiConfig.load(); // e.g. reads lib/config/hostIp.json
+    serverRoot = cfg.serverRoot; // already normalized there
+  }
+
+  // 2) Build base API URL and store in globals.
+  final baseWithApi = '$serverRoot/api';
+  g.appServerRoot = baseWithApi; // used across the app
+
+  // 3) Create Dio once and expose it via globals.
+  final dio =
+      Dio(
+          BaseOptions(
+            baseUrl: baseWithApi,
+            connectTimeout: const Duration(seconds: 30),
+            receiveTimeout: const Duration(seconds: 60),
+            sendTimeout: const Duration(seconds: 30),
+            headers: const {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+          ),
+        )
+        ..interceptors.add(
+          LogInterceptor(
+            requestBody: true,
+            responseBody: true,
+            requestHeader: false,
+            responseHeader: false,
+          ),
+        );
+
+  // 4) Restore token (if any) to keep the user signed in.
+  final sp = await SharedPreferences.getInstance();
+  final savedToken = sp.getString('token');
+  if ((savedToken ?? '').isNotEmpty) {
+    dio.options.headers['Authorization'] = 'Bearer $savedToken';
+    g.token = savedToken; // keep in your globals if you use them elsewhere
+  }
+
+  g.appDio = dio; // make it available globally
+}
 
 Future<void> main() async {
-  runZonedGuarded(
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Surface all framework errors to the console in dev.
+  FlutterError.onError = (details) {
+    FlutterError.dumpErrorToConsole(details);
+  };
+
+  await runZonedGuarded(
     () async {
-      WidgetsFlutterBinding.ensureInitialized(); // init Flutter
-      try {
-        Stripe.publishableKey =
-            'pk_test_51RnLY8ROH9W55MgTYuuYpaStORtbLEggQMGOYxzYacMiDUpbfifBgThEzcMgFnvyMaskalQ0WUcQv08aByizug1I00Wcq3XHll'; // test key
-        Stripe.urlScheme = 'flutterstripe'; // must match Manifest scheme
-        Stripe.merchantIdentifier =
-            'merchant.com.hobbysphere'; // iOS ok on Android
-
-        await Stripe.instance.applySettings(); // initialize the plugin
-        debugPrint('[Stripe] init OK'); // log success
-      } on PlatformException catch (e, st) {
-        debugPrint(
-          '[Stripe] init FAIL code=${e.code} msg=${e.message} details=${e.details}',
-        );
-        debugPrint('$st'); // log full stack
-      } catch (e, st) {
-        debugPrint('[Stripe] init FAIL unexpected: $e\n$st');
-      }
-
-      // ---- your existing boot logic (unchanged) ----
-      final cfg = await ApiConfig.load(); // load server cfg
-      final apiClient = ApiClient(cfg); // build dio
-      final sp = await SharedPreferences.getInstance(); // prefs
-      final savedToken = sp.getString('token'); // jwt from storage
-      if ((savedToken ?? '').isNotEmpty) {
-        apiClient.setToken(savedToken!); // set on client
-        g.Token = savedToken; // cache in globals
-      }
-      g.appDio = apiClient.dio; // expose dio
-      g.appServerRoot = cfg.serverRoot; // expose base
-     runApp(App(config: cfg)); // start app
+      await _initStripe();
+      await _initNetworking();
+      runApp(const App()); // App builds MaterialApp.router
     },
     (error, stack) {
-      debugPrint('UNCAUGHT in main zone: $error\n$stack'); // safety
+      debugPrint('UNCAUGHT: $error');
+      debugPrintStack(stackTrace: stack);
     },
   );
 }

@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/utils/PdfHelper.dart';
@@ -37,7 +38,7 @@ class BusinessAnalyticsScreen extends StatelessWidget {
         shape: const CircleBorder(),
         child: const Icon(Icons.reviews, color: Colors.white),
         onPressed: () {
-          Navigator.pushNamed(
+          LegacyNav.pushNamed(
             context,
             Routes.businessReviews,
             arguments: BusinessReviewsRouteArgs(

@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/app/bootstrap/start_user_realtime.dart' as rt;
 import 'package:hobby_sphere/app/router/router.dart';
-
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
@@ -88,7 +88,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final bearer = _bearerOrEmpty(widget.token); // format token
 
     // push named route
-    Navigator.of(context).pushNamed(
+    LegacyNav.pushNamed(
+      context,
       Routes.userActivityDetail, // route name
       arguments: UserActivityDetailRouteArgs(
         itemId: itemId, // required id

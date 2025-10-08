@@ -5,7 +5,7 @@ import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/theme/app_colors.dart';
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';
-
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 import 'package:hobby_sphere/features/activities/user/common/presentation/widgets/activity_card.dart';
 import '../../domain/usecases/get_upcoming_guest_items.dart';
 import '../bloc/upcoming/upcoming_bloc.dart';
@@ -117,7 +117,8 @@ class ExploreSection extends StatelessWidget {
                     imageBaseUrl: imageBaseUrl,
                     onPressed: () {
                       // no token here → open as guest (token: null)                    // comment
-                      Navigator.of(context).pushNamed(
+                      LegacyNav.pushNamed(
+                        context,
                         Routes.userActivityDetail, // route
                         arguments: UserActivityDetailRouteArgs(
                           // args

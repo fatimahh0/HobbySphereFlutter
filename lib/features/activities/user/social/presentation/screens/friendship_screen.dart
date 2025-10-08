@@ -11,6 +11,7 @@ import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
 import '../bloc/friends/friends_bloc.dart'; // bloc
 import '../bloc/friends/friends_event.dart'; // events
 import '../bloc/friends/friends_state.dart'; // state
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 
 class FriendshipScreen extends StatefulWidget {
   final int initialTab; // 0 rec / 1 sent / 2 friends
@@ -249,7 +250,8 @@ class _FriendshipScreenState extends State<FriendshipScreen> {
                             b.add(const LoadFriends()); // refresh
                           },
                         ),
-                        onTap: () => Navigator.of(context).pushNamed(
+                        onTap: () => LegacyNav.pushNamed(
+                          context,
                           '/community/chat',
                           arguments: u,
                         ), // open chat

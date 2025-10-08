@@ -6,7 +6,7 @@ import 'dart:io'; // File
 import 'package:dio/dio.dart'; // HTTP + FormData
 import 'package:hobby_sphere/features/activities/user/social/domain/entities/chat_message.dart'; // entity
 import 'package:hobby_sphere/features/activities/user/social/domain/entities/contact_count.dart'; // counts
-import 'package:hobby_sphere/services/token_store.dart'; // token read
+import 'package:hobby_sphere/features/authentication/login&register/data/services/token_store.dart'; // token read
 
 class MessageService {
   final Dio _dio; // http client
@@ -25,7 +25,7 @@ class MessageService {
 
   Future<List<ChatMessage>> conversation(int otherId, int meId) async {
     final res = await _dio.get(
-      '/api/messages/conversation/$otherId', // endpoint
+      '/messages/conversation/$otherId', // endpoint
       options: await _auth(), // auth
     );
     final list = (res.data as List).cast<dynamic>(); // cast list
@@ -62,7 +62,7 @@ class MessageService {
 
     // post multipart form (Dio sets content-type automatically)
     final res = await _dio.post(
-      '/api/messages/send/$to', // endpoint
+      '/messages/send/$to', // endpoint
       data: form, // multipart
       options: await _auth(), // auth
     );
@@ -78,21 +78,21 @@ class MessageService {
 
   Future<void> deleteMessage(int messageId) async {
     await _dio.delete(
-      '/api/messages/$messageId',
+      '/messages/$messageId',
       options: await _auth(),
     ); // delete
   }
 
   Future<void> markRead(int messageId) async {
     await _dio.patch(
-      '/api/messages/$messageId/read',
+      '/messages/$messageId/read',
       options: await _auth(),
     ); // read
   }
 
   Future<List<ContactCount>> countsByContact() async {
     final res = await _dio.get(
-      '/api/messages/count/by-contact',
+      '/messages/count/by-contact',
       options: await _auth(),
     ); // get
     final data = res.data; // payload
@@ -106,7 +106,7 @@ class MessageService {
 
   Future<List<ContactCount>> unreadByContact() async {
     final res = await _dio.get(
-      '/api/messages/unread/by-contact',
+      '/messages/unread/by-contact',
       options: await _auth(),
     ); // get
     final data = res.data; // payload

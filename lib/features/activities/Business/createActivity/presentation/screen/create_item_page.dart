@@ -8,7 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC
 import 'package:hobby_sphere/shared/utils/ion_icon_mapper.dart';
 import 'package:image_picker/image_picker.dart'; // picker
 import 'package:intl/intl.dart'; // dates
-
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
 import 'package:hobby_sphere/shared/widgets/app_button.dart'; // button
 import 'package:hobby_sphere/shared/widgets/app_text_field.dart'; // text field
@@ -148,7 +148,7 @@ class _CreateItemViewState extends State<_CreateItemView> {
 
   // Open Profile to connect Stripe then re-check on return
   Future<void> _goConnectStripe(BuildContext context, int businessId) async {
-    await Navigator.pushNamed(
+    await LegacyNav.pushNamed(
       context,
       Routes.businessProfile, // target profile
       arguments: BusinessProfileRouteArgs(

@@ -15,7 +15,7 @@ import 'package:hobby_sphere/features/activities/user/userProfile/data/services/
 import 'package:hobby_sphere/features/activities/user/userProfile/domain/usecases/get_user_profile.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // l10n
 import 'package:hobby_sphere/core/network/globals.dart' as g; // server root
-
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 // Sections
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/widgets/interest_section.dart';
 import 'package:hobby_sphere/features/activities/user/userHome/presentation/widgets/explore_section.dart';
@@ -98,7 +98,8 @@ class UserHomeScreen extends StatelessWidget {
       );
     }
 
-    Navigator.of(context).pushNamed(
+    LegacyNav.pushNamed(
+      context,
       Routes.userActivityDetail,
       arguments: UserActivityDetailRouteArgs(
         itemId: itemId,

@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/app/router/router.dart';
+import 'package:hobby_sphere/app/router/legacy_nav.dart'; // ✅ Legacy bridge
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/widgets/welcome_section.dart';
 import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
@@ -29,8 +30,6 @@ import 'package:hobby_sphere/l10n/app_localizations.dart';
 import '../bloc/business_home_bloc.dart';
 import '../bloc/business_home_event.dart';
 import '../bloc/business_home_state.dart';
-
-// New: Activity details
 
 class BusinessHomeScreen extends StatelessWidget {
   final String token;
@@ -115,7 +114,7 @@ class _BusinessHomeView extends StatelessWidget {
         WelcomeSection(
           token: context.read<BusinessHomeBloc>().token,
           onOpenNotifications: () async {
-            await Navigator.pushNamed(
+            await LegacyNav.pushNamed(
               context,
               Routes.businessNotifications,
               arguments: BusinessNotificationsRouteArgs(
@@ -123,13 +122,12 @@ class _BusinessHomeView extends StatelessWidget {
                 businessId: businessId,
               ),
             );
-            // 🔁 refresh badge + (optionally) list after returning
+            // 🔁 refresh badge after returning
             final notifBloc = context.read<BusinessNotificationBloc>();
             notifBloc
               ..add(LoadBusinessNotifications())
               ..add(LoadUnreadCount(token));
           },
-
           onOpenCreateActivity: () => onCreate(context, businessId),
         ),
         const HeaderWithBadge(),
@@ -179,9 +177,9 @@ class _BusinessHomeView extends StatelessWidget {
                   SliverList(
                     delegate: SliverChildBuilderDelegate((ctx, index) {
                       final a = state.items[index];
-                      if (a.status.toLowerCase() == 'terminated') {
+                      if (a.status.toLowerCase() == 'terminated')
                         return const SizedBox();
-                      }
+
                       return BusinessListItemCard(
                         id: '${a.id}',
                         title: a.name,
@@ -189,7 +187,7 @@ class _BusinessHomeView extends StatelessWidget {
                         location: a.location,
                         imageUrl: a.imageUrl,
                         onView: () async {
-                          final result = await Navigator.pushNamed(
+                          final result = await LegacyNav.pushNamed<bool>(
                             context,
                             Routes.businessActivityDetails,
                             arguments: BusinessActivityDetailsRouteArgs(
@@ -197,21 +195,15 @@ class _BusinessHomeView extends StatelessWidget {
                               activityId: a.id,
                             ),
                           );
-
                           if (result == true) {
                             context.read<BusinessHomeBloc>().add(
                               const BusinessHomeStarted(),
                             );
                           }
                         },
-
                         onEdit: () {
-                          final rootCtx = Navigator.of(
+                          LegacyNav.pushNamed(
                             context,
-                            rootNavigator: true,
-                          ).context;
-                          Navigator.pushNamed(
-                            rootCtx,
                             Routes.editBusinessActivity,
                             arguments: EditActivityRouteArgs(
                               itemId: a.id,

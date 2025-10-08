@@ -5,11 +5,13 @@ import 'dart:io'; // File for local previews
 import 'package:flutter/material.dart'; // UI
 import 'package:flutter/services.dart'; // PlatformException
 import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 import 'package:image_picker/image_picker.dart'; // camera/gallery
 
 // i18n + routes
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
-import 'package:hobby_sphere/app/router/router.dart' show Routes; // routes
+import 'package:hobby_sphere/app/router/router.dart'
+    show Routes, RegisterEmailRouteArgs; // routes
 
 // shared widgets (use your own implementations)
 import 'package:hobby_sphere/shared/widgets/app_button.dart'; // button
@@ -250,20 +252,22 @@ class _RegisterViewState extends State<_RegisterView> {
                         ),
                         const SizedBox(height: 20),
                         PhoneInput(
-                          initialIso: 'CA', // default
-                          submittedOnce: false, // visuals
+                          initialIso: 'CA',
+                          submittedOnce: false,
                           onChanged: (e164, _, __) {
-                            setState(() => _e164Phone = e164 ?? ''); // save
-                            bloc.add(
-                              RegPhoneChanged(e164 ?? ''),
-                            ); // update bloc
+                            setState(() => _e164Phone = e164 ?? '');
+                            bloc.add(RegPhoneChanged(e164 ?? ''));
                           },
-                          onSwapToEmail: () => Navigator.pushNamed(
+                          onSwapToEmail: () => LegacyNav.pushNamed(
                             context,
-                            Routes.registerEmail, // your route
-                            arguments: {'roleIndex': s.roleIndex}, // keep role
+                            Routes.registerEmail,
+                            arguments: RegisterEmailRouteArgs(
+                              initialRoleIndex:
+                                  s.roleIndex, // keep selected role
+                            ),
                           ),
                         ),
+
                         AnimatedCrossFade(
                           duration: const Duration(milliseconds: 220), // smooth
                           crossFadeState: _showPasswordStage
@@ -645,7 +649,7 @@ class _RegisterViewState extends State<_RegisterView> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                      PillField(
+                        PillField(
                           controller: _bizWebsite,
                           label: t.registerWebsite,
                           onChanged: (v) =>

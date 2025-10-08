@@ -11,7 +11,7 @@ class ThemeService {
   Dio get _dio => g.appDio ?? Dio();
 
   // API path: .../api/themes/active/mobile
-  String get _url => '${g.appServerRoot}/api/themes/active/mobile';
+  String get _url => '${g.appServerRoot}/themes/active/mobile';
 
   // GET and return a Map<String, dynamic>
   Future<Map<String, dynamic>> getActiveMobileTheme() async {

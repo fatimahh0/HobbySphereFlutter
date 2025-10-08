@@ -10,7 +10,7 @@ import 'package:intl/intl.dart'; // Date formatting
 import 'package:google_maps_flutter/google_maps_flutter.dart'; // LatLng
 import 'package:hobby_sphere/core/network/globals.dart'
     as g; // serverRootNoApi()
-
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 // Create Activity stack (repo + usecase)
 import 'package:hobby_sphere/features/activities/Business/createActivity/data/repositories/create_item_repository_impl.dart'; // Create repo
 import 'package:hobby_sphere/features/activities/Business/createActivity/domain/usecases/create_item.dart'; // Create usecase
@@ -218,7 +218,7 @@ class _ReopenItemViewState extends State<_ReopenItemView> {
 
   // Open BusinessProfile to connect Stripe, then re-check on return
   Future<void> _goConnectStripe(BuildContext context, int businessId) async {
-    await Navigator.pushNamed(
+    await LegacyNav.pushNamed(
       context, // Context
       Routes.businessProfile, // Your profile route
       arguments: BusinessProfileRouteArgs(

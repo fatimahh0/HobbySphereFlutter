@@ -1,11 +1,13 @@
 // Flutter 3.35.x
 // BusinessProfileScreen — simple, shows Stripe button, uses BLoC.
+// Uses LegacyNav for all route navigation.
 
 import 'package:flutter/material.dart'; // UI
 import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC
 import 'package:shared_preferences/shared_preferences.dart'; // local storage
 
 import 'package:hobby_sphere/app/router/router.dart'; // routes
+import 'package:hobby_sphere/app/router/legacy_nav.dart'; // ✅ Legacy bridge
 import 'package:hobby_sphere/core/network/globals.dart' as g; // server root
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
 
@@ -31,178 +33,162 @@ class BusinessProfileScreen extends StatelessWidget {
   final void Function(Locale)? onChangeLocale; // optional callback
 
   const BusinessProfileScreen({
-    super.key, // key
-    required this.token, // set token
-    required this.businessId, // set id
-    this.onTabChange, // optional
-    this.onChangeLocale, // optional
+    super.key,
+    required this.token,
+    required this.businessId,
+    this.onTabChange,
+    this.onChangeLocale,
   });
 
   // Helper: get server root without /api
   String _serverRoot() {
-    final base = (g.appServerRoot ?? ''); // take global root
-    return base.replaceFirst(RegExp(r'/api/?$'), ''); // strip /api
+    final base = (g.appServerRoot ?? '');
+    return base.replaceFirst(RegExp(r'/api/?$'), '');
   }
 
   @override
   Widget build(BuildContext context) {
-    final tr = AppLocalizations.of(context)!; // i18n
+    final tr = AppLocalizations.of(context)!;
 
     return BlocBuilder<BusinessProfileBloc, BusinessProfileState>(
       builder: (context, state) {
-        // show spinner while loading
         if (state is BusinessProfileLoading) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()), // spinner
+            body: Center(child: CircularProgressIndicator()),
           );
         }
-        // show error
         if (state is BusinessProfileError) {
-          return Scaffold(
-            body: Center(child: Text(state.message)),
-          ); // error text
+          return Scaffold(body: Center(child: Text(state.message)));
         }
-        // show content
         if (state is BusinessProfileLoaded) {
-          return _buildProfile(context, state, tr); // content
+          return _buildProfile(context, state, tr);
         }
-        // empty if initial
-        return const SizedBox.shrink(); // nothing
+        return const SizedBox.shrink();
       },
     );
   }
 
-  // Content builder
   Widget _buildProfile(
-    BuildContext context, // context
-    BusinessProfileLoaded state, // loaded state
-    AppLocalizations tr, // i18n
+    BuildContext context,
+    BusinessProfileLoaded state,
+    AppLocalizations tr,
   ) {
-    final business = state.business; // business entity
-    final stripeConnected = state.stripeConnected; // stripe flag
-    final theme = Theme.of(context); // theme
-    final serverRoot = _serverRoot(); // server root for images
+    final business = state.business;
+    final stripeConnected = state.stripeConnected;
+    final theme = Theme.of(context);
+    final serverRoot = _serverRoot();
 
-    const double avatarSize = 96; // avatar size
+    const double avatarSize = 96;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background, // bg color
+      backgroundColor: theme.colorScheme.background,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ), // page padding
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           children: [
             // Logo circle
             Center(
               child: Container(
-                width: avatarSize, // width
-                height: avatarSize, // height
+                width: avatarSize,
+                height: avatarSize,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle, // circle
-                  color: theme.colorScheme.surface, // surface color
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.surface,
                   border: Border.all(
-                    color: theme.colorScheme.outlineVariant, // thin border
-                    width: 1, // 1px
+                    color: theme.colorScheme.outlineVariant,
+                    width: 1,
                   ),
                 ),
                 child: ClipOval(
                   child:
-                      (business.logoUrl != null &&
-                          business.logoUrl!.isNotEmpty) // has logo?
+                      (business.logoUrl != null && business.logoUrl!.isNotEmpty)
                       ? Image.network(
-                          '$serverRoot${business.logoUrl}', // full image url
-                          fit: BoxFit.contain, // contain
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.store,
-                            size: 44,
-                          ), // fallback icon
+                          '$serverRoot${business.logoUrl}',
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) =>
+                              const Icon(Icons.store, size: 44),
                         )
-                      : const Icon(Icons.store, size: 44), // default icon
+                      : const Icon(Icons.store, size: 44),
                 ),
               ),
             ),
 
-            const SizedBox(height: 12), // space
+            const SizedBox(height: 12),
             // Business name
             Text(
-              business.name, // name
-              textAlign: TextAlign.center, // center text
+              business.name,
+              textAlign: TextAlign.center,
               style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.primary, // primary color
-                fontWeight: FontWeight.bold, // bold
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
               ),
             ),
 
-            const SizedBox(height: 6), // space
+            const SizedBox(height: 6),
             // Visibility + status
             Text(
-              "${business.isPublicProfile ? tr.publicProfile : tr.privateProfile} | ${business.status}", // info
-              textAlign: TextAlign.center, // center
-              style: theme.textTheme.bodyMedium, // style
+              "${business.isPublicProfile ? tr.publicProfile : tr.privateProfile} | ${business.status}",
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium,
             ),
 
-            const SizedBox(height: 6), // space
+            const SizedBox(height: 6),
             // Motivation line
             Text(
-              tr.businessGrowMessage, // localized text
-              textAlign: TextAlign.center, // center
+              tr.businessGrowMessage,
+              textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
-                fontStyle: FontStyle.italic, // italic
+                fontStyle: FontStyle.italic,
               ),
             ),
 
-            const SizedBox(height: 14), // space
+            const SizedBox(height: 14),
             // Stripe section
-            if (stripeConnected == true) // if connected
+            if (stripeConnected == true)
               Center(
                 child: Text(
-                  tr.stripeAccountConnected, // "Stripe connected"
+                  tr.stripeAccountConnected,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.green, // green text
-                    fontWeight: FontWeight.w600, // semi-bold
+                    color: Colors.green,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               )
             else
               Center(
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.account_balance_wallet), // wallet icon
-                  label: Text(tr.registerOnStripe), // "Register on Stripe"
+                  icon: const Icon(Icons.account_balance_wallet),
+                  label: Text(tr.registerOnStripe),
                   onPressed: () {
-                    // Dispatch event to open Stripe onboarding
                     context.read<BusinessProfileBloc>().add(
                       ConnectStripePressed(
-                        // custom event
-                        token: token, // pass token
-                        businessId: businessId, // pass id
+                        token: token,
+                        businessId: businessId,
                       ),
                     );
                   },
                 ),
               ),
 
-            const SizedBox(height: 18), // space
+            const SizedBox(height: 18),
+
             // ===== Menu tiles =====
             _menuTile(
               context,
-              icon: Icons.edit, // edit icon
-              title: tr.editBusinessInfo, // edit text
+              icon: Icons.edit,
+              title: tr.editBusinessInfo,
               onTap: () async {
-                // Open edit screen
-                final updated = await Navigator.pushNamed(
+                final updated = await LegacyNav.pushNamed<bool>(
                   context,
-                  Routes.editBusiness, // route
+                  Routes.editBusiness,
                   arguments: EditBusinessRouteArgs(
-                    token: token, // pass token
-                    businessId: businessId, // pass id
+                    token: token,
+                    businessId: businessId,
                   ),
                 );
-                // If updated, reload profile
                 if (updated == true && context.mounted) {
                   context.read<BusinessProfileBloc>().add(
-                    LoadBusinessProfile(token, businessId), // reload
+                    LoadBusinessProfile(token, businessId),
                   );
                 }
               },
@@ -210,16 +196,15 @@ class BusinessProfileScreen extends StatelessWidget {
 
             _menuTile(
               context,
-              icon: Icons.notifications, // bell
-              title: tr.notifications, // title
+              icon: Icons.notifications,
+              title: tr.notifications,
               onTap: () {
-                // Open notifications
-                Navigator.pushNamed(
+                LegacyNav.pushNamed(
                   context,
-                  Routes.businessNotifications, // route
+                  Routes.businessNotifications,
                   arguments: BusinessNotificationsRouteArgs(
-                    token: token, // token
-                    businessId: businessId, // id
+                    token: token,
+                    businessId: businessId,
                   ),
                 );
               },
@@ -227,98 +212,90 @@ class BusinessProfileScreen extends StatelessWidget {
 
             _menuTile(
               context,
-              icon: Icons.person_add, // add person
-              title: tr.inviteManager, // title
-              onTap: () => Navigator.pushNamed(
+              icon: Icons.person_add,
+              title: tr.inviteManager,
+              onTap: () => LegacyNav.pushNamed(
                 context,
-                Routes.inviteManager, // route
+                Routes.inviteManager,
                 arguments: InviteManagerRouteArgs(
-                  token: token, // token
-                  businessId: businessId, // id
+                  token: token,
+                  businessId: businessId,
                 ),
               ),
             ),
 
             _menuTile(
               context,
-              icon: Icons.privacy_tip, // privacy icon
-              title: tr.privacyPolicy, // title
-              onTap: () => Navigator.of(
-                context,
-              ).pushNamed(Routes.privacyPolicy), // open policy
+              icon: Icons.privacy_tip,
+              title: tr.privacyPolicy,
+              onTap: () => LegacyNav.pushNamed(context, Routes.privacyPolicy),
             ),
 
             _menuTile(
               context,
-              icon: Icons.language, // language icon
-              title: tr.language, // title
-              onTap: () => _showLanguageSelector(context, tr), // open selector
+              icon: Icons.language,
+              title: tr.language,
+              onTap: () => _showLanguageSelector(context, tr),
             ),
 
             _menuTile(
               context,
-              icon: Icons.logout, // logout icon
-              title: tr.logout, // title
-              onTap: () => _confirmLogout(context, tr), // confirm logout
+              icon: Icons.logout,
+              title: tr.logout,
+              onTap: () => _confirmLogout(context, tr),
             ),
 
-            const SizedBox(height: 8), // space
-            // Manage account (expand)
+            const SizedBox(height: 8),
+
+            // Manage account
             ExpansionTile(
-              leading: const Icon(Icons.settings), // settings icon
-              title: Text(tr.manageAccount), // title
+              leading: const Icon(Icons.settings),
+              title: Text(tr.manageAccount),
               children: [
                 _menuTile(
                   context,
-                  icon: Icons.visibility, // eye icon
+                  icon: Icons.visibility,
                   title: business.isPublicProfile
                       ? tr.profileMakePrivate
-                      : tr.profileMakePublic, // toggle text
+                      : tr.profileMakePublic,
                   onTap: () {
-                    // Dispatch toggle visibility
                     context.read<BusinessProfileBloc>().add(
                       ToggleVisibility(
-                        token, // token
-                        businessId, // id
-                        !business.isPublicProfile, // switch value
+                        token,
+                        businessId,
+                        !business.isPublicProfile,
                       ),
                     );
                   },
                 ),
                 _menuTile(
                   context,
-                  icon: Icons.power_settings_new, // power icon
-                  title: tr.setInactive, // title
+                  icon: Icons.power_settings_new,
+                  title: tr.setInactive,
                   onTap: () async {
-                    // Show deactivate dialog (old stack)
                     final ok = await showDialog<bool>(
-                      context: context, // context
-                      barrierDismissible: false, // force choice
+                      context: context,
+                      barrierDismissible: false,
                       builder: (ctx) {
-                        // Create repo + usecase for dialog
-                        final repo = BusinessRepositoryImpl(
-                          BusinessService(),
-                        ); // repo
-                        final usecase = UpdateBusinessStatus(repo); // usecase
+                        final repo = BusinessRepositoryImpl(BusinessService());
+                        final usecase = UpdateBusinessStatus(repo);
                         return BlocProvider(
-                          create: (_) =>
-                              DeactivateAccountCubit(usecase), // cubit
+                          create: (_) => DeactivateAccountCubit(usecase),
                           child: DeactivateAccountDialog(
-                            token: token, // token
-                            businessId: businessId, // id
+                            token: token,
+                            businessId: businessId,
                           ),
                         );
                       },
                     );
-                    // If deactivated, clear and go to login
                     if (ok == true && context.mounted) {
-                      final prefs =
-                          await SharedPreferences.getInstance(); // prefs
-                      await prefs.clear(); // clear
-                      Navigator.of(context).pushNamedAndRemoveUntil(
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.clear();
+                      LegacyNav.pushNamedAndRemoveUntil(
+                        context,
                         Routes.login,
                         (_) => false,
-                      ); // go login
+                      );
                     }
                   },
                 ),
@@ -333,19 +310,19 @@ class BusinessProfileScreen extends StatelessWidget {
   // Simple tile helper
   Widget _menuTile(
     BuildContext context, {
-    required IconData icon, // left icon
-    required String title, // title text
-    required VoidCallback onTap, // on press
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
   }) {
     return Column(
       children: [
         ListTile(
-          leading: Icon(icon), // icon
-          title: Text(title), // text
-          trailing: const Icon(Icons.chevron_right), // arrow
-          onTap: onTap, // open
+          leading: Icon(icon),
+          title: Text(title),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: onTap,
         ),
-        const Divider(height: 1), // thin divider
+        const Divider(height: 1),
       ],
     );
   }
@@ -353,31 +330,31 @@ class BusinessProfileScreen extends StatelessWidget {
   // Language selector bottom sheet
   void _showLanguageSelector(BuildContext context, AppLocalizations tr) {
     showModalBottomSheet(
-      context: context, // context
+      context: context,
       builder: (ctx) {
         return SafeArea(
           child: Column(
-            mainAxisSize: MainAxisSize.min, // wrap content
+            mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                title: const Text("English"), // en
+                title: const Text("English"),
                 onTap: () {
-                  Navigator.pop(ctx); // close
-                  onChangeLocale?.call(const Locale('en')); // set
+                  Navigator.pop(ctx);
+                  onChangeLocale?.call(const Locale('en'));
                 },
               ),
               ListTile(
-                title: const Text("Français"), // fr
+                title: const Text("Français"),
                 onTap: () {
-                  Navigator.pop(ctx); // close
-                  onChangeLocale?.call(const Locale('fr')); // set
+                  Navigator.pop(ctx);
+                  onChangeLocale?.call(const Locale('fr'));
                 },
               ),
               ListTile(
-                title: const Text("العربية"), // ar
+                title: const Text("العربية"),
                 onTap: () {
-                  Navigator.pop(ctx); // close
-                  onChangeLocale?.call(const Locale('ar')); // set
+                  Navigator.pop(ctx);
+                  onChangeLocale?.call(const Locale('ar'));
                 },
               ),
             ],
@@ -390,37 +367,34 @@ class BusinessProfileScreen extends StatelessWidget {
 
 // Logout confirm dialog
 Future<void> _confirmLogout(BuildContext context, AppLocalizations tr) async {
-  final theme = Theme.of(context); // theme
+  final theme = Theme.of(context);
   final confirmed = await showDialog<bool>(
-    context: context, // context
-    builder: (ctx) {
-      return AlertDialog(
-        title: Text(tr.logout), // title
-        content: Text(tr.profileLogoutConfirm), // message
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false), // cancel
-            child: Text(
-              tr.cancel, // cancel text
-              style: TextStyle(color: theme.colorScheme.error), // red text
-            ),
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(tr.logout),
+      content: Text(tr.profileLogoutConfirm),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(
+            tr.cancel,
+            style: TextStyle(color: theme.colorScheme.error),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true), // confirm
-            child: Text(tr.confirm), // confirm text
-          ),
-        ],
-      );
-    },
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(tr.confirm),
+        ),
+      ],
+    ),
   );
 
   if (confirmed == true) {
-    final prefs = await SharedPreferences.getInstance(); // prefs
-    await prefs.clear(); // clear
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
     if (context.mounted) {
-      Navigator.of(
-        context,
-      ).pushNamedAndRemoveUntil(Routes.login, (_) => false); // go login
+      // Clear stack and go to login via Legacy bridge
+      LegacyNav.pushNamedAndRemoveUntil(context, Routes.login, (_) => false);
     }
   }
 }

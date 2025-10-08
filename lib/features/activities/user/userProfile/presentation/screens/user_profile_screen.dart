@@ -2,6 +2,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart'; // UI
 import 'package:flutter_bloc/flutter_bloc.dart'; // bloc
+import 'package:go_router/go_router.dart';
 import 'package:hobby_sphere/app/bootstrap/start_user_realtime.dart' as rt;
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 import 'package:hobby_sphere/features/activities/user/tickets/data/models/booking_model.dart';
@@ -9,7 +10,7 @@ import 'package:hobby_sphere/features/activities/user/tickets/data/services/tick
 import 'package:shared_preferences/shared_preferences.dart'; // logout
 import 'package:hobby_sphere/app/router/router.dart'; // routes
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // l10n
-
+import 'package:hobby_sphere/app/router/legacy_nav.dart';
 import '../bloc/user_profile_bloc.dart'; // bloc
 import '../bloc/user_profile_state.dart'; // state
 import '../bloc/user_profile_event.dart'; // event
@@ -42,10 +43,49 @@ class UserProfileScreen extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
+        // inside build(), where you switch on state:
         if (state is UserProfileError) {
-          // error
-          return Scaffold(body: Center(child: Text(state.message)));
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.person_off_outlined, size: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Couldn't load your profile. Please try again.",
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () => context.read<UserProfileBloc>().add(
+                        LoadUserProfile(token, userId),
+                      ),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
+                    const SizedBox(height: 8),
+                    // Optional: short, faint developer hint (ellipsized)
+                    if (state.message.isNotEmpty)
+                      Text(
+                        state.message,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
         }
+
         if (state is UserProfileLoaded) {
           // data
           return _buildLoaded(context, tr, state); // build UI
@@ -99,7 +139,8 @@ class UserProfileScreen extends StatelessWidget {
                 final svc = TicketsService(dio); // service instance
 
                 // 3) push the calendar route and pass a loader callback
-                Navigator.of(context).pushNamed(
+                LegacyNav.pushNamed(
+                  context,
                   Routes.userTicketsCalendar, // route we added in router.dart
                   arguments: CalendarTicketsRouteArgs(
                     // loader returns ALL tickets as BookingEntity list
@@ -143,7 +184,8 @@ class UserProfileScreen extends StatelessWidget {
               context,
               icon: Icons.edit, // edit
               title: tr.profileEditProfile, // "Edit Profile"
-              onTap: () => Navigator.of(context).pushNamed(
+              onTap: () => LegacyNav.pushNamed(
+                context,
                 Routes.editUserProfile,
                 arguments: EditUserProfileRouteArgs(
                   token: token,
@@ -159,7 +201,8 @@ class UserProfileScreen extends StatelessWidget {
               title: tr.profileMyInterests, // l10n: "My Interests"
               onTap: () {
                 // navigate to the Edit Interests screen
-                Navigator.of(context).pushNamed(
+                LegacyNav.pushNamed(
+                  context,
                   Routes.editInterests, // route name we added
                   arguments: EditInterestsRouteArgs(
                     // pass args to screen
@@ -175,7 +218,8 @@ class UserProfileScreen extends StatelessWidget {
               icon: Icons.notifications_outlined,
               title: tr.notifications,
               onTap: () {
-                Navigator.of(context).pushNamed(
+                LegacyNav.pushNamed(
+                  context,
                   Routes.userNotifications,
                   arguments: UserNotificationsRouteArgs(token: token),
                 );
@@ -186,8 +230,7 @@ class UserProfileScreen extends StatelessWidget {
               context,
               icon: Icons.privacy_tip_outlined, // privacy
               title: tr.privacyPolicy, // "Privacy Policy"
-              onTap: () =>
-                  Navigator.of(context).pushNamed(Routes.privacyPolicy),
+              onTap: () => LegacyNav.pushNamed(context, Routes.privacyPolicy),
             ),
             _tile(
               context,
@@ -340,12 +383,14 @@ Future<void> _confirmLogout(BuildContext context, AppLocalizations tr) async {
     ),
   );
 
-  if (confirmed == true) {
-    await rt.stopUserRealtime(); // ✅ close WS cleanly
+if (confirmed == true) {
+    await rt.stopUserRealtime();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); // clear app data
+    await prefs.clear();
     if (context.mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (_) => false);
+      // Clear stack and go to login using go_router
+      context.goNamed(Routes.login);
     }
   }
+
 }
