@@ -1,5 +1,4 @@
 // lib/core/network/globals.dart
-
 library globals;
 
 import 'package:dio/dio.dart';
@@ -25,10 +24,9 @@ String readAuthToken() {
   return (authToken ?? token ?? userToken ?? Token ?? '').toString();
 }
 
-// Root without trailing `/api` (now appServerRoot is guaranteed set after main()).
+// Root without trailing `/api`.
 String serverRootNoApi() {
-  // no '??' needed because appServerRoot is late non-null
-  final base = appServerRoot; // already a String
+  final base = appServerRoot;
   return base.replaceFirst(RegExp(r'/api/?$'), '');
 }
 
@@ -38,6 +36,22 @@ Dio dio() {
     BaseOptions(
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(minutes: 1),
+    ),
+  );
+}
+
+/// NEW: convenience to configure the shared Dio with a baseUrl.
+void makeDefaultDio(String baseUrl) {
+  appDio = Dio(
+    BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 60),
+      sendTimeout: const Duration(seconds: 30),
+      headers: const {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
     ),
   );
 }

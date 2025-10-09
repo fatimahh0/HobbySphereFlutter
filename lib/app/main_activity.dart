@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+// ⬇️ added for Stripe
+import 'package:flutter/services.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+
 import 'package:hobby_sphere/config/env.dart';
 import 'package:hobby_sphere/core/network/api_config.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
@@ -13,6 +17,37 @@ import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
 import 'package:hobby_sphere/shared/theme/app_theme.dart' show AppTheme;
 import 'package:hobby_sphere/shared/network/connection_cubit.dart';
 
+// ---------- Stripe (only change you asked for) ----------
+Future<void> _initStripe() async {
+  try {
+    final pk = (Env.stripePublishableKey ?? '').trim();
+    if (pk.isEmpty) throw StateError('Env.stripePublishableKey is empty');
+
+    // Required
+    Stripe.publishableKey = pk;
+
+    // Android/iOS return URL scheme
+    Stripe.urlScheme = 'flutterstripe'; // <-- use property, not a function
+    Stripe.merchantIdentifier = 'merchant.com.hobbysphere'; // iOS (optional)
+
+    // Apply settings after changing any of the above
+    await Stripe.instance.applySettings();
+
+    debugPrint(
+      '[Stripe] Initialized (${pk.startsWith("pk_live_") ? "LIVE" : "TEST"})',
+    );
+  } on PlatformException catch (e, st) {
+    debugPrint(
+      '[Stripe] PlatformException: ${e.code} ${e.message} ${e.details}',
+    );
+    debugPrint('$st');
+  } catch (e, st) {
+    debugPrint('[Stripe] Init error: $e');
+    debugPrint('$st');
+  }
+}
+
+// ---------- Your existing networking (unchanged) ----------
 Future<void> _initNetworking() async {
   String serverRoot;
 
@@ -58,14 +93,14 @@ Future<void> _initNetworking() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  
   FlutterError.onError = (details) {
     FlutterError.dumpErrorToConsole(details);
   };
 
   await runZonedGuarded(
     () async {
-      await _initNetworking();
+      await _initStripe(); // ⬅️ added
+      await _initNetworking(); // ⬅️ same as before
       runApp(const ActivityApp());
     },
     (e, st) {
@@ -80,7 +115,6 @@ class ActivityApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-  
     final router = app_router.AppRouter.build(
       enabledFeatures: const ['activity'],
       onToggleTheme: () {},
@@ -88,7 +122,6 @@ class ActivityApp extends StatelessWidget {
       getCurrentLocale: () => const Locale('en'),
     );
 
-    
     final healthUrl =
         (g.appServerRoot).replaceFirst(RegExp(r'/api/?$'), '') +
         '/actuator/health';
@@ -99,11 +132,8 @@ class ActivityApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Hobby Sphere — Activity',
         routerConfig: router,
-
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-
-    
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: ThemeMode.system,

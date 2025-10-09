@@ -160,7 +160,9 @@ import 'package:hobby_sphere/features/activities/Business/businessBooking/data/r
 
 // Shell / Nav
 import 'package:hobby_sphere/navigation/nav_bootstrap.dart';
-
+import 'package:hobby_sphere/navigation/activities/shell_bottom.dart';
+import 'package:hobby_sphere/navigation/activities/shell_drawer.dart';
+import 'package:hobby_sphere/navigation/activities/shell_top.dart';
 
 List<RouteBase> buildActivityRoutes({
   required VoidCallback onToggleTheme,
@@ -934,28 +936,74 @@ List<RouteBase> buildActivityRoutes({
 
     // ===== Shell (role aware) =====
     GoRoute(
-      path: Routes.shell,
-      name: Routes.shell,
+      path: Routes.shell, // shell route
+      name: Routes.shell, // name
       builder: (_, state) {
-        final sh = state.extra is ShellRouteArgs
+        final sh =
+            state.extra
+                is ShellRouteArgs // read args
             ? state.extra as ShellRouteArgs
             : null;
-        if (sh == null)
-          return const _RouteErrorPage(message: 'Missing ShellRouteArgs');
+        if (sh == null) {
+          return const _RouteErrorPage(
+            message: 'Missing ShellRouteArgs',
+          ); // guard
+        }
 
+        // define the 3 builders *for Activities feature*
+        final BuildShell buildBottom =
+            (ctx, role, token, businessId, onLoc, onTheme) {
+              // return your existing Activities bottom shell
+              return ShellBottom(
+                role: role, // pass role
+                token: token, // pass token
+                businessId: businessId, // pass business id
+                onChangeLocale: onLoc, // pass i18n
+                onToggleTheme: onTheme, // pass theme
+              );
+            };
+
+        final BuildShell buildTop =
+            (ctx, role, token, businessId, onLoc, onTheme) {
+              // return your existing Activities top shell
+              return ShellTop(
+                role: role, // pass role
+                token: token, // pass token
+                businessId: businessId, // pass business id
+                onChangeLocale: onLoc, // pass i18n
+                onToggleTheme: onTheme, // pass theme
+              );
+            };
+
+        final BuildShell buildDrawer =
+            (ctx, role, token, businessId, onLoc, onTheme) {
+              // return your existing Activities drawer shell
+              return ShellDrawer(
+                role: role, // pass role
+                token: token, // pass token
+                businessId: businessId, // pass business id
+                onChangeLocale: onLoc, // pass i18n
+                onToggleTheme: onTheme, // pass theme
+              );
+            };
+
+        // hand everything to the dynamic chooser
         return NavBootstrap(
-          role: sh.role,
-          token: sh.token,
-          businessId: sh.businessId,
-          onChangeLocale: (loc) {}, // inject from top if بدك
-          onToggleTheme: () {}, // inject من الـ app
+          role: sh.role, // who’s using the app
+          token: sh.token, // jwt or ''
+          businessId: sh.businessId, // biz id if needed
+          onChangeLocale:
+              (loc) {}, // wire real callbacks from AppRouter if you have them
+          onToggleTheme: () {}, // same
+          buildBottom: buildBottom, // activities bottom builder
+          buildTop: buildTop, // activities top builder
+          buildDrawer: buildDrawer, // activities drawer builder
         );
       },
     ),
   ];
 }
 
-// ====== صفحة خطأ لطيفة ======
 class _RouteErrorPage extends StatelessWidget {
   final String message;
   const _RouteErrorPage({required this.message, super.key});

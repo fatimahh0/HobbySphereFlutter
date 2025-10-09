@@ -1,25 +1,32 @@
 // lib/app/router/router.dart
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-// lib/app/router/router.dart
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import 'package:hobby_sphere/core/constants/app_role.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
+
+// ===== Activities (shared args + entities it references) =====
 import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
+import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
+import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/PrivacyPolicyScreen.dart';
-import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
-import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
 import 'package:hobby_sphere/features/activities/routes_activity.dart';
 import 'package:hobby_sphere/features/activities/user/social/domain/entities/user_min.dart';
 import 'package:hobby_sphere/features/activities/user/tickets/domain/entities/booking_entity.dart';
+
+// ===== Auth =====
 import 'package:hobby_sphere/features/authentication/forgotpassword/presentation/screens/forgot_password_page.dart';
 import 'package:hobby_sphere/features/authentication/login&register/data/services/registration_service.dart';
 import 'package:hobby_sphere/features/authentication/login&register/presentation/login/screen/login_page.dart';
 import 'package:hobby_sphere/features/authentication/login&register/presentation/register/screens/register_email_page.dart';
 import 'package:hobby_sphere/features/authentication/login&register/presentation/register/screens/register_page.dart';
 
+// ===== Product (optional module) =====
+
+import 'package:hobby_sphere/features/products/product_module.dart';
 
 abstract class Routes {
   static const splash = '/';
@@ -28,6 +35,8 @@ abstract class Routes {
   static const login = '/login';
   static const register = '/register';
   static const registerEmail = '/register/email';
+
+  // Activities (existing)
   static const userHome = '/user/home';
   static const businessHome = '/business/home';
   static const userTicketsCalendar = '/user/tickets/calendar';
@@ -51,6 +60,7 @@ abstract class Routes {
   static const editUserProfile = '/user/edit-profile';
   static const editInterests = '/user/edit-interests';
   static const userNotifications = '/user-notifications';
+
   // Community / Social
   static const community = '/community';
   static const createPost = '/community/create';
@@ -58,10 +68,16 @@ abstract class Routes {
   static const addFriend = '/community/add-friend';
   static const myPosts = '/community/myposts';
   static const friendship = '/community/chat';
+
   static const forgot = '/forgot';
+
+  // ===== Product (NEW) =====
+  static const productHome = '/product/home';
+  // (optional) if you want a dedicated product shell path instead of Routes.shell:
+  // static const productShell = '/product/shell';
 }
 
-// ====== نفس الـ Args classes تبعك (copy) ======
+// ====== Arg classes (unchanged from your version) ======
 class EditActivityRouteArgs {
   final int itemId;
   final int businessId;
@@ -257,7 +273,6 @@ class ConversationRouteArgs {
   const ConversationRouteArgs({required this.myId, required this.peer});
 }
 
-
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 typedef LocaleGetter = Locale Function();
@@ -269,32 +284,42 @@ class AppRouter {
     required void Function(Locale) onChangeLocale,
     required LocaleGetter getCurrentLocale,
   }) {
-    
+    // 1) common routes
     final commonRoutes = _commonRoutes(
       onToggleTheme: onToggleTheme,
       onChangeLocale: onChangeLocale,
       getCurrentLocale: getCurrentLocale,
     );
 
+    // 2) feature routes (activities)
     final activityRoutes = enabledFeatures.contains('activity')
         ? buildActivityRoutes(
             onToggleTheme: onToggleTheme,
             onChangeLocale: onChangeLocale,
             getCurrentLocale: getCurrentLocale,
           )
-        : <RouteBase>[];
+        : const <RouteBase>[];
 
+    // 3) feature routes (product)
+    final productRoutes = enabledFeatures.contains('product')
+        ? ProductModule().routes(
+            onToggleTheme: onToggleTheme,
+            onChangeLocale: onChangeLocale,
+            getCurrentLocale: getCurrentLocale,
+          )
+        : const <RouteBase>[];
+
+    // 4) compose
     return GoRouter(
       navigatorKey: rootNavigatorKey,
       initialLocation: Routes.splash,
-      routes: [...commonRoutes, ...activityRoutes],
+      routes: [...commonRoutes, ...activityRoutes, ...productRoutes],
       errorBuilder: (_, state) => _RouteErrorPage(
         message: state.error?.toString() ?? 'Unknown route error',
       ),
     );
   }
 }
-
 
 List<RouteBase> _commonRoutes({
   required VoidCallback onToggleTheme,
@@ -361,7 +386,6 @@ List<RouteBase> _commonRoutes({
     ),
   ];
 }
-
 
 class _RouteErrorPage extends StatelessWidget {
   final String message;

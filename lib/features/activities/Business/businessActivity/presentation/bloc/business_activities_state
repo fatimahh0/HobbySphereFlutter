@@ -1,26 +1,36 @@
-import 'package:equatable/equatable.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
+// Flutter 3.35.x
+// States for BusinessActivitiesBloc (initial, loading, loaded, error)
 
+import 'package:equatable/equatable.dart'; // value equality
+import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart'; // entity
+
+// Base class for all states
 abstract class BusinessActivitiesState extends Equatable {
-  const BusinessActivitiesState();
+  const BusinessActivitiesState(); // const ctor
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => []; // default no props
 }
 
+// First state before any action
 class BusinessActivitiesInitial extends BusinessActivitiesState {}
 
+// Shows a loading spinner
 class BusinessActivitiesLoading extends BusinessActivitiesState {}
 
+// Shows the loaded list
 class BusinessActivitiesLoaded extends BusinessActivitiesState {
-  final List<BusinessActivity> activities;
-  const BusinessActivitiesLoaded(this.activities);
+  final List<BusinessActivity> activities; // data list
+  const BusinessActivitiesLoaded(this.activities); // ctor
+
   @override
-  List<Object?> get props => [activities];
+  List<Object?> get props => [activities]; // compare by list
 }
 
+// Shows an error message (non-404)
 class BusinessActivitiesError extends BusinessActivitiesState {
-  final String message;
-  const BusinessActivitiesError(this.message);
+  final String message; // error text
+  const BusinessActivitiesError(this.message); // ctor
+
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message]; // compare by text
 }

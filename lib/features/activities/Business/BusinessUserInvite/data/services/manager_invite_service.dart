@@ -12,7 +12,7 @@ class ManagerInviteService {
   }) async {
     final dio = g.dio();
     final base = g.appServerRoot ?? '';
-    final url = '$base/api/businesses/$businessId/send-manager-invite';
+    final url = '$base/businesses/$businessId/send-manager-invite';
     final authValue = token.startsWith('Bearer ') ? token : 'Bearer $token';
 
     try {

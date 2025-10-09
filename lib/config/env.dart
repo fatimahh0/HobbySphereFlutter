@@ -10,6 +10,12 @@ class Env {
     defaultValue: 'pk.14ea0e02d4685f88a3ec5ea23dd898b9',
   );
 
+  static const stripePublishableKey = String.fromEnvironment(
+    'STRIPE_PUBLISHABLE_KEY',
+    defaultValue:
+        'pk_test_51RnLY8ROH9W55MgTYuuYpaStORtbLEggQMGOYxzYacMiDUpbfifBgThEzcMgFnvyMaskalQ0WUcQv08aByizug1I00Wcq3XHll',
+  );
+
   // Optional role if you want to switch shells/tabs via flag
   static const appRole = String.fromEnvironment(
     'APP_ROLE',

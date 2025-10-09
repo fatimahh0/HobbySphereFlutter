@@ -1,97 +1,119 @@
-// lib/navigation/nav_bootstrap.dart
-// Loads remote theme / chooses nav type (bottom/top/drawer), then builds the shell.
-// Receives real callbacks from AppRouter and forwards them to the shell widgets.
+// Dynamic nav chooser (feature-agnostic)
+// 1) fetch remote theme json
+// 2) extract nav type (bottom/top/drawer)
+// 3) call the right shell builder passed by the feature
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // UI
 import 'package:hobby_sphere/features/activities/common/data/services/theme_service.dart';
+// your theme API service
+import '../app/router/nav_type.dart'; // enum
+import '../app/router/nav_from_theme.dart'; // json -> enum
+import '../core/constants/app_role.dart'; // AppRole
 
-import '../app/router/nav_type.dart';
-import '../app/router/nav_from_theme.dart';
-import '../core/constants/app_role.dart';
-
-import 'shell_bottom.dart';
-import 'shell_top.dart';
-import 'shell_drawer.dart';
+// Reusable builders signature so each feature can render its own tabs/screens
+typedef BuildShell =
+    Widget Function(
+      BuildContext context, // context
+      AppRole role, // user/business
+      String token, // jwt or ''
+      int businessId, // business id (0 if not used)
+      void Function(Locale) onChangeLocale, // i18n callback
+      VoidCallback onToggleTheme, // theme callback
+    );
 
 class NavBootstrap extends StatefulWidget {
-  final AppRole role;
-  final String token;
-  final int businessId;
+  final AppRole role; // role
+  final String token; // jwt
+  final int businessId; // business id
+  final void Function(Locale) onChangeLocale; // i18n
+  final VoidCallback onToggleTheme; // theme toggle
 
-  // callbacks injected from router
-  final void Function(Locale) onChangeLocale;
-  final VoidCallback onToggleTheme;
+  // 3 builders injected by the feature (Activity / Product / etc.)
+  final BuildShell buildBottom; // bottom shell
+  final BuildShell buildTop; // top shell
+  final BuildShell buildDrawer; // drawer shell
 
   const NavBootstrap({
-    super.key,
-    required this.role,
-    required this.token,
-    required this.businessId,
-    required this.onChangeLocale,
-    required this.onToggleTheme,
+    super.key, // key
+    required this.role, // role
+    required this.token, // token
+    required this.businessId, // businessId
+    required this.onChangeLocale, // i18n
+    required this.onToggleTheme, // theme
+    required this.buildBottom, // bottom builder
+    required this.buildTop, // top builder
+    required this.buildDrawer, // drawer builder
   });
 
   @override
-  State<NavBootstrap> createState() => _NavBootstrapState();
+  State<NavBootstrap> createState() => _NavBootstrapState(); // state
 }
 
 class _NavBootstrapState extends State<NavBootstrap> {
-  final _themeService = ThemeService();
-  late final Future<AppNavType> _future;
+  final _themeService = ThemeService(); // api service
+  late final Future<AppNavType> _future; // future nav type
 
   @override
   void initState() {
-    super.initState();
-    _future = _load();
+    super.initState(); // init
+    _future = _load(); // kick off fetch
   }
 
   Future<AppNavType> _load() async {
     try {
-      final json = await _themeService.getActiveMobileTheme();
-      return navTypeFromTheme(json);
+      final json = await _themeService
+          .getActiveMobileTheme(); // fetch theme json
+      return navTypeFromTheme(json); // parse to enum
     } catch (_) {
-      return AppNavType.bottom;
+      return AppNavType.bottom; // fallback
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<AppNavType>(
-      future: _future,
+      // wait for enum
+      future: _future, // future
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
+          // still loading?
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            // minimal loader
+            body: Center(child: CircularProgressIndicator()), // spinner
           );
         }
 
-        final type = snap.data ?? AppNavType.bottom;
+        final nav = snap.data ?? AppNavType.bottom; // resolved or fallback
 
-        switch (type) {
+        // call the proper shell builder (feature decides its pages)
+        switch (nav) {
           case AppNavType.top:
-            return ShellTop(
-              role: widget.role,
-              token: widget.token,
-              businessId: widget.businessId,
-              onChangeLocale: widget.onChangeLocale,
-              onToggleTheme: widget.onToggleTheme,
+            return widget.buildTop(
+              context,
+              widget.role,
+              widget.token,
+              widget.businessId,
+              widget.onChangeLocale,
+              widget.onToggleTheme, // pass callbacks
             );
           case AppNavType.drawer:
-            return ShellDrawer(
-              role: widget.role,
-              token: widget.token,
-              businessId: widget.businessId,
-              onChangeLocale: widget.onChangeLocale,
-              onToggleTheme: widget.onToggleTheme,
+            return widget.buildDrawer(
+              context,
+              widget.role,
+              widget.token,
+              widget.businessId,
+              widget.onChangeLocale,
+              widget.onToggleTheme,
             );
           case AppNavType.bottom:
           default:
-            return ShellBottom(
-              role: widget.role,
-              token: widget.token,
-              businessId: widget.businessId,
-              onChangeLocale: widget.onChangeLocale,
-              onToggleTheme: widget.onToggleTheme,
+            return widget.buildBottom(
+              context,
+              widget.role,
+              widget.token,
+              widget.businessId,
+              widget.onChangeLocale,
+              widget.onToggleTheme,
             );
         }
       },
