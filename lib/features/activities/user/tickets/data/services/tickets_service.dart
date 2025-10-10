@@ -17,7 +17,7 @@ class TicketsService {
     final s = (status).trim().toLowerCase();
 
     // endpoints:
-    // pending  => server returns Pending + CancelRequested
+    // pending   => server returns Pending + CancelRequested
     // completed => Completed
     // canceled  => Canceled
     final path = switch (s) {
@@ -40,12 +40,23 @@ class TicketsService {
     }
   }
 
+  // ✅ Backend is PUT /api/bookings/cancel/request/{bookingId}
   Future<void> requestCancel(String token, int bookingId, String reason) async {
-    await dio.post(
+    await dio.put(
       '/bookings/cancel/request/$bookingId',
-      data: {'reason': reason},
+      data: {'reason': reason}, // backend accepts/ignores; safe to send
       options: _auth(token),
     );
+  }
+
+  // (optional) direct cancel by user (if you expose it in UI)
+  Future<void> cancelBooking(String token, int bookingId) async {
+    await dio.put('/bookings/cancel/$bookingId', options: _auth(token));
+  }
+
+  // (optional) reset back to pending (matches backend PUT /pending/{id})
+  Future<void> resetToPending(String token, int bookingId) async {
+    await dio.put('/bookings/pending/$bookingId', options: _auth(token));
   }
 
   Future<void> deleteCanceled(String token, int bookingId) async {

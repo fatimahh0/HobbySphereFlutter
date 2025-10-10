@@ -37,7 +37,7 @@ class HomeService {
   Future<List<Map<String, dynamic>>> getUpcomingGuest({int? typeId}) async {
     try {
       final path = typeId == null
-          ? '/items/guest/upcoming'
+          ? '/items/upcoming'
           : '/items/guest/upcoming?typeId=$typeId';
 
       final res = await _fetch.fetch(HttpMethod.get, path);

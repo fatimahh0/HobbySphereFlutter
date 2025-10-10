@@ -15,7 +15,7 @@ class BusinessUsersService {
   // ==== GET /api/business-users/my-users ====
   Future<List<dynamic>> fetchUsers(String token) async {
     final res = await _dio.get(
-      '${g.appServerRoot}/api/business-users/my-users', // url
+      '${g.appServerRoot}/business-users/my-users', // url
       options: Options(
         headers: {'Authorization': _bearer(token)}, // ✅ Bearer prefix
       ),
@@ -33,7 +33,7 @@ class BusinessUsersService {
     String? phoneNumber, // optional
   }) async {
     final res = await _dio.post(
-      '${g.appServerRoot}/api/business-users/create', // url
+      '${g.appServerRoot}/business-users/create', // url
       data: {
         'firstName': firstname, // ✅ correct casing
         'lastName': lastname, // ✅ correct casing
@@ -63,7 +63,7 @@ class BusinessUsersService {
   }) async {
     try {
       final res = await _dio.post(
-        '${g.appServerRoot}/api/items/book-cash', // url
+        '${g.appServerRoot}/items/book-cash', // url
         data: {
           'itemId': itemId, // required
           'businessUserId': businessUserId, // required
