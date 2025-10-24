@@ -85,7 +85,7 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     XFile? banner,
   }) async {
     final m = await api.completeBusinessProfile(
-      businessId: pendingId,
+      pendingId: pendingId,
       businessName: name,
       description: description,
       websiteUrl: websiteUrl,

@@ -1,262 +1,256 @@
-// registration_service.dart
+// lib/core/registration/registration_service.dart
 // Flutter 3.35.x
-// Simple Dio service for registration-related APIs.
-// Every line has a small comment to explain what it does.
+// Dio service for registration-related APIs with explicit ownerProjectLinkId injection.
 
-import 'dart:io'; // for HttpException (readable errors)
-import 'package:dio/dio.dart'; // Dio HTTP client
-import 'package:image_picker/image_picker.dart'; // for image file upload
+import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:hobby_sphere/config/env.dart';
 
 class RegistrationService {
-  final Dio dio; // injected Dio instance (has baseUrl, interceptors)
-  RegistrationService(this.dio); // constructor
+  final Dio dio;
+  RegistrationService(this.dio);
+
+  // ---- helper: normalize owner id from dart-define ----
+  String get _ownerId =>
+      (int.tryParse(Env.ownerProjectLinkId) ?? Env.ownerProjectLinkId)
+          .toString();
 
   // ---------- USER: send verification (email or phone) ----------
+  // Backend expects ownerProjectLinkId as @RequestParam, so we add it in queryParameters.
   Future<void> sendUserVerification({
-    String? email, // optional email
-    String? phoneNumber, // optional phone
-    required String password, // required password
+    String? email,
+    String? phoneNumber,
+    required String password,
   }) async {
     final res = await dio.post(
-      '/auth/send-verification', // endpoint (no /api)
+      '/auth/send-verification',
       queryParameters: {
-        if (email != null && email.isNotEmpty) 'email': email, // pass email
+        if (email != null && email.isNotEmpty) 'email': email,
         if (phoneNumber != null && phoneNumber.isNotEmpty)
-          'phoneNumber': phoneNumber, // pass phone
-        'password': password, // pass password
+          'phoneNumber': phoneNumber,
+        'password': password,
+        'ownerProjectLinkId':
+            _ownerId, // 👈 required by controller as @RequestParam
       },
     );
-    _ok(res); // throw if not 2xx
+    _ok(res);
   }
 
   // ---------- USER: verify code (EMAIL) -> returns pendingId ----------
+  // Controller doesn't require ownerProjectLinkId here.
   Future<int> verifyUserEmailCode(String email, String code) async {
     final r = await dio.post(
-      '/auth/verify-email-code', // verify email code
-      data: {'email': email, 'code': code}, // request body
+      '/auth/verify-email-code',
+      data: {'email': email, 'code': code},
     );
-    _ok(r); // ensure 2xx
-    // prefer pendingId; fallback to user.id if backend still returns it
+    _ok(r);
     final pendingId = (r.data['pendingId'] ?? r.data['user']?['id']) as num;
-    return pendingId.toInt(); // return int
+    return pendingId.toInt();
   }
 
   // ---------- USER: verify code (PHONE) -> returns pendingId ----------
+  // Controller doesn't require ownerProjectLinkId here.
   Future<int> verifyUserPhoneCode(String phone, String code) async {
     final r = await dio.post(
-      '/auth/user/verify-phone-code', // verify phone code
-      data: {'phoneNumber': phone, 'code': code}, // request body
+      '/auth/user/verify-phone-code',
+      data: {'phoneNumber': phone, 'code': code},
     );
-    _ok(r); // ensure 2xx
-    // prefer pendingId; fallback to user.id if needed
+    _ok(r);
     final pendingId = (r.data['pendingId'] ?? r.data['user']?['id']) as num;
-    return pendingId.toInt(); // return int
+    return pendingId.toInt();
   }
 
-  // ---------- USER: complete profile -> returns the REAL created user map ----------
+  // ---------- USER: complete profile (multipart) ----------
+  // Controller expects ownerProjectLinkId as @RequestParam in multipart → add as field.
   Future<Map<String, dynamic>> completeUserProfile({
-    required int pendingId, // pending id from verify step
-    required String username, // username
-    required String firstName, // first name
-    required String lastName, // last name
-    required bool isPublicProfile, // visibility flag
-    XFile? profileImage, // optional image
+    required int pendingId,
+    required String username,
+    required String firstName,
+    required String lastName,
+    required bool isPublicProfile,
+    XFile? profileImage,
   }) async {
     final form = FormData.fromMap({
-      'pendingId': pendingId, // send pending id
-      'username': username, // send username
-      'firstName': firstName, // send first name
-      'lastName': lastName, // send last name
-      'isPublicProfile': isPublicProfile, // public flag
+      'pendingId': pendingId,
+      'username': username,
+      'firstName': firstName,
+      'lastName': lastName,
+      'isPublicProfile': isPublicProfile,
+      'ownerProjectLinkId': _ownerId, // 👈 required @RequestParam in controller
       if (profileImage != null)
         'profileImage': await MultipartFile.fromFile(
-          profileImage.path, // file path
-          filename: profileImage.name, // file name
-        ), // attach file
+          profileImage.path,
+          filename: profileImage.name,
+        ),
     });
 
-    final r = await dio.post(
-      '/auth/complete-profile', // finalize user creation
-      data: form, // multipart form
-    );
-    _ok(r); // ensure 2xx
-
-    final user = Map<String, dynamic>.from(r.data['user'] as Map); // user json
-    return user; // return user map
+    final r = await dio.post('/auth/complete-profile', data: form);
+    _ok(r);
+    return Map<String, dynamic>.from(r.data['user'] as Map);
   }
 
-  // ---------- USER: add interests -> primary /api path + legacy fallback ----------
- // in registration_service.dart
+  // ---------- USER: add interests (tries multiple known endpoints) ----------
   Future<void> addUserInterests(int userId, List<int> ids) async {
-    // New canonical endpoint
-    final primary = '/users/$userId/UpdateCategory';
-
-    // Known alternates in your codebase
-    final alt1 = '/users/$userId/categoriess';
-    final alt2 =
-        '/users/$userId/categories'; // if you later switch to PUT/POST here
-    final legacy =
-        '/users/$userId/UpdateInterest'; // old path your app used
-
-    // Try them in order until one succeeds
-    final paths = <String>[primary, alt1, alt2, legacy];
+    final paths = <String>[
+      '/users/$userId/UpdateCategory',
+      '/users/$userId/categoriess',
+      '/users/$userId/categories',
+      '/users/$userId/UpdateInterest',
+    ];
 
     DioException? lastError;
-
     for (final path in paths) {
       try {
         final r = await dio.post(path, data: ids);
-        if (r.statusCode != null &&
-            r.statusCode! >= 200 &&
-            r.statusCode! < 300) {
-          return; // success on this path
-        }
+        if ((r.statusCode ?? 0) >= 200 && (r.statusCode ?? 0) < 300) return;
       } on DioException catch (e) {
         lastError = e;
-        // continue to next path only if it was a 404/405
         final sc = e.response?.statusCode ?? 0;
-        if (!(sc == 404 || sc == 405)) rethrow;
+        if (sc != 404 && sc != 405) rethrow;
       }
     }
-
-    // If we got here, all attempts failed
     if (lastError != null) throw lastError;
     throw HttpException('No interests endpoint accepted the request.');
   }
 
-
   // ---------- USER: resend verification code ----------
+  // (Your controller example shows resend-business-code only; keeping user variant in case it exists)
   Future<void> resendUserCode(String contact) async {
     final r = await dio.post(
-      '/auth/resend-user-code', // resend endpoint
-      data: {'emailOrPhone': contact}, // contact string
+      '/auth/resend-user-code',
+      data: {'emailOrPhone': contact},
     );
-    _ok(r); // ensure 2xx
+    _ok(r);
   }
 
   // ---------- BUSINESS: send verification -> returns pendingId ----------
+  // Controller expects ownerProjectLinkId as @RequestParam, so add in queryParameters.
   Future<int> sendBusinessVerification({
-    String? email, // optional email
-    String? phoneNumber, // optional phone
-    required String password, // password
+    String? email,
+    String? phoneNumber,
+    required String password,
   }) async {
     final r = await dio.post(
-      '/auth/business/send-verification', // business path (no /api)
+      '/auth/business/send-verification',
       queryParameters: {
-        if (email != null && email.isNotEmpty) 'email': email, // pass email
+        if (email != null && email.isNotEmpty) 'email': email,
         if (phoneNumber != null && phoneNumber.isNotEmpty)
-          'phoneNumber': phoneNumber, // pass phone
-        'password': password, // pass password
+          'phoneNumber': phoneNumber,
+        'password': password,
+        'ownerProjectLinkId': _ownerId, // 👈 required @RequestParam
       },
     );
-    _ok(r); // ensure 2xx
-    return (r.data['pendingId'] as num).toInt(); // return pendingId
+    _ok(r);
+    return (r.data['pendingId'] as num).toInt();
   }
 
   // ---------- BUSINESS: verify email -> returns businessId ----------
   Future<int> verifyBusinessEmailCode(String email, String code) async {
     final r = await dio.post(
-      '/auth/business/verify-code', // verify email
-      data: {'email': email, 'code': code}, // request body
+      '/auth/business/verify-code',
+      data: {'email': email, 'code': code},
     );
-    _ok(r); // ensure 2xx
-    return (r.data['business']['id'] as num).toInt(); // business id
+    _ok(r);
+    return (r.data['business']['id'] as num).toInt();
   }
 
   // ---------- BUSINESS: verify phone -> returns businessId ----------
   Future<int> verifyBusinessPhoneCode(String phone, String code) async {
     final r = await dio.post(
-      '/auth/business/verify-phone-code', // verify phone
-      data: {'phoneNumber': phone, 'code': code}, // request body
+      '/auth/business/verify-phone-code',
+      data: {'phoneNumber': phone, 'code': code},
     );
-    _ok(r); // ensure 2xx
-    return (r.data['business']['id'] as num).toInt(); // business id
+    _ok(r);
+    return (r.data['business']['id'] as num).toInt();
   }
 
-  // ---------- BUSINESS: complete profile -> returns business map ----------
+  // ---------- BUSINESS: complete profile (multipart) ----------
+  // Controller expects ownerProjectLinkId & pendingId as @RequestParam in multipart → include as fields.
   Future<Map<String, dynamic>> completeBusinessProfile({
-    required int businessId, // business id from verify step
-    required String businessName, // business name
-    String? description, // optional description
-    String? websiteUrl, // optional website
-    XFile? logo, // optional logo file
-    XFile? banner, // optional banner file
+    required int pendingId,
+    required String businessName,
+    String? description,
+    String? websiteUrl,
+    XFile? logo,
+    XFile? banner,
   }) async {
     final form = FormData.fromMap({
-      'businessId': businessId, // id
-      'businessName': businessName, // name
-      if (description != null) 'description': description, // set if non-null
-      if (websiteUrl != null) 'websiteUrl': websiteUrl, // set if non-null
+      'ownerProjectLinkId': _ownerId, // 👈 required @RequestParam
+      'pendingId': pendingId,
+      'businessName': businessName,
+      if (description != null) 'description': description,
+      if (websiteUrl != null) 'websiteUrl': websiteUrl,
       if (logo != null)
-        'logo': await MultipartFile.fromFile(
-          logo.path, // logo path
-          filename: logo.name, // logo filename
-        ), // attach file
+        'logo': await MultipartFile.fromFile(logo.path, filename: logo.name),
       if (banner != null)
         'banner': await MultipartFile.fromFile(
-          banner.path, // banner path
-          filename: banner.name, // banner filename
-        ), // attach file
+          banner.path,
+          filename: banner.name,
+        ),
     });
 
-    final r = await dio.post(
-      '/auth/business/complete-profile', // business finalize
-      data: form, // multipart form
-    );
-    _ok(r); // ensure 2xx
-    return Map<String, dynamic>.from(r.data['business'] as Map); // map
+    final r = await dio.post('/auth/business/complete-profile', data: form);
+    _ok(r);
+    return Map<String, dynamic>.from(r.data['business'] as Map);
   }
 
   // ---------- BUSINESS: resend code ----------
   Future<void> resendBusinessCode(String contact) async {
     final r = await dio.post(
-      '/auth/resend-business-code', // resend endpoint
-      data: {'emailOrPhone': contact}, // contact
+      '/auth/resend-business-code',
+      data: {'emailOrPhone': contact},
     );
-    _ok(r); // ensure 2xx
+    _ok(r);
   }
 
   // ---------- INTERESTS: GET all categories (new API + safe fallback) ----------
   Future<List<Map<String, dynamic>>> fetchActivityTypes() async {
-    const primary = '/admin/categoriess'; // new controller mapping
-    const fallback = '/admin/categories'; // safe fallback if server fixes path
+    // normalize/require the project id
+    final pid = Env.requiredVar(Env.projectId, 'PROJECT_ID');
+
+    // preferred project-scoped endpoint (your controller: /api/admin/categories/by-project/{projectId})
+    final primary = '/admin/categories/by-project/$pid';
+
+    // safe fallbacks (old endpoints you had)
+    const fallback1 = '/admin/categoriess';
+    const fallback2 = '/admin/categories';
+
     try {
-      final r = await dio.get(primary); // try primary
-      _ok(r); // ensure 2xx
-      return _asListOfMap(r.data); // normalize to List<Map>
+      final r = await dio.get(primary);
+      _ok(r);
+      return _asListOfMap(r.data);
     } on DioException catch (e) {
-      // on 4xx/5xx try fallback path
-      if ((e.response?.statusCode ?? 0) >= 400) {
-        final r2 = await dio.get(fallback); // fallback
-        _ok(r2); // ensure 2xx
-        return _asListOfMap(r2.data); // normalize
+      final sc = e.response?.statusCode ?? 0;
+
+      // try the legacy ones you already use
+      if (sc == 404 || sc == 400 || sc == 405) {
+        try {
+          final r2 = await dio.get(fallback1);
+          _ok(r2);
+          return _asListOfMap(r2.data);
+        } on DioException {
+          final r3 = await dio.get(fallback2);
+          _ok(r3);
+          return _asListOfMap(r3.data);
+        }
       }
-      rethrow; // bubble if it's a network/unknown error
+      rethrow;
     }
   }
 
-  // ---------- helper: normalize to List<Map<String, dynamic>> ----------
+  // ---------- helpers ----------
   List<Map<String, dynamic>> _asListOfMap(dynamic data) {
-    if (data is List) {
-      return List<Map<String, dynamic>>.from(data); // already a list → cast
-    }
+    if (data is List) return List<Map<String, dynamic>>.from(data);
     if (data is Map && data['data'] is List) {
-      return List<Map<String, dynamic>>.from(
-        data['data'],
-      ); // unwrap {data:[...]}
+      return List<Map<String, dynamic>>.from(data['data']);
     }
-    return const <Map<String, dynamic>>[]; // safe empty
+    return const <Map<String, dynamic>>[];
   }
 
-  // ---------- helper: throws if not 2xx ----------
   void _ok(Response r) {
     if (r.statusCode == null || r.statusCode! < 200 || r.statusCode! >= 300) {
-      throw HttpException(
-        'Request failed: ${r.statusCode} ${r.statusMessage}', // readable error
-      );
+      throw HttpException('Request failed: ${r.statusCode} ${r.statusMessage}');
     }
   }
-
-  // in registration_service.dart
- 
 }

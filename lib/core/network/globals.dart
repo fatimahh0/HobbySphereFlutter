@@ -1,36 +1,29 @@
-// lib/core/network/globals.dart
 library globals;
 
 import 'package:dio/dio.dart';
+import 'package:hobby_sphere/core/network/interceptors/tenant_interceptor.dart';
+import 'package:hobby_sphere/core/network/interceptors/auth_body_injector.dart';
 import 'package:hobby_sphere/core/realtime/realtime_service.dart';
 
-// Shared HTTP client (set once in main()).
 Dio? appDio;
+late String appServerRoot;
 
-//  Base API root is required after main() sets it, so make it non-nullable.
-late String appServerRoot; // e.g. "http://host:8080/api"
-
-// Multiple token aliases so old/new code both work.
 String? authToken;
 String? token;
 String? userToken;
 String? Token;
 
-// Realtime singleton instance (nullable until connected).
 RealtimeService? realtime;
 
-// Read a token safely (picks the first non-empty).
 String readAuthToken() {
   return (authToken ?? token ?? userToken ?? Token ?? '').toString();
 }
 
-// Root without trailing `/api`.
 String serverRootNoApi() {
   final base = appServerRoot;
   return base.replaceFirst(RegExp(r'/api/?$'), '');
 }
 
-// Ensure a Dio instance exists.
 Dio dio() {
   return appDio ??= Dio(
     BaseOptions(
@@ -40,7 +33,8 @@ Dio dio() {
   );
 }
 
-/// NEW: convenience to configure the shared Dio with a baseUrl.
+/// NEW: configure shared Dio with baseUrl + interceptors
+// lib/core/network/globals.dart (أو مكان تهيئة Dio)
 void makeDefaultDio(String baseUrl) {
   appDio = Dio(
     BaseOptions(
@@ -53,5 +47,16 @@ void makeDefaultDio(String baseUrl) {
         'Accept': 'application/json',
       },
     ),
-  );
+  )
+    ..interceptors.clear()
+    ..interceptors.addAll([
+      OwnerInjector(), // 👈 هذا فقط يكفي
+      LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        requestHeader: false,
+        responseHeader: false,
+      ),
+    ]);
 }
+

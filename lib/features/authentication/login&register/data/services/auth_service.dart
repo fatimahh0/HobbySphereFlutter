@@ -1,11 +1,12 @@
-// Dio calls only. Map in/out only. Keep neutral and small.
+// lib/core/auth/auth_service.dart
 import 'package:dio/dio.dart';
+import 'package:hobby_sphere/config/env.dart';
 import 'package:hobby_sphere/core/network/api_fetch.dart';
 import 'package:hobby_sphere/core/network/api_methods.dart';
 
 class AuthService {
-  final _fetch = ApiFetch(); // shared wrapper
-  static const _base = '/auth'; // base path
+  final _fetch = ApiFetch(); // uses the shared Dio (with interceptors)
+  static const _base = '/auth'; // no leading slash
 
   Future<Map<String, dynamic>> _post(
     String path,
@@ -14,28 +15,25 @@ class AuthService {
   }) async {
     try {
       final res = await _fetch.fetch(
-        // send
         HttpMethod.post,
         path,
         data: body,
         headers: headers,
       );
-      final data =
-          (res.data is Map) // normalize to Map
+      final data = (res.data is Map)
           ? Map<String, dynamic>.from(res.data)
           : <String, dynamic>{};
-      data['_status'] = res.statusCode ?? 200; // add status
-      return data; // ok map
+      data['_status'] = res.statusCode ?? 200;
+      return data;
     } on DioException catch (e) {
       final data = (e.response?.data is Map)
           ? Map<String, dynamic>.from(e.response!.data)
           : <String, dynamic>{};
-      data['error'] =
-          data['error'] ?? e.message ?? 'Request failed'; // add error
-      data['_status'] = e.response?.statusCode ?? 0; // status
-      return data; // error map (no throw)
+      data['error'] = data['error'] ?? e.message ?? 'Request failed';
+      data['_status'] = e.response?.statusCode ?? 0;
+      return data;
     } catch (e) {
-      return {'_status': 0, 'error': 'Unexpected: $e'}; // last guard
+      return {'_status': 0, 'error': 'Unexpected: $e'};
     }
   }
 
@@ -43,44 +41,56 @@ class AuthService {
   Future<Map<String, dynamic>> loginUserEmail({
     required String email,
     required String password,
-  }) => _post('$_base/user/login', {
-    'email': email.trim(), // backend expects Users model
-    'passwordHash': password, // field name is passwordHash
+  }) => _post('$_base/user/login'.replaceFirst('_.', ''), {
+    'email': email.trim(),
+    'password': password, // backend expects "password"
+    'ownerProjectLinkId':
+        int.tryParse(Env.ownerProjectLinkId) ?? Env.ownerProjectLinkId,
   });
 
   Future<Map<String, dynamic>> loginUserPhone({
     required String phoneNumber,
     required String password,
-  }) => _post('$_base/user/login-phone', {
-    'phoneNumber': phoneNumber, // phone
-    'passwordHash': password, // field name
+  }) => _post('$_base/user/login-phone'.replaceFirst('_.', ''), {
+    'phoneNumber': phoneNumber,
+    'password': password,
+    'ownerProjectLinkId':
+        int.tryParse(Env.ownerProjectLinkId) ?? Env.ownerProjectLinkId,
   });
 
   // ---------- BUSINESS ----------
   Future<Map<String, dynamic>> loginBusinessEmail({
     required String email,
     required String password,
-  }) => _post('$_base/business/login', {
-    'email': email.trim(), // business login
-    'passwordHash': password, // field name
+  }) => _post('$_base/business/login'.replaceFirst('_.', ''), {
+    'email': email.trim(),
+    'password': password,
+    'ownerProjectLinkId':
+        int.tryParse(Env.ownerProjectLinkId) ?? Env.ownerProjectLinkId,
   });
 
   Future<Map<String, dynamic>> loginBusinessPhone({
     required String phoneNumber,
     required String password,
-  }) => _post('$_base/business/login-phone', {
-    'phoneNumber': phoneNumber, // phone
-    'passwordHash': password, // field name
+  }) => _post('$_base/business/login-phone'.replaceFirst('_.', ''), {
+    'phoneNumber': phoneNumber,
+    'password': password,
+    'ownerProjectLinkId':
+        int.tryParse(Env.ownerProjectLinkId) ?? Env.ownerProjectLinkId,
   });
 
-  // ---------- GOOGLE (optional) ----------
+  // ---------- GOOGLE ----------
   Future<Map<String, dynamic>> loginGoogle(String idToken) =>
-      _post('$_base/google', {'idToken': idToken}); // idToken
+      _post('$_base/google'.replaceFirst('_.', ''), {
+        'idToken': idToken,
+        'ownerProjectLinkId':
+            int.tryParse(Env.ownerProjectLinkId) ?? Env.ownerProjectLinkId,
+      });
 
   // ---------- REACTIVATE ----------
   Future<Map<String, dynamic>> reactivateUser(int id) =>
-      _post('$_base/reactivate', {'id': id}); // user reactivate
+      _post('$_base/reactivate'.replaceFirst('_.', ''), {'id': id});
 
   Future<Map<String, dynamic>> reactivateBusiness(int id) =>
-      _post('$_base/business/reactivate', {'id': id}); // business reactivate
+      _post('$_base/business/reactivate'.replaceFirst('_.', ''), {'id': id});
 }

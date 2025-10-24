@@ -1,120 +1,127 @@
-// Flutter 3.35.x — clean and stable.
-// Sends text and/or one image file without reusing MultipartFile.
-// Each line has a short comment.
-
-import 'dart:io'; // File
-import 'package:dio/dio.dart'; // HTTP + FormData
-import 'package:hobby_sphere/features/activities/user/social/domain/entities/chat_message.dart'; // entity
-import 'package:hobby_sphere/features/activities/user/social/domain/entities/contact_count.dart'; // counts
-import 'package:hobby_sphere/features/authentication/login&register/data/services/token_store.dart'; // token read
+// Flutter 3.35.x — MessageService with ownerProjectLinkId injection
+import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:hobby_sphere/config/env.dart'; // <-- for OWNER_PROJECT_LINK_ID
+import 'package:hobby_sphere/features/activities/user/social/domain/entities/chat_message.dart';
+import 'package:hobby_sphere/features/activities/user/social/domain/entities/contact_count.dart';
+import 'package:hobby_sphere/features/authentication/login&register/data/services/token_store.dart';
 
 class MessageService {
-  final Dio _dio; // http client
+  final Dio _dio;
 
-  MessageService(String baseUrl)
-    : _dio = Dio(BaseOptions(baseUrl: baseUrl)); // base URL
+  MessageService(String baseUrl) : _dio = Dio(BaseOptions(baseUrl: baseUrl));
+
+  // ---- Owner/Tenant helpers ----
+  dynamic get _oplId {
+    final raw = (Env.ownerProjectLinkId).trim();
+    assert(raw.isNotEmpty, 'OWNER_PROJECT_LINK_ID is required.');
+    return int.tryParse(raw) ?? raw;
+  }
+
+  // Append ownerProjectLinkId to any path (keeps existing query params)
+  String _withOwnerQuery(String path) {
+    final uri = Uri.parse(path);
+    final qp = Map<String, String>.from(uri.queryParameters)
+      ..['ownerProjectLinkId'] = _oplId.toString();
+    return uri.replace(queryParameters: qp).toString();
+  }
+
+  // Add ownerProjectLinkId to existing FormData
+  FormData _addOwnerToForm(FormData form) {
+    form.fields.add(MapEntry('ownerProjectLinkId', _oplId.toString()));
+    return form;
+  }
 
   Future<Options> _auth() async {
-    final t = await TokenStore.read(); // load token
-    return Options(
-      headers: {'Authorization': 'Bearer ${t.token ?? ''}'},
-    ); // header
+    final t = await TokenStore.read();
+    final token = (t.token ?? '').trim();
+    final bearer = token.startsWith('Bearer ') ? token : 'Bearer $token';
+    return Options(headers: {'Authorization': bearer});
   }
 
   // ---------- read chat ----------
 
   Future<List<ChatMessage>> conversation(int otherId, int meId) async {
     final res = await _dio.get(
-      '/messages/conversation/$otherId', // endpoint
-      options: await _auth(), // auth
+      _withOwnerQuery('/messages/conversation/$otherId'),
+      options: await _auth(),
     );
-    final list = (res.data as List).cast<dynamic>(); // cast list
+    final list = (res.data as List).cast<dynamic>();
     return list
-        .map((e) => ChatMessage.fromMap(e as Map<String, dynamic>, meId)) // map
-        .toList(); // done
+        .map((e) => ChatMessage.fromMap(e as Map<String, dynamic>, meId))
+        .toList();
   }
 
-  // ---------- send text / image (no input blocking) ----------
+  // ---------- send text / image ----------
 
   Future<ChatMessage> send({
-    required int to, // receiver id
-    String? text, // optional text
-    File? image, // optional image file
-    required int meId, // my id (used by fromMap for isMine)
+    required int to,
+    String? text,
+    File? image,
+    required int meId,
   }) async {
-    final form = FormData(); // fresh form each call
+    final form = FormData();
 
-    // add text once if present
     if (text != null && text.trim().isNotEmpty) {
-      form.fields.add(MapEntry('message', text.trim())); // server "message"
+      form.fields.add(MapEntry('message', text.trim()));
     }
 
-    // add image once if present — IMPORTANT: only ONE key to avoid finalize()
     if (image != null) {
       final mf = await MultipartFile.fromFile(
-        image.path, // local path
+        image.path,
         filename: image.uri.pathSegments.isNotEmpty
             ? image.uri.pathSegments.last
-            : 'upload.jpg', // name
+            : 'upload.jpg',
       );
-      form.files.add(MapEntry('image', mf)); // one field only
+      form.files.add(MapEntry('image', mf));
     }
 
-    // post multipart form (Dio sets content-type automatically)
     final res = await _dio.post(
-      '/messages/send/$to', // endpoint
-      data: form, // multipart
-      options: await _auth(), // auth
+      '/messages/send/$to',
+      data: _addOwnerToForm(form), // <-- inject owner in body
+      options: await _auth(),
     );
 
-    // parse back to entity
-    return ChatMessage.fromMap(
-      res.data as Map<String, dynamic>,
-      meId,
-    ); // entity
+    return ChatMessage.fromMap(res.data as Map<String, dynamic>, meId);
   }
 
   // ---------- misc APIs ----------
 
   Future<void> deleteMessage(int messageId) async {
     await _dio.delete(
-      '/messages/$messageId',
+      _withOwnerQuery('/messages/$messageId'),
       options: await _auth(),
-    ); // delete
+    );
   }
 
   Future<void> markRead(int messageId) async {
     await _dio.patch(
-      '/messages/$messageId/read',
+      _withOwnerQuery('/messages/$messageId/read'),
       options: await _auth(),
-    ); // read
+    );
   }
 
   Future<List<ContactCount>> countsByContact() async {
     final res = await _dio.get(
-      '/messages/count/by-contact',
+      _withOwnerQuery('/messages/count/by-contact'),
       options: await _auth(),
-    ); // get
-    final data = res.data; // payload
+    );
+    final data = res.data;
     if (data is List && data.isNotEmpty && data.first is List) {
-      return data
-          .map<ContactCount>((e) => ContactCount.fromArray(e))
-          .toList(); // tuple
+      return data.map<ContactCount>((e) => ContactCount.fromArray(e)).toList();
     }
-    return (data as List).map((e) => ContactCount.fromMap(e)).toList(); // map
+    return (data as List).map((e) => ContactCount.fromMap(e)).toList();
   }
 
   Future<List<ContactCount>> unreadByContact() async {
     final res = await _dio.get(
-      '/messages/unread/by-contact',
+      _withOwnerQuery('/messages/unread/by-contact'),
       options: await _auth(),
-    ); // get
-    final data = res.data; // payload
+    );
+    final data = res.data;
     if (data is List && data.isNotEmpty && data.first is List) {
-      return data
-          .map<ContactCount>((e) => ContactCount.fromArray(e))
-          .toList(); // tuple
+      return data.map<ContactCount>((e) => ContactCount.fromArray(e)).toList();
     }
-    return (data as List).map((e) => ContactCount.fromMap(e)).toList(); // map
+    return (data as List).map((e) => ContactCount.fromMap(e)).toList();
   }
 }

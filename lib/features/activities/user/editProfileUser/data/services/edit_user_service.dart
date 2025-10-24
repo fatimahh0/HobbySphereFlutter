@@ -1,10 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
+import 'package:hobby_sphere/config/env.dart'; // <-- to read ownerProjectLinkId
 
 class EditUserService {
   final Dio _dio = g.appDio!;
   String get _baseUsers => '${g.appServerRoot}/users';
   String get _baseAuth => '${g.appServerRoot}/auth';
+
+  // normalize ownerProjectLinkId to int when possible
+  dynamic get _ownerId =>
+      int.tryParse(Env.ownerProjectLinkId) ?? Env.ownerProjectLinkId;
 
   Future<Map<String, dynamic>> getUserMap({
     required String token,
@@ -12,6 +17,8 @@ class EditUserService {
   }) async {
     final res = await _dio.get(
       '$_baseUsers/$userId',
+      // 👇 backend requires ownerProjectLinkId as query param
+      queryParameters: {'ownerProjectLinkId': _ownerId},
       options: Options(
         responseType: ResponseType.json,
         headers: {'Authorization': 'Bearer $token'},

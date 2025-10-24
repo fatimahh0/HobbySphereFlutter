@@ -1,47 +1,91 @@
-// raw HTTP service (Dio via your ApiFetch wrapper)
-import 'package:hobby_sphere/core/network/api_fetch.dart'
-    as net; // alias as net
-import 'package:hobby_sphere/core/network/api_methods.dart'; // HttpMethod enum
+// lib/core/catalog/item_types_service.dart
+import 'dart:io';
+import 'package:hobby_sphere/core/network/api_fetch.dart';
+import 'package:hobby_sphere/core/network/api_methods.dart';
+import 'package:hobby_sphere/config/env.dart';
 
 class ItemTypesService {
-  // create one ApiFetch instance
-  final net.ApiFetch _fetch = net.ApiFetch(); // HTTP client
-  // base path (adjust if backend differs)
-  static const String _typesPath = '/item-types'; // endpoint path
+  final ApiFetch _fetch = ApiFetch();
+  static const String _base = '/item-types';
 
-  // returns raw JSON list from API
-  Future<List<Map<String, dynamic>>> getTypes(String token) async {
-    // perform GET call with bearer header
-    final res = await _fetch.fetch(
-      HttpMethod.get, // HTTP verb
-      _typesPath, // endpoint
-      headers: {'Authorization': 'Bearer $token'}, // auth
-    );
+  String get _projectId => Env.requiredVar(Env.projectId, 'PROJECT_ID');
 
-    // take payload
-    final data = res.data; // dynamic json
+  // ---------- Primary: list by PROJECT ----------
+  Future<List<Map<String, dynamic>>> getItemTypesByProject() async {
+    // Preferred endpoint: /api/item-types/by-project/{projectId}
+    final primary = '$_base/by-project/$_projectId';
 
-    // direct list: [ {...}, {...} ]
+    try {
+      final r = await _fetch.fetch(HttpMethod.get, primary);
+      _ok(r.statusCode, r.statusMessage);
+      return _asListOfMap(r.data);
+    } on HttpException {
+      rethrow;
+    } catch (_) {
+      // Fallbacks (older endpoints you had)
+      return _fallbackTypes();
+    }
+  }
+
+  // ---------- Optional: list by CATEGORY ----------
+  Future<List<Map<String, dynamic>>> getItemTypesByCategory(
+    int categoryId,
+  ) async {
+    final path = '$_base/by-category/$categoryId';
+    final r = await _fetch.fetch(HttpMethod.get, path);
+    _ok(r.statusCode, r.statusMessage);
+    return _asListOfMap(r.data);
+  }
+
+  // ---------- Legacy name kept for compatibility ----------
+  // RN: getAllActivityTypes / getActivityTypesCategories
+  Future<List<Map<String, dynamic>>> getAllActivityTypes() {
+    return getItemTypesByProject(); // project-scoped by default
+  }
+
+  // ---------- Internal fallbacks ----------
+  Future<List<Map<String, dynamic>>> _fallbackTypes() async {
+    // Try /item-types then /item-types/guest
+    final paths = <String>[
+      _base, // /api/item-types
+      '$_base/guest', // /api/item-types/guest
+    ];
+
+    HttpException? last;
+    for (final p in paths) {
+      try {
+        final r = await _fetch.fetch(HttpMethod.get, p);
+        _ok(r.statusCode, r.statusMessage);
+        return _asListOfMap(r.data);
+      } catch (e) {
+        if (e is HttpException) last = e;
+      }
+    }
+    if (last != null) throw last;
+    return const <Map<String, dynamic>>[];
+  }
+
+  // ---------- Helpers ----------
+  List<Map<String, dynamic>> _asListOfMap(dynamic data) {
     if (data is List) {
-      // cast each to map safely
       return data
-          .cast<dynamic>() // dynamic list
-          .map((e) => Map<String, dynamic>.from(e as Map)) // map item
-          .toList(); // return list of maps
+          .cast<dynamic>()
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
     }
-
-    // wrapped list: { data: [ {...}, {...} ] }
     if (data is Map && data['data'] is List) {
-      // unwrap 'data'
-      final list = data['data'] as List; // inner list
-      // cast each to map safely
+      final list = data['data'] as List;
       return list
-          .cast<dynamic>() // dynamic list
-          .map((e) => Map<String, dynamic>.from(e as Map)) // map item
-          .toList(); // return list of maps
+          .cast<dynamic>()
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
     }
+    return const <Map<String, dynamic>>[];
+  }
 
-    // fallback empty
-    return <Map<String, dynamic>>[]; // nothing
+  void _ok(int? code, String? msg) {
+    if (code == null || code < 200 || code >= 300) {
+      throw HttpException('Request failed: $code $msg');
+    }
   }
 }

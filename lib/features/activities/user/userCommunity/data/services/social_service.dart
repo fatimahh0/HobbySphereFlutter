@@ -1,17 +1,42 @@
 // lib/features/activities/user/userCommunity/data/services/social_service.dart
-// Flutter 3.35.x — SocialService (no static host, all relative, plain & robust)
+// Flutter 3.35.x — SocialService with tenant (ownerProjectLinkId) injection
 
-import 'package:dio/dio.dart'; // HTTP & FormData
-import 'package:hobby_sphere/core/network/api_fetch.dart'; // your wrapper
-import 'package:hobby_sphere/core/network/api_methods.dart'; // method enum
+import 'package:dio/dio.dart';
+import 'package:hobby_sphere/config/env.dart';
+import 'package:hobby_sphere/core/network/api_fetch.dart';
+import 'package:hobby_sphere/core/network/api_methods.dart';
 
 class SocialService {
-  final _fetch = ApiFetch(); // one shared client
+  final _fetch = ApiFetch();
 
-  // ✅ always under /api (relative paths; baseUrl handled by ApiFetch)
-  static const _api = '/posts'; // posts root
-  static const _comments = '/comments'; // comments root
-  static const _notif = '/notifications'; // notifications root
+  // roots (ApiFetch should prepend /api base)
+  static const _api = '/posts';
+  static const _comments = '/comments';
+  static const _notif = '/notifications';
+
+  // ---- Owner/Tenant helpers (same spirit as AuthService) ----
+  dynamic get _oplId {
+    final raw = (Env.ownerProjectLinkId).trim();
+    assert(raw.isNotEmpty, 'OWNER_PROJECT_LINK_ID is required.');
+    return int.tryParse(raw) ?? raw;
+  }
+
+  Map<String, dynamic> _withOwner(Map<String, dynamic> body) => {
+    ...body,
+    'ownerProjectLinkId': _oplId,
+  };
+
+  // Append owner to a GET/DELETE path as query param
+  String _withOwnerQuery(String path) {
+    final sep = path.contains('?') ? '&' : '?';
+    return '$path${sep}ownerProjectLinkId=$_oplId';
+  }
+
+  // Ensure FormData contains owner id (for multipart)
+  FormData _addOwnerToForm(FormData form) {
+    form.fields.add(MapEntry('ownerProjectLinkId', _oplId.toString()));
+    return form;
+  }
 
   // make sure Authorization header starts with "Bearer "
   String _bearer(String token) => token.trim().startsWith('Bearer ')
@@ -23,43 +48,40 @@ class SocialService {
   Future<List<dynamic>> getAllPosts({required String token}) async {
     try {
       final res = await _fetch.fetch(
-        HttpMethod.get, // GET
-        _api, // /api/posts
-        headers: {'Authorization': _bearer(token)}, // bearer
+        HttpMethod.get,
+        _withOwnerQuery(_api), // /posts?ownerProjectLinkId=...
+        headers: {'Authorization': _bearer(token)},
       );
-      final data = res.data; // payload
-      if (data is List) return data; // raw list
+      final data = res.data;
+      if (data is List) return data;
       if (data is Map) {
-        // wrapped list?
         final maybe =
             data['data'] ?? data['items'] ?? data['content'] ?? data['posts'];
         if (maybe is List) return maybe;
       }
-      return <dynamic>[]; // fallback
+      return <dynamic>[];
     } on DioException catch (e) {
-      final code = e.response?.statusCode ?? 0; // http code
-      if (code == 204 || code == 404) return <dynamic>[]; // empty is fine
-      rethrow; // other errors
+      final code = e.response?.statusCode ?? 0;
+      if (code == 204 || code == 404) return <dynamic>[];
+      rethrow;
     }
   }
 
   Future<void> createPost({
-    required String token, // jwt
-    required String content, // text
-    String? hashtags, // optional
-    String? visibility, // PUBLIC/FRIENDS_ONLY
-    List<int>? imageBytes, // optional
-    String? imageFilename, // optional
-    String? imageMime, // e.g. image/jpeg
+    required String token,
+    required String content,
+    String? hashtags,
+    String? visibility,
+    List<int>? imageBytes,
+    String? imageFilename,
+    String? imageMime,
   }) async {
-    // multipart form (works well with Spring)
     final form = FormData.fromMap({
-      'content': content, // required
+      'content': content,
       if (hashtags?.isNotEmpty == true) 'hashtags': hashtags,
       if (visibility?.isNotEmpty == true) 'visibility': visibility,
       if (imageBytes != null && imageBytes.isNotEmpty)
         'image': MultipartFile.fromBytes(
-          // optional image
           imageBytes,
           filename: imageFilename ?? 'upload.jpg',
           contentType: imageMime != null ? DioMediaType.parse(imageMime) : null,
@@ -67,22 +89,24 @@ class SocialService {
     });
 
     await _fetch.fetch(
-      HttpMethod.post, // POST
-      _api, // /api/posts
-      headers: {'Authorization': _bearer(token)}, // bearer
-      data: form, // multipart body
+      HttpMethod.post,
+      _api, // body will carry owner
+      headers: {'Authorization': _bearer(token)},
+      data: _addOwnerToForm(form),
     );
   }
 
   Future<void> toggleLike({required String token, required int postId}) async {
     try {
+      // send tiny form so backend reads owner in body
+      final form = FormData.fromMap({'noop': '1'});
       await _fetch.fetch(
-        HttpMethod.post, // POST
-        '$_api/$postId/like', // /api/posts/{id}/like
-        headers: {'Authorization': _bearer(token)}, // bearer
+        HttpMethod.post,
+        '$_api/$postId/like',
+        headers: {'Authorization': _bearer(token)},
+        data: _addOwnerToForm(form),
       );
     } on DioException catch (e) {
-      // if server returned 200 but wrapper tripped on plain text, treat as success
       final code = e.response?.statusCode ?? 0;
       final body = e.response?.data;
       final isFormat = e.error is FormatException;
@@ -93,54 +117,53 @@ class SocialService {
 
   Future<int> countLikes({required String token, required int postId}) async {
     final res = await _fetch.fetch(
-      HttpMethod.get, // GET
-      '$_api/$postId/likes', // /api/posts/{id}/likes
-      headers: {'Authorization': _bearer(token)}, // bearer
+      HttpMethod.get,
+      _withOwnerQuery('$_api/$postId/likes'),
+      headers: {'Authorization': _bearer(token)},
     );
-    final v = res.data; // payload
-    return v is num ? v.toInt() : int.tryParse('$v') ?? 0; // normalize
+    final v = res.data;
+    return v is num ? v.toInt() : int.tryParse('$v') ?? 0;
   }
 
   // -------------------- COMMENTS --------------------
 
   Future<List<dynamic>> getComments({
-    required String token, // jwt
-    required int postId, // post id
+    required String token,
+    required int postId,
   }) async {
     final res = await _fetch.fetch(
-      HttpMethod.get, // GET
-      '$_comments/$postId', // /api/comments/{postId}
-      headers: {'Authorization': _bearer(token)}, // bearer
+      HttpMethod.get,
+      _withOwnerQuery('$_comments/$postId'),
+      headers: {'Authorization': _bearer(token)},
     );
-    final data = res.data; // payload
-    if (data is List) return data; // raw list
-    if (data is Map && data['data'] is List) return data['data']; // wrapped
-    return <dynamic>[]; // fallback
+    final data = res.data;
+    if (data is List) return data;
+    if (data is Map && data['data'] is List) return data['data'];
+    return <dynamic>[];
   }
 
-  // ✅ send as FORM (multipart) so Spring @RequestParam("content") is found
   Future<void> addComment({
-    required String token, // jwt
-    required int postId, // post id
-    required String content, // comment text
+    required String token,
+    required int postId,
+    required String content,
   }) async {
-    final form = FormData.fromMap({'content': content}); // one field form
+    final form = FormData.fromMap({'content': content});
     await _fetch.fetch(
-      HttpMethod.post, // POST
-      '$_comments/$postId', // /api/comments/{postId}
-      headers: {'Authorization': _bearer(token)}, // bearer
-      data: form, // multipart/form-data
+      HttpMethod.post,
+      '$_comments/$postId',
+      headers: {'Authorization': _bearer(token)},
+      data: _addOwnerToForm(form),
     );
   }
 
   Future<void> deleteComment({
-    required String token, // jwt
-    required int commentId, // comment id
+    required String token,
+    required int commentId,
   }) async {
     await _fetch.fetch(
-      HttpMethod.delete, // DELETE
-      '$_comments/$commentId', // /api/comments/{id}
-      headers: {'Authorization': _bearer(token)}, // bearer
+      HttpMethod.delete,
+      _withOwnerQuery('$_comments/$commentId'),
+      headers: {'Authorization': _bearer(token)},
     );
   }
 
@@ -148,61 +171,48 @@ class SocialService {
 
   Future<int> getUnreadNotificationCount({required String token}) async {
     final res = await _fetch.fetch(
-      HttpMethod.get, // GET
-      '$_notif/unread-count', // /api/notifications/unread-count
-      headers: {'Authorization': _bearer(token)}, // bearer
+      HttpMethod.get,
+      _withOwnerQuery('$_notif/unread-count'),
+      headers: {'Authorization': _bearer(token)},
     );
-    final v = res.data; // payload
-    return v is num ? v.toInt() : int.tryParse('$v') ?? 0; // normalize
+    final v = res.data;
+    return v is num ? v.toInt() : int.tryParse('$v') ?? 0;
   }
 
-  // lib/features/activities/user/userCommunity/data/services/social_service.dart
-  // ... keep your imports and class as-is. Just ADD these two methods inside SocialService:
+  // -------------------- EXTRA (already in your snippet) --------------------
 
-  // get posts by specific user id
   Future<List<dynamic>> getPostsByUser({
-    required String token, // jwt
-    required int userId, // current user id
+    required String token,
+    required int userId,
   }) async {
     final res = await _fetch.fetch(
-      HttpMethod.get, // GET
-      '$_api/user/$userId', // -> /posts/user/{userId}  (ApiFetch adds /api)
-      headers: {'Authorization': _bearer(token)}, // bearer
+      HttpMethod.get,
+      _withOwnerQuery('$_api/user/$userId'),
+      headers: {'Authorization': _bearer(token)},
     );
-    final data = res.data; // payload
-    if (data is List) return data; // raw list
+    final data = res.data;
+    if (data is List) return data;
     if (data is Map) {
-      // wrapped shapes
       final maybe =
           data['data'] ?? data['items'] ?? data['content'] ?? data['posts'];
       if (maybe is List) return maybe;
     }
-    return <dynamic>[]; // fallback
+    return <dynamic>[];
   }
 
-  // delete a post (owner)
-  // inside SocialService
-
-  Future<void> deletePost({
-    required String token, // jwt
-    required int postId, // post id
-  }) async {
+  Future<void> deletePost({required String token, required int postId}) async {
     try {
       await _fetch.fetch(
-        HttpMethod.delete, // DELETE
-        '$_api/$postId', // /posts/{id}
+        HttpMethod.delete,
+        _withOwnerQuery('$_api/$postId'),
         headers: {'Authorization': _bearer(token)},
       );
     } on DioException catch (e) {
-      // Server often returns 200 with a *string* body like "Post deleted successfully".
-      // Your wrapper may try to parse it as JSON → FormatException. Treat as success.
       final code = e.response?.statusCode ?? 0;
       final body = e.response?.data;
       final isFormat = e.error is FormatException;
-      if (code == 200 || code == 204 || isFormat || body is String) {
-        return; // consider it successful
-      }
-      rethrow; // real network/server error
+      if (code == 200 || code == 204 || isFormat || body is String) return;
+      rethrow;
     }
   }
 }
