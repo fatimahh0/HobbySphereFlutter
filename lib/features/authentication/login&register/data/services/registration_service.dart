@@ -92,10 +92,11 @@ class RegistrationService {
 
   // ---------- USER: add interests (tries multiple known endpoints) ----------
   Future<void> addUserInterests(int userId, List<int> ids) async {
-    final paths = <String>[
-      '/users/$userId/UpdateCategory',
-      '/users/$userId/categoriess',
+   final paths = <String>[
+      '/users/$userId/update-category', // canonical first
       '/users/$userId/categories',
+      '/users/$userId/categoriess',
+      '/users/$userId/UpdateCategory',
       '/users/$userId/UpdateInterest',
     ];
 

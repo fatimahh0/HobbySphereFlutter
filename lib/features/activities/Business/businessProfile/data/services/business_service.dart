@@ -23,12 +23,13 @@ class BusinessService {
   }
 
   /// PUT /api/businesses/{id}/visibility
+  /// PATCH /api/businesses/{id}/visibility
   Future<void> updateVisibility(String token, int id, bool isPublic) async {
     await _fetch.fetch(
-      HttpMethod.put, // PUT
-      '$_base/$id/visibility', // path
-      headers: {'Authorization': _auth(token)}, // auth
-      data: {'isPublicProfile': isPublic}, // body
+      HttpMethod.patch, // 👈 PATCH (not PUT)
+      '/businesses/$id/visibility',
+      headers: {'Authorization': _auth(token)},
+      data: {'public': isPublic}, // 👈 'public' (not isPublicProfile)
     );
   }
 
