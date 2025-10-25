@@ -1,67 +1,91 @@
-// 🌐 Low-level friends HTTP service (Dio).
-import 'package:dio/dio.dart'; // dio
-import '../../domain/entities/user_min.dart'; // map
-import '../../domain/entities/friend_request.dart'; // map
-import 'package:hobby_sphere/features/authentication/login&register/data/services/token_store.dart'; // token
+// 🌐 Low-level friends HTTP service (Dio) with ownerProjectLinkId injection.
+import 'package:dio/dio.dart';
+import 'package:hobby_sphere/config/env.dart'; // <- for OWNER_PROJECT_LINK_ID
+import '../../domain/entities/user_min.dart';
+import '../../domain/entities/friend_request.dart';
+import 'package:hobby_sphere/features/authentication/login&register/data/services/token_store.dart';
 
 class FriendsService {
-  final Dio _dio; // client
-  FriendsService(String baseUrl)
-    : _dio = Dio(BaseOptions(baseUrl: baseUrl)); // ctor
+  final Dio _dio;
 
-  Future<Options> _auth() async {
-    final t = await TokenStore.read(); // token
-    return Options(
-      headers: {'Authorization': 'Bearer ${t.token ?? ''}'},
-    ); // bearer
+  FriendsService(String baseUrl) : _dio = Dio(BaseOptions(baseUrl: baseUrl));
+
+  // ---- Owner/Tenant helpers ----
+  dynamic get _oplId {
+    final raw = (Env.ownerProjectLinkId).trim();
+    assert(raw.isNotEmpty, 'OWNER_PROJECT_LINK_ID is required.');
+    return int.tryParse(raw) ?? raw;
   }
 
+  // Append ownerProjectLinkId to any path (keeps existing query params)
+  String _withOwnerQuery(String path) {
+    final uri = Uri.parse(path);
+    final qp = Map<String, String>.from(uri.queryParameters)
+      ..['ownerProjectLinkId'] = _oplId.toString();
+    return uri.replace(queryParameters: qp).toString();
+  }
+
+  // Minimal body for POST endpoints that otherwise have no body
+  FormData _ownerForm() =>
+      FormData.fromMap({'ownerProjectLinkId': _oplId.toString()});
+
+  Future<Options> _auth() async {
+    final t = await TokenStore.read();
+    final bearer = (t.token ?? '').trim();
+    final header = bearer.startsWith('Bearer ') ? bearer : 'Bearer $bearer';
+    return Options(headers: {'Authorization': header});
+  }
+
+  // ------------------- USERS -------------------
+
   Future<List<UserMin>> getAllUsers() async {
-    final res = await _dio.get('/users/all', options: await _auth()); // GET
-    final list = (res.data as List).cast<dynamic>(); // list
-    return list
-        .map((e) => UserMin.fromMap(e as Map<String, dynamic>))
-        .toList(); // map
+    final res = await _dio.get(
+      _withOwnerQuery('/users/all'),
+      options: await _auth(),
+    );
+    final list = (res.data as List).cast<dynamic>();
+    return list.map((e) => UserMin.fromMap(e as Map<String, dynamic>)).toList();
   }
 
   Future<List<UserMin>> getSuggestedUsers(int meId) async {
     final res = await _dio.get(
-      '/users/$meId/suggestions',
+      _withOwnerQuery('/users/$meId/suggestions'),
       options: await _auth(),
-    ); // GET
-    final list = (res.data as List).cast<dynamic>(); // list
-    return list
-        .map((e) => UserMin.fromMap(e as Map<String, dynamic>))
-        .toList(); // map
+    );
+    final list = (res.data as List).cast<dynamic>();
+    return list.map((e) => UserMin.fromMap(e as Map<String, dynamic>)).toList();
   }
+
+  // ------------------- FRIEND REQUESTS -------------------
 
   Future<void> sendFriend(int friendId) async {
     await _dio.post(
       '/friends/add/$friendId',
+      data: _ownerForm(),
       options: await _auth(),
-    ); // POST
+    );
   }
 
   Future<void> cancelFriend(int friendId) async {
     await _dio.delete(
-      '/friends/cancel/$friendId',
+      _withOwnerQuery('/friends/cancel/$friendId'),
       options: await _auth(),
-    ); // DELETE (by userId - optional)
+    );
   }
 
   Future<void> cancelSentRequest(int requestId) async {
     await _dio.delete(
-      '/friends/cancel/$requestId',
+      _withOwnerQuery('/friends/cancel/$requestId'),
       options: await _auth(),
-    ); // DELETE (by requestId - used by Sent tab)
+    );
   }
 
   Future<List<FriendRequestItem>> getPending() async {
     final res = await _dio.get(
-      '/friends/pending',
+      _withOwnerQuery('/friends/pending'),
       options: await _auth(),
-    ); // GET
-    final list = (res.data as List).cast<dynamic>(); // list
+    );
+    final list = (res.data as List).cast<dynamic>();
     return list
         .map(
           (e) => FriendRequestItem.fromMap(
@@ -69,15 +93,15 @@ class FriendsService {
             incoming: true,
           ),
         )
-        .toList(); // map incoming
+        .toList();
   }
 
   Future<List<FriendRequestItem>> getSent() async {
     final res = await _dio.get(
-      '/friends/sent',
+      _withOwnerQuery('/friends/sent'),
       options: await _auth(),
-    ); // GET
-    final list = (res.data as List).cast<dynamic>(); // list
+    );
+    final list = (res.data as List).cast<dynamic>();
     return list
         .map(
           (e) => FriendRequestItem.fromMap(
@@ -85,52 +109,53 @@ class FriendsService {
             incoming: false,
           ),
         )
-        .toList(); // map outgoing
+        .toList();
   }
 
   Future<List<UserMin>> getFriends() async {
     final res = await _dio.get(
-      '/friends/my',
+      _withOwnerQuery('/friends/my'),
       options: await _auth(),
-    ); // GET
-    final list = (res.data as List).cast<dynamic>(); // list
-    return list
-        .map((e) => UserMin.fromMap(e as Map<String, dynamic>))
-        .toList(); // map
+    );
+    final list = (res.data as List).cast<dynamic>();
+    return list.map((e) => UserMin.fromMap(e as Map<String, dynamic>)).toList();
   }
 
   Future<void> accept(int requestId) async {
     await _dio.post(
       '/friends/accept/$requestId',
+      data: _ownerForm(),
       options: await _auth(),
-    ); // POST
+    );
   }
 
   Future<void> reject(int requestId) async {
     await _dio.post(
       '/friends/reject/$requestId',
+      data: _ownerForm(),
       options: await _auth(),
-    ); // POST
+    );
   }
 
   Future<void> unfriend(int userId) async {
     await _dio.delete(
-      '/friends/unfriend/$userId',
+      _withOwnerQuery('/friends/unfriend/$userId'),
       options: await _auth(),
-    ); // DELETE
+    );
   }
 
   Future<void> block(int userId) async {
     await _dio.post(
       '/friends/block/$userId',
+      data: _ownerForm(),
       options: await _auth(),
-    ); // POST
+    );
   }
 
   Future<void> unblock(int userId) async {
     await _dio.delete(
-      '/friends/unblock/$userId',
+      _withOwnerQuery('/friends/unblock/$userId'),
       options: await _auth(),
-    ); // DELETE
+    );
   }
 }
