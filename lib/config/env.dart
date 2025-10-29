@@ -45,7 +45,7 @@ class Env {
   /// Where to attach IDs
   /// - 'header' → X-Owner-Project-Id / X-Project-Id headers
   /// - 'query'  → ?ownerProjectLinkId=...&projectId=...
-  /// - 'off'    → لا شي (لو الendpoint فيه path params)
+
   static const ownerAttachMode = String.fromEnvironment(
     'OWNER_ATTACH_MODE',
     defaultValue: 'header',
@@ -95,7 +95,7 @@ class Env {
         if (extra != null) ...extra,
       };
     }
-    // if query-mode or off → لا نضيف الهيدر الخاص
+    // if query-mode or off →
     return {'Content-Type': 'application/json', if (extra != null) ...extra};
   }
 
@@ -105,14 +105,14 @@ class Env {
       final pid = requiredVar(projectId, 'PROJECT_ID');
       return {
         'Content-Type': 'application/json',
-        'X-Project-Id': pid, // تستخدمه لو عاملين فلترة بالهيدر
+        'X-Project-Id': pid, 
         if (extra != null) ...extra,
       };
     }
     return {'Content-Type': 'application/json', if (extra != null) ...extra};
   }
 
-  /// WS URL (تقدر تضيف projectId كمان لو بدك)
+  /// WS URL 
   static String get wsUrl {
     final base = requiredVar(apiBaseUrl, 'API_BASE_URL');
     final scheme = base.startsWith('https') ? 'wss' : 'ws';

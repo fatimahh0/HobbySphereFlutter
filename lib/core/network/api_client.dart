@@ -10,7 +10,7 @@ class ApiClient {
     : dio =
           Dio(
               BaseOptions(
-                baseUrl: config.baseUrl, // e.g. http://192.168.1.6:8080/api
+                baseUrl: config.baseUrl,
                 connectTimeout: const Duration(seconds: 30),
                 receiveTimeout: const Duration(seconds: 60),
                 sendTimeout: const Duration(seconds: 30),
@@ -21,7 +21,7 @@ class ApiClient {
               ),
             )
             ..interceptors.addAll([
-              OwnerInjector(), // 👈 one interceptor to handle ALL cases
+              OwnerInjector(),
               LogInterceptor(
                 requestBody: true,
                 responseBody: true,
