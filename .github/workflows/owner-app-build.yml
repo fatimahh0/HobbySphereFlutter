@@ -3,7 +3,6 @@ name: Owner App Build (Android APK)
 on:
   repository_dispatch:
     types: [owner_app_build]
-
   workflow_dispatch:
 
 jobs:
@@ -14,6 +13,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Java for Android/Gradle (Flutter recommends 17+)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: 'gradle'
+
+      # Install Android SDK & build-tools
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: '34.0.0'
+          ndk: false
+
+      # Accept Android licenses (sometimes still required)
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses
+
+      # Flutter toolchain
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -26,6 +46,7 @@ jobs:
       - name: Pub get
         run: flutter pub get
 
+      # Read backend payload
       - name: Read payload
         id: payload
         run: |
@@ -38,6 +59,7 @@ jobs:
           echo "callback_token=${{ github.event.client_payload.CI_CALLBACK_TOKEN }}" >> $GITHUB_OUTPUT
           echo "backend_ci_base=${{ github.event.client_payload.BACKEND_CI_BASE }}"  >> $GITHUB_OUTPUT
 
+      # Build-time defines from repository secrets
       - name: Build defines
         id: defs
         run: |
@@ -45,8 +67,21 @@ jobs:
           echo "STRIPE_PUBLISHABLE_KEY=${{ secrets.STRIPE_PUBLISHABLE_KEY }}" >> $GITHUB_OUTPUT
           echo "WS_PATH=/api/ws" >> $GITHUB_OUTPUT
 
+      # Optional: Gradle cache speeds (Flutter uses Gradle under android/)
+      - name: Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # Build the release APK
       - name: Build APK (release)
         run: |
+          # NOTE: adjust target if your entrypoint is different
           flutter build apk --release \
             -t lib/app/main_activity.dart \
             --dart-define=API_BASE_URL=${{ steps.defs.outputs.API_BASE_URL }} \
@@ -75,6 +110,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Make sure jq is available for parsing release assets (usually preinstalled, but safe)
+      - name: Ensure jq
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
       - name: Extract asset URL
         id: asset
         run: |
@@ -90,7 +132,8 @@ jobs:
           APK="${{ steps.asset.outputs.apk_url }}"
 
           echo "Callback -> $BASE/owner-projects/$OWNER/$PROJECT/apk-url"
-          curl -X PUT "$BASE/owner-projects/$OWNER/$PROJECT/apk-url" \
+          curl -sS -X PUT "$BASE/owner-projects/$OWNER/$PROJECT/apk-url" \
             -H "X-Auth-Token: $TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{\"apkUrl\":\"$APK\"}"
+            -d "{\"apkUrl\":\"$APK\"}" \
+            -w "\nHTTP %{http_code}\n"
