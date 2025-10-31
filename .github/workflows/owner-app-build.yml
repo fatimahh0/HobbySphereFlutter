@@ -13,8 +13,8 @@ permissions:
 
 jobs:
   build-android:
-    # Keep self-hosted if you use your own runner; otherwise switch to ubuntu-latest
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+
 
     steps:
       # 1) Checkout the Flutter project code
