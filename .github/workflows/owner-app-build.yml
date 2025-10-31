@@ -1,20 +1,27 @@
 name: Owner App Build (Android APK)
 
 on:
+  # Triggered by your backend via repository_dispatch (event_type = owner_app_build)
   repository_dispatch:
     types: [owner_app_build]
+  # Manual trigger from the Actions tab (for testing)
   workflow_dispatch:
+
+# Needed to create releases and upload APK assets
+permissions:
+  contents: write
 
 jobs:
   build-android:
+    # Keep self-hosted if you use your own runner; otherwise switch to ubuntu-latest
     runs-on: self-hosted
 
-
     steps:
+      # 1) Checkout the Flutter project code
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Java for Android/Gradle (Flutter recommends 17+)
+      # 2) Install Java (required by Gradle/Android build)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -22,45 +29,47 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      # Install Android SDK & build-tools
+      # 3) Install Android SDK and build-tools
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
           api-level: 34
           build-tools: '34.0.0'
-          ndk: false
 
-      # Accept Android licenses (sometimes still required)
+      # 4) Accept Android SDK licenses
       - name: Accept Android licenses
         run: yes | sdkmanager --licenses
 
-      # Flutter toolchain
+      # 5) Install Flutter toolchain
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
+      # 6) Diagnostics (optional but helpful)
       - name: Flutter doctor
         run: flutter doctor -v
 
+      # 7) Resolve Flutter pub dependencies
       - name: Pub get
         run: flutter pub get
 
-      # Read backend payload
+      # 8) Read payload sent by your backend (owner/project/slug/callback details)
       - name: Read payload
         id: payload
         run: |
-          echo "owner_id=${{ github.event.client_payload.OWNER_ID }}"           >> $GITHUB_OUTPUT
-          echo "project_id=${{ github.event.client_payload.PROJECT_ID }}"       >> $GITHUB_OUTPUT
+          echo "owner_id=${{ github.event.client_payload.OWNER_ID }}" >> $GITHUB_OUTPUT
+          echo "project_id=${{ github.event.client_payload.PROJECT_ID }}" >> $GITHUB_OUTPUT
           echo "owner_project_link=${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}" >> $GITHUB_OUTPUT
-          echo "slug=${{ github.event.client_payload.SLUG }}"                   >> $GITHUB_OUTPUT
-          echo "app_name=${{ github.event.client_payload.APP_NAME }}"           >> $GITHUB_OUTPUT
-          echo "theme_id=${{ github.event.client_payload.THEME_ID }}"           >> $GITHUB_OUTPUT
+          echo "slug=${{ github.event.client_payload.SLUG }}" >> $GITHUB_OUTPUT
+          echo "app_name=${{ github.event.client_payload.APP_NAME }}" >> $GITHUB_OUTPUT
+          echo "theme_id=${{ github.event.client_payload.THEME_ID }}" >> $GITHUB_OUTPUT
           echo "callback_token=${{ github.event.client_payload.CI_CALLBACK_TOKEN }}" >> $GITHUB_OUTPUT
-          echo "backend_ci_base=${{ github.event.client_payload.BACKEND_CI_BASE }}"  >> $GITHUB_OUTPUT
+          echo "backend_ci_base=${{ github.event.client_payload.BACKEND_CI_BASE }}" >> $GITHUB_OUTPUT
 
-      # Build-time defines from repository secrets
+      # 9) Build-time defines (taken from repo secrets)
+      #    - API_BASE_URL should be your public backend URL (the Cloudflare tunnel base)
       - name: Build defines
         id: defs
         run: |
@@ -68,7 +77,7 @@ jobs:
           echo "STRIPE_PUBLISHABLE_KEY=${{ secrets.STRIPE_PUBLISHABLE_KEY }}" >> $GITHUB_OUTPUT
           echo "WS_PATH=/api/ws" >> $GITHUB_OUTPUT
 
-      # Optional: Gradle cache speeds (Flutter uses Gradle under android/)
+      # 10) Cache Gradle to speed up subsequent builds
       - name: Gradle cache
         uses: actions/cache@v4
         with:
@@ -79,10 +88,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # Build the release APK
+      # 11) Build the release APK (adjust -t if your entrypoint file differs)
       - name: Build APK (release)
         run: |
-          # NOTE: adjust target if your entrypoint is different
           flutter build apk --release \
             -t lib/app/main_activity.dart \
             --dart-define=API_BASE_URL=${{ steps.defs.outputs.API_BASE_URL }} \
@@ -93,43 +101,56 @@ jobs:
             --dart-define=APP_ROLE=both \
             --dart-define=OWNER_ATTACH_MODE=header
 
+      # 12) Debug: print APK directory to confirm file names/locations
+      - name: List APK outputs (debug)
+        run: |
+          echo "== build/app/outputs/flutter-apk =="
+          ls -R build/app/outputs/flutter-apk || true
+
+      # 13) Upload any *.apk we built as an artifact (use wildcard to catch various APK names)
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.payload.outputs.slug }}-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
           retention-days: 14
 
+      # 14) Create a GitHub Release and attach the APK file(s)
       - name: Create release
         id: rel
         uses: softprops/action-gh-release@v2
         with:
           tag_name: app-${{ steps.payload.outputs.slug }}-${{ github.run_id }}
           name: "${{ steps.payload.outputs.app_name }} (run ${{ github.run_id }})"
-          files: build/app/outputs/flutter-apk/app-release.apk
+          files: build/app/outputs/flutter-apk/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Make sure jq is available for parsing release assets (usually preinstalled, but safe)
+      # 15) Ensure jq exists (used to parse the release assets JSON)
       - name: Ensure jq
         run: |
           if ! command -v jq >/dev/null 2>&1; then
             sudo apt-get update && sudo apt-get install -y jq
           fi
 
+      # 16) Extract the direct download URL of the uploaded APK from the release assets
       - name: Extract asset URL
         id: asset
         run: |
+          echo "Assets JSON:"
+          echo '${{ steps.rel.outputs.assets }}'
           url=$(jq -r '.[0].browser_download_url' <<< "${{ steps.rel.outputs.assets }}")
           echo "apk_url=$url" >> $GITHUB_OUTPUT
+          echo "Resolved APK URL: $url"
 
+      # 17) Call back your backend with the real APK URL (PUT /api/ci/owner-projects/{owner}/{project}/apk-url)
       - name: Callback backend with APK URL
         run: |
           OWNER=${{ steps.payload.outputs.owner_id }}
           PROJECT=${{ steps.payload.outputs.project_id }}
           TOKEN=${{ steps.payload.outputs.callback_token }}
-          BASE=${{ steps.payload.outputs.backend_ci_base }}
+          BASE=${{ steps.payload.outputs.backend_ci_base }}   # Must end with /api/ci
           APK="${{ steps.asset.outputs.apk_url }}"
 
           echo "Callback -> $BASE/owner-projects/$OWNER/$PROJECT/apk-url"
