@@ -43,6 +43,13 @@ jobs:
 
       - name: Pub get
         run: flutter pub get
+        # If your app lives in a subfolder, uncomment:
+        # working-directory: apps/owner_app
+
+      - name: Ensure entrypoint exists
+        run: test -f lib/app/main_activity.dart || (echo "Missing lib/app/main_activity.dart" && exit 1)
+        # If your app lives in a subfolder, uncomment:
+        # working-directory: apps/owner_app
 
       - name: Read payload
         id: payload
@@ -74,9 +81,16 @@ jobs:
           test -n "${{ steps.defs.outputs.API_BASE_URL }}"         || (echo "❌ MISSING API_BASE_URL (repo secret)" && exit 1)
           test -n "${{ steps.payload.outputs.backend_ci_base }}"   || (echo "❌ MISSING BACKEND_CI_BASE" && exit 1)
 
+      - name: Echo dart-defines (debug)
+        run: |
+          echo API_BASE_URL=${{ steps.defs.outputs.API_BASE_URL }}
+          echo OWNER_PROJECT_LINK_ID=${{ steps.payload.outputs.owner_project_link }}
+          echo PROJECT_ID=${{ steps.payload.outputs.project_id }}
+
       - name: Build APK (release)
         run: |
           flutter build apk --release \
+            -t lib/app/main_activity.dart \
             --dart-define=API_BASE_URL=${{ steps.defs.outputs.API_BASE_URL }} \
             --dart-define=WS_PATH=${{ steps.defs.outputs.WS_PATH }} \
             --dart-define=OWNER_PROJECT_LINK_ID=${{ steps.payload.outputs.owner_project_link }} \
@@ -84,6 +98,8 @@ jobs:
             --dart-define=STRIPE_PUBLISHABLE_KEY=${{ steps.defs.outputs.STRIPE_PUBLISHABLE_KEY }} \
             --dart-define=APP_ROLE=both \
             --dart-define=OWNER_ATTACH_MODE=header
+        # If your app lives in a subfolder, uncomment:
+        # working-directory: apps/owner_app
 
       - name: List APK outputs (debug)
         run: |
