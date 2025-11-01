@@ -1,0 +1,196 @@
+name: Owner App Build (Android APK)
+
+on:
+  repository_dispatch:
+    types: [owner_app_build]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: '34.0.0'
+
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+        # working-directory: apps/owner_app
+
+      - name: Pub get
+        run: flutter pub get
+        # working-directory: apps/owner_app
+
+      - name: Ensure entrypoint exists
+        run: test -f lib/app/main_activity.dart || (echo "Missing lib/app/main_activity.dart" && exit 1)
+        # working-directory: apps/owner_app
+
+      # -------------------- DEBUG: show whole payload --------------------
+      - name: Dump client_payload (debug)
+        run: |
+          echo '== github.event.client_payload =='
+          echo '${{ toJson(github.event.client_payload) }}'
+
+      # -------------------- Read payload into outputs --------------------
+      - name: Read payload
+        id: payload
+        run: |
+          echo "owner_id=${{ github.event.client_payload.OWNER_ID }}"            >> "$GITHUB_OUTPUT"
+          echo "project_id=${{ github.event.client_payload.PROJECT_ID }}"        >> "$GITHUB_OUTPUT"
+          echo "owner_project_link=${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}" >> "$GITHUB_OUTPUT"
+          echo "slug=${{ github.event.client_payload.SLUG }}"                    >> "$GITHUB_OUTPUT"
+          echo "app_name=${{ github.event.client_payload.APP_NAME }}"            >> "$GITHUB_OUTPUT"
+          echo "theme_id=${{ github.event.client_payload.THEME_ID }}"            >> "$GITHUB_OUTPUT"
+          echo "callback_token=${{ github.event.client_payload.CI_CALLBACK_TOKEN }}" >> "$GITHUB_OUTPUT"
+          echo "backend_ci_base=${{ github.event.client_payload.BACKEND_CI_BASE }}"  >> "$GITHUB_OUTPUT"
+
+      # -------------------- Build safe dart-defines --------------------
+      - name: Build defines
+        id: defs
+        shell: bash
+        run: |
+          # API base: prefer secret; fall back to a safe local URL
+          API="${{ secrets.API_BASE_URL }}"
+          if [ -z "$API" ] || [ "$API" = "null" ]; then
+            API="http://10.0.2.2:8080/api"
+          fi
+          echo "API_BASE_URL=$API" >> "$GITHUB_OUTPUT"
+
+          # Stripe PK: optional; provide harmless dummy to avoid build failure
+          PK="${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
+          if [ -z "$PK" ] || [ "$PK" = "null" ]; then
+            PK="pk_test_dummy"
+          fi
+          echo "STRIPE_PUBLISHABLE_KEY=$PK" >> "$GITHUB_OUTPUT"
+
+          # WS path
+          echo "WS_PATH=/api/ws" >> "$GITHUB_OUTPUT"
+
+          # Owner-Project Link: use payload if present; else compose owner-project
+          OPL="${{ steps.payload.outputs.owner_project_link }}"
+          if [ -z "$OPL" ] || [ "$OPL" = "null" ]; then
+            OPL="${{ steps.payload.outputs.owner_id }}-${{ steps.payload.outputs.project_id }}"
+          fi
+          echo "OWNER_PROJECT_LINK_ID=$OPL" >> "$GITHUB_OUTPUT"
+
+          # Project ID: default to 0 if missing
+          PID="${{ steps.payload.outputs.project_id }}"
+          if [ -z "$PID" ] || [ "$PID" = "null" ]; then
+            PID="0"
+          fi
+          echo "PROJECT_ID=$PID" >> "$GITHUB_OUTPUT"
+
+      # -------------------- Debug & light validation --------------------
+      - name: Debug & validate inputs
+        run: |
+          echo "OWNER_ID=${{ steps.payload.outputs.owner_id }}"
+          echo "PROJECT_ID(def)=${{ steps.defs.outputs.PROJECT_ID }}"
+          echo "OWNER_PROJECT_LINK_ID(def)=${{ steps.defs.outputs.OWNER_PROJECT_LINK_ID }}"
+          echo "API_BASE_URL(def)=${{ steps.defs.outputs.API_BASE_URL }}"
+          echo "BACKEND_CI_BASE=${{ steps.payload.outputs.backend_ci_base }}"
+          # Only require callback base; API has default now
+          test -n "${{ steps.payload.outputs.backend_ci_base }}" || (echo "❌ MISSING BACKEND_CI_BASE" && exit 1)
+
+      - name: Echo dart-defines (debug)
+        run: |
+          echo API_BASE_URL=${{ steps.defs.outputs.API_BASE_URL }}
+          echo WS_PATH=${{ steps.defs.outputs.WS_PATH }}
+          echo OWNER_PROJECT_LINK_ID=${{ steps.defs.outputs.OWNER_PROJECT_LINK_ID }}
+          echo PROJECT_ID=${{ steps.defs.outputs.PROJECT_ID }}
+          echo STRIPE_PUBLISHABLE_KEY=${{ steps.defs.outputs.STRIPE_PUBLISHABLE_KEY }}
+
+      # -------------------- Build APK --------------------
+      - name: Build APK (release)
+        run: |
+          flutter build apk --release \
+            -t lib/app/main_activity.dart \
+            --dart-define=API_BASE_URL=${{ steps.defs.outputs.API_BASE_URL }} \
+            --dart-define=WS_PATH=${{ steps.defs.outputs.WS_PATH }} \
+            --dart-define=OWNER_PROJECT_LINK_ID=${{ steps.defs.outputs.OWNER_PROJECT_LINK_ID }} \
+            --dart-define=PROJECT_ID=${{ steps.defs.outputs.PROJECT_ID }} \
+            --dart-define=STRIPE_PUBLISHABLE_KEY=${{ steps.defs.outputs.STRIPE_PUBLISHABLE_KEY }} \
+            --dart-define=APP_ROLE=both \
+            --dart-define=OWNER_ATTACH_MODE=header
+        # working-directory: apps/owner_app
+
+      - name: List APK outputs (debug)
+        run: |
+          echo "== build/app/outputs/flutter-apk =="
+          ls -R build/app/outputs/flutter-apk || true
+        # working-directory: apps/owner_app
+
+      # -------------------- Publish & callback --------------------
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.payload.outputs.slug }}-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Create release
+        id: rel
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-${{ steps.payload.outputs.slug }}-${{ github.run_id }}
+          name: "${{ steps.payload.outputs.app_name }} (run ${{ github.run_id }})"
+          files: build/app/outputs/flutter-apk/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure jq
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
+      - name: Extract asset URL
+        id: asset
+        shell: bash
+        run: |
+          echo "Assets JSON:"
+          echo '${{ steps.rel.outputs.assets }}'
+          url=$(jq -r '.[0].browser_download_url' <<< "${{ steps.rel.outputs.assets }}")
+          echo "apk_url=$url" >> "$GITHUB_OUTPUT"
+          echo "Resolved APK URL: $url"
+
+      - name: Callback backend with APK URL
+        shell: bash
+        run: |
+          OWNER='${{ steps.payload.outputs.owner_id }}'
+          PROJECT='${{ steps.payload.outputs.project_id }}'
+          TOKEN='${{ steps.payload.outputs.callback_token }}'
+          BASE='${{ steps.payload.outputs.backend_ci_base }}'   # must end with /api/ci
+          APK='${{ steps.asset.outputs.apk_url }}'
+
+          echo "Callback -> $BASE/owner-projects/$OWNER/$PROJECT/apk-url"
+          curl -sS -X PUT "$BASE/owner-projects/$OWNER/$PROJECT/apk-url" \
+            -H "X-Auth-Token: $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"apkUrl\":\"$APK\"}" \
+            -w "\nHTTP %{http_code}\n"
