@@ -6,7 +6,6 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Read MAPS_API_KEY from local.properties (or from env as fallback)
 val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) f.inputStream().use { load(it) }
@@ -28,21 +27,31 @@ android {
         versionName = flutter.versionName
         multiDexEnabled = true
 
-        // ✅ Kotlin DSL way (don’t reassign the map; set the entry)
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
+    
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "17"
     }
 
     buildTypes {
         release {
+          
+            isMinifyEnabled = false
+            isShrinkResources = false
+
+          
             signingConfig = signingConfigs.getByName("debug")
+        }
+        debug {
+           
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
