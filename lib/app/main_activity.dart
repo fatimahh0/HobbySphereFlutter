@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// ⬇️ added for Stripe
+// Stripe
 import 'package:flutter/services.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
@@ -17,20 +17,15 @@ import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
 import 'package:hobby_sphere/shared/theme/app_theme.dart' show AppTheme;
 import 'package:hobby_sphere/shared/network/connection_cubit.dart';
 
-// ---------- Stripe (only change you asked for) ----------
 Future<void> _initStripe() async {
   try {
-    final pk = (Env.stripePublishableKey ?? '').trim();
+    final pk = (Env.stripePublishableKey).trim();
     if (pk.isEmpty) throw StateError('Env.stripePublishableKey is empty');
 
-    // Required
     Stripe.publishableKey = pk;
-
-    // Android/iOS return URL scheme
-    Stripe.urlScheme = 'flutterstripe'; // <-- use property, not a function
-    Stripe.merchantIdentifier = 'merchant.com.hobbysphere'; // iOS (optional)
-
-    // Apply settings after changing any of the above
+    Stripe.urlScheme = 'flutterstripe';
+    Stripe.merchantIdentifier =
+        'merchant.com.hobbysphere'; // iOS only (optional)
     await Stripe.instance.applySettings();
 
     debugPrint(
@@ -46,8 +41,6 @@ Future<void> _initStripe() async {
     debugPrint('$st');
   }
 }
-
-// ---------- Your existing networking (unchanged) ----------
 Future<void> _initNetworking() async {
   String serverRoot;
 
@@ -67,27 +60,15 @@ Future<void> _initNetworking() async {
   final baseWithApi = '$serverRoot/api';
   g.appServerRoot = baseWithApi;
 
-  g.appDio =
-      Dio(
-          BaseOptions(
-            baseUrl: baseWithApi,
-            connectTimeout: const Duration(seconds: 30),
-            receiveTimeout: const Duration(seconds: 60),
-            sendTimeout: const Duration(seconds: 30),
-            headers: const {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-          ),
-        )
-        ..interceptors.add(
-          LogInterceptor(
-            requestBody: true,
-            responseBody: true,
-            requestHeader: false,
-            responseHeader: false,
-          ),
-        );
+  // ✅ make owner/project available globally for all screens/services
+  g.wsPath = Env.wsPath; // usually /api/ws
+  g.ownerProjectLinkId = Env.ownerProjectLinkId; // e.g. "1-1"
+  g.projectId = Env.projectId;
+  g.appRole = Env.appRole;
+  g.ownerAttachMode = Env.ownerAttachMode; // 'header'|'query'|'body'|'off'
+
+  // ✅ use our shared builder so interceptors are attached
+  g.makeDefaultDio(baseWithApi);
 }
 
 void main() async {
@@ -99,8 +80,8 @@ void main() async {
 
   await runZonedGuarded(
     () async {
-      await _initStripe(); // ⬅️ added
-      await _initNetworking(); // ⬅️ same as before
+      await _initStripe();
+      await _initNetworking();
       runApp(const ActivityApp());
     },
     (e, st) {

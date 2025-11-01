@@ -1,6 +1,5 @@
-// lib/app/env.dart
 class Env {
-  /// Base REST, e.g. http://192.168.1.7:8080
+  /// Base REST, e.g. http://192.168.1.7:8080  (without trailing /api)
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',
@@ -18,13 +17,13 @@ class Env {
     defaultValue: 'both',
   );
 
-  /// 🔑 Tenant/owner link id (for user/business multi-tenant APIs)
+  /// 🔑 Tenant/owner link id (e.g., "1-1")
   static const ownerProjectLinkId = String.fromEnvironment(
     'OWNER_PROJECT_LINK_ID',
     defaultValue: '',
   );
 
-  /// 🔑 NEW: pure project id (for catalog: Category / ItemType)
+  /// 🔑 Pure project id (for catalog filtering)
   static const projectId = String.fromEnvironment(
     'PROJECT_ID',
     defaultValue: '',
@@ -38,14 +37,12 @@ class Env {
 
   static const stripePublishableKey = String.fromEnvironment(
     'STRIPE_PUBLISHABLE_KEY',
-    defaultValue:
-        'pk_test_51RnLY8ROH9W55MgTYuuYpaStORtbLEggQMGOYxzYacMiDUpbfifBgThEzcMgFnvyMaskalQ0WUcQv08aByizug1I00Wcq3XHll',
+    defaultValue: 'pk_test_51RnLY8ROH9W55MgT...', // replace in CI
   );
 
   /// Where to attach IDs
   /// - 'header' → X-Owner-Project-Id / X-Project-Id headers
   /// - 'query'  → ?ownerProjectLinkId=...&projectId=...
-
   static const ownerAttachMode = String.fromEnvironment(
     'OWNER_ATTACH_MODE',
     defaultValue: 'header',
@@ -87,7 +84,7 @@ class Env {
 
   /// Default headers for multi-tenant endpoints (users/business)
   static Map<String, String> tenantHeaders({Map<String, String>? extra}) {
-    if (ownerAttachMode == 'header') {
+    if (ownerAttachMode == 'header' && ownerProjectLinkId.trim().isNotEmpty) {
       final ownerId = requiredVar(ownerProjectLinkId, 'OWNER_PROJECT_LINK_ID');
       return {
         'Content-Type': 'application/json',
@@ -95,24 +92,23 @@ class Env {
         if (extra != null) ...extra,
       };
     }
-    // if query-mode or off →
     return {'Content-Type': 'application/json', if (extra != null) ...extra};
   }
 
   /// Default headers for catalog (Category / ItemType)
   static Map<String, String> projectHeaders({Map<String, String>? extra}) {
-    if (ownerAttachMode == 'header') {
+    if (ownerAttachMode == 'header' && projectId.trim().isNotEmpty) {
       final pid = requiredVar(projectId, 'PROJECT_ID');
       return {
         'Content-Type': 'application/json',
-        'X-Project-Id': pid, 
+        'X-Project-Id': pid,
         if (extra != null) ...extra,
       };
     }
     return {'Content-Type': 'application/json', if (extra != null) ...extra};
   }
 
-  /// WS URL 
+  /// WS URL (adds owner/project as query params)
   static String get wsUrl {
     final base = requiredVar(apiBaseUrl, 'API_BASE_URL');
     final scheme = base.startsWith('https') ? 'wss' : 'ws';
