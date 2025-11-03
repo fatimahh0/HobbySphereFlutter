@@ -1,3 +1,4 @@
+// lib/config/env.dart
 class Env {
   /// Base REST, e.g. http://192.168.1.7:8080  (without trailing /api)
   static const apiBaseUrl = String.fromEnvironment(
@@ -40,16 +41,23 @@ class Env {
     defaultValue: 'pk_test_51RnLY8ROH9W55MgT...', // replace in CI
   );
 
-  /// Where to attach IDs
-  /// - 'header' → X-Owner-Project-Id / X-Project-Id headers
-  /// - 'query'  → ?ownerProjectLinkId=...&projectId=...
+  /// Where to attach IDs: 'header' | 'query' | 'body' | 'off'
   static const ownerAttachMode = String.fromEnvironment(
     'OWNER_ATTACH_MODE',
     defaultValue: 'header',
   );
 
-  // ---------- Helpers ----------
+  /// 🔥 dynamic branding
+  static const appName = String.fromEnvironment(
+    'APP_NAME',
+    defaultValue: 'build4all',
+  );
+  static const appLogoUrl = String.fromEnvironment(
+    'APP_LOGO_URL',
+    defaultValue: '',
+  );
 
+  // ---------- Helpers ----------
   static String requiredVar(String value, String name) {
     if (value.isEmpty) {
       throw StateError('Missing: $name. Use --dart-define=$name=...');
@@ -82,7 +90,6 @@ class Env {
     return uri;
   }
 
-  /// Default headers for multi-tenant endpoints (users/business)
   static Map<String, String> tenantHeaders({Map<String, String>? extra}) {
     if (ownerAttachMode == 'header' && ownerProjectLinkId.trim().isNotEmpty) {
       final ownerId = requiredVar(ownerProjectLinkId, 'OWNER_PROJECT_LINK_ID');
@@ -95,7 +102,6 @@ class Env {
     return {'Content-Type': 'application/json', if (extra != null) ...extra};
   }
 
-  /// Default headers for catalog (Category / ItemType)
   static Map<String, String> projectHeaders({Map<String, String>? extra}) {
     if (ownerAttachMode == 'header' && projectId.trim().isNotEmpty) {
       final pid = requiredVar(projectId, 'PROJECT_ID');
@@ -108,7 +114,6 @@ class Env {
     return {'Content-Type': 'application/json', if (extra != null) ...extra};
   }
 
-  /// WS URL (adds owner/project as query params)
   static String get wsUrl {
     final base = requiredVar(apiBaseUrl, 'API_BASE_URL');
     final scheme = base.startsWith('https') ? 'wss' : 'ws';
@@ -133,7 +138,6 @@ class Env {
   static bool get hasOwner => ownerProjectLinkId.trim().isNotEmpty;
   static bool get hasProject => projectId.trim().isNotEmpty;
 
-  // Convenience endpoints
   static String get locationIqAutocomplete =>
       'https://api.locationiq.com/v1/autocomplete?key=$locationIqKey';
   static String get locationIqSearch =>

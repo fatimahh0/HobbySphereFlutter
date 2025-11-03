@@ -76,8 +76,8 @@ dependencies:
   flutter_stripe: ^10.0.0
   connectivity_plus: ^6.0.5       # check Wi-Fi/Cell status
   go_router: ^14.2.1
-
- 
+  flutter_launcher_icons: ^0.13.1
+  
 
 
 flutter_localizations:
@@ -169,6 +169,11 @@ flutter_native_splash:
     color: "#16A34A"
     image: assets/splash/splash.png 
   
+flutter_icons:
+  android: true
+  ios: false
+  image_path: assets/icons/app_icon.png
+  min_sdk_android: 21
 
 
 l10n:

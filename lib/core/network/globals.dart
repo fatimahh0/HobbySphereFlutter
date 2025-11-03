@@ -21,15 +21,36 @@ String? projectId; // e.g. "1"
 String? appRole; // "both" | "user" | "business"
 String? wsPath; // "/api/ws"
 
+// -------- Branding --------
+String appName = 'Hobby Sphere — Activity'; // safe fallback
+String appLogoUrl = ''; // can be absolute or relative (e.g. /uploads/...)
+
 // ---- Helpers ----
 String readAuthToken() {
   return (authToken ?? token ?? userToken ?? Token ?? '').toString();
 }
 
 String serverRootNoApi() {
+  // appServerRoot is like http://host:8080/api → strip /api
   final base = appServerRoot;
   return base.replaceFirst(RegExp(r'/api/?$'), '');
 }
+
+/// ✅ Resolve relative paths like "/uploads/..." against the server root.
+/// If already absolute (starts with http/https), return as is.
+String resolveUrl(String maybeRelative) {
+  final s = (maybeRelative).trim();
+  if (s.isEmpty) return s;
+  if (s.startsWith('http://') || s.startsWith('https://')) return s;
+
+  // Ensure we have a base (serverRootNoApi) before concatenating
+  final base = serverRootNoApi().replaceAll(RegExp(r'/+$'), '');
+  final rel = s.startsWith('/') ? s : '/$s';
+  return '$base$rel';
+}
+
+/// Public getter you can use in widgets (login, app bars, etc.)
+String get appLogoUrlResolved => resolveUrl(appLogoUrl);
 
 Dio dio() {
   return appDio ??= Dio(

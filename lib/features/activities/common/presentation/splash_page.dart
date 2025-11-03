@@ -3,6 +3,7 @@
 // Waits until internet + server are reachable, then routes once via GoRouter.
 
 import 'dart:convert' as convert;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -174,7 +175,6 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final primary = AppColors.primary;
     final lighter = _adjustLightness(primary, 0.14);
     final darker = _adjustLightness(primary, -0.14);
@@ -227,7 +227,10 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                l10n.splashNoConnectionTitle,
+                                // keep your l10n here
+                                AppLocalizations.of(
+                                  context,
+                                )!.splashNoConnectionTitle,
                                 style: AppTypography.textTheme.titleLarge
                                     ?.copyWith(
                                       color: cs.onErrorContainer,
@@ -237,7 +240,9 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                l10n.splashNoConnectionDesc,
+                                AppLocalizations.of(
+                                  context,
+                                )!.splashNoConnectionDesc,
                                 style: AppTypography.textTheme.bodyMedium
                                     ?.copyWith(color: cs.onErrorContainer),
                                 textAlign: TextAlign.center,
@@ -246,7 +251,11 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                               FilledButton(
                                 onPressed: () =>
                                     context.read<ConnectionCubit>().retryNow(),
-                                child: Text(l10n.connectionTryAgain),
+                                child: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.connectionTryAgain,
+                                ),
                               ),
                             ],
                           ),
@@ -265,7 +274,9 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                l10n.splashServerDownTitle,
+                                AppLocalizations.of(
+                                  context,
+                                )!.splashServerDownTitle,
                                 style: AppTypography.textTheme.titleLarge
                                     ?.copyWith(
                                       color: cs.onSurface,
@@ -275,7 +286,9 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                l10n.splashServerDownDesc,
+                                AppLocalizations.of(
+                                  context,
+                                )!.splashServerDownDesc,
                                 style: AppTypography.textTheme.bodyMedium
                                     ?.copyWith(color: cs.onSurface),
                                 textAlign: TextAlign.center,
@@ -284,7 +297,11 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                               FilledButton(
                                 onPressed: () =>
                                     context.read<ConnectionCubit>().retryNow(),
-                                child: Text(l10n.connectionTryAgain),
+                                child: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.connectionTryAgain,
+                                ),
                               ),
                             ],
                           ),
@@ -292,40 +309,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                       );
                     }
 
-                    // connecting/connected → logo
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 112,
-                          height: 112,
-                          decoration: BoxDecoration(
-                            color: AppColors.onPrimary.withOpacity(0.12),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.onPrimary.withOpacity(0.28),
-                              width: 1.4,
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.sports_soccer,
-                            size: 56,
-                            color: AppColors.onPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          l10n.appTitle,
-                          textAlign: TextAlign.center,
-                          style: AppTypography.textTheme.headlineSmall
-                              ?.copyWith(
-                                color: AppColors.onPrimary,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.4,
-                              ),
-                        ),
-                      ],
-                    );
+                    // connecting/connected → brand logo + runtime name
+                    return const _BrandSplash(size: 112);
                   },
                 ),
               ),
@@ -376,4 +361,101 @@ class _RouteTarget {
   final String name; // must be a GoRouter route name (Routes.*)
   final Object? args; // will be passed in extra:
   _RouteTarget({required this.name, this.args});
+}
+
+/// =========================
+/// Brand splash (logo + name)
+/// =========================
+class _BrandSplash extends StatelessWidget {
+  final double size;
+  const _BrandSplash({super.key, this.size = 112});
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = Colors.white.withOpacity(.28);
+    final bgColor = Colors.white.withOpacity(.12);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: bgColor,
+            shape: BoxShape.circle,
+            border: Border.all(color: borderColor, width: 1.4),
+          ),
+          child: ClipOval(child: _logoImage(size)),
+        ),
+        const SizedBox(height: 18),
+        Text(
+          g.appName.isNotEmpty ? g.appName : 'Hobby Sphere — Activity',
+          textAlign: TextAlign.center,
+          style: AppTypography.textTheme.headlineSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _logoImage(double size) {
+    final url = _cacheBusted(g.appLogoUrlResolved);
+    if (url.isNotEmpty) {
+      return LayoutBuilder(
+        builder: (ctx, _) {
+          final dpr = MediaQuery.of(ctx).devicePixelRatio;
+          return Image.network(
+            url,
+            fit: BoxFit.cover,
+            cacheWidth: (size * dpr).round(),
+            cacheHeight: (size * dpr).round(),
+            loadingBuilder: (c, child, evt) =>
+                evt == null ? child : Container(color: Colors.white24),
+            errorBuilder: (_, __, ___) => _assetOrInitials(ctx),
+          );
+        },
+      );
+    }
+    return _assetOrInitials(null);
+  }
+
+  Widget _assetOrInitials(BuildContext? context) {
+    return Image.asset(
+      'assets/images/Logo.png',
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => Center(
+        child: Text(
+          _initialsOf(g.appName),
+          style: AppTypography.textTheme.headlineSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            letterSpacing: .5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _initialsOf(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return 'HS';
+    final parts = t.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.length == 1) {
+      return parts.first.characters.take(2).toString().toUpperCase();
+    }
+    return (parts.first.characters.take(1).toString() +
+            parts.last.characters.take(1).toString())
+        .toUpperCase();
+  }
+
+  // dev-only cache buster so a changed URL shows immediately while testing
+  String _cacheBusted(String url) {
+    if (!kDebugMode || url.isEmpty) return url;
+    final sep = url.contains('?') ? '&' : '?';
+    return '$url${sep}cb=${DateTime.now().millisecondsSinceEpoch}';
+  }
 }

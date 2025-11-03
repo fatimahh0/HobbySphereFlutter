@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <style name="NormalTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-    <item name="android:windowBackground">@android:color/white</item>
-  </style>
-
-  <style name="LaunchTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-    <!-- Android 12 splash API -->
-    <item name="android:windowSplashScreenBackground">#16A34A</item>
-    <item name="android:windowSplashScreenAnimatedIcon">@drawable/android12splash</item>
-    <item name="android:windowSplashScreenIconBackgroundColor">@null</item>
-    <!-- Keep regular window flags -->
-    <item name="android:windowNoTitle">true</item>
-    <item name="android:windowFullscreen">false</item>
-  </style>
+    <style name="NormalTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+    <style name="LaunchTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Android 12 splash API -->
+        <!-- Keep regular window flags -->
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowSplashScreenBackground">#16A34A</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/android12splash</item>
+    </style>
 </resources>

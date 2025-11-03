@@ -55,7 +55,6 @@ Map<String, dynamic> _decodeJwtPayload(String jwt) {
   }
 }
 
-
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
@@ -332,30 +331,107 @@ class _LoginViewState extends State<_LoginView> {
 }
 
 class _Logo extends StatelessWidget {
+  const _Logo();
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: 140,
-      height: 140,
+    const double size = 140;
+
+    Widget circle(Widget child) => Container(
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: cs.primary.withOpacity(.18),
+        color: cs.primary.withOpacity(.10),
         shape: BoxShape.circle,
       ),
-      child: Center(
-        child: Image.asset(
-          'assets/images/Logo.png',
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => Text(
-            'HS',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: cs.primary,
-              fontWeight: FontWeight.w800,
-              letterSpacing: .5,
+      child: ClipOval(child: child),
+    );
+
+    final url = g.appLogoUrlResolved.trim();
+    final hasUrl = url.isNotEmpty;
+
+    if (hasUrl) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          circle(
+            Image.network(
+              url,
+              fit: BoxFit.cover,
+              // lightweight placeholder while loading
+              loadingBuilder: (context, child, evt) {
+                if (evt == null) return child;
+                return Container(color: cs.surfaceVariant.withOpacity(.5));
+              },
+              // if the URL fails → fallback to asset, then initials
+              errorBuilder: (_, __, ___) => _assetOrInitials(context),
+              // crisper rasterization
+              cacheWidth: (size * MediaQuery.devicePixelRatioOf(context))
+                  .round(),
+              cacheHeight: (size * MediaQuery.devicePixelRatioOf(context))
+                  .round(),
             ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            g.appName.isNotEmpty ? g.appName : 'Hobby Sphere',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      );
+    }
+
+    // No URL → asset or initials
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        circle(_assetOrInitials(context)),
+        const SizedBox(height: 10),
+        Text(
+          g.appName.isNotEmpty ? g.appName : 'Hobby Sphere',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _assetOrInitials(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Image.asset(
+      'assets/images/Logo.png',
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => Center(
+        child: Text(
+          _initialsOf(g.appName),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: cs.primary,
+            fontWeight: FontWeight.w800,
+            letterSpacing: .5,
           ),
         ),
       ),
     );
+  }
+
+  String _initialsOf(String s) {
+    final trimmed = s.trim();
+    if (trimmed.isEmpty) return 'BA';
+    final parts = trimmed
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.length == 1) {
+      return parts.first.characters.take(2).toString().toUpperCase();
+    }
+    return (parts.first.characters.take(1).toString() +
+            parts.last.characters.take(1).toString())
+        .toUpperCase();
   }
 }

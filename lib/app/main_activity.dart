@@ -1,10 +1,9 @@
+// lib/app/main_activity.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-// Stripe
 import 'package:flutter/services.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
@@ -24,8 +23,7 @@ Future<void> _initStripe() async {
 
     Stripe.publishableKey = pk;
     Stripe.urlScheme = 'flutterstripe';
-    Stripe.merchantIdentifier =
-        'merchant.com.hobbysphere'; // iOS only (optional)
+    Stripe.merchantIdentifier = 'merchant.com.hobbysphere'; // iOS only
     await Stripe.instance.applySettings();
 
     debugPrint(
@@ -41,6 +39,7 @@ Future<void> _initStripe() async {
     debugPrint('$st');
   }
 }
+
 Future<void> _initNetworking() async {
   String serverRoot;
 
@@ -60,14 +59,28 @@ Future<void> _initNetworking() async {
   final baseWithApi = '$serverRoot/api';
   g.appServerRoot = baseWithApi;
 
-  // ✅ make owner/project available globally for all screens/services
-  g.wsPath = Env.wsPath; // usually /api/ws
-  g.ownerProjectLinkId = Env.ownerProjectLinkId; // e.g. "1-1"
+  // multi-tenant globals
+  g.wsPath = Env.wsPath;
+  g.ownerProjectLinkId = Env.ownerProjectLinkId;
   g.projectId = Env.projectId;
   g.appRole = Env.appRole;
-  g.ownerAttachMode = Env.ownerAttachMode; // 'header'|'query'|'body'|'off'
+  g.ownerAttachMode = Env.ownerAttachMode;
 
-  // ✅ use our shared builder so interceptors are attached
+  // ---------- BRANDING ----------
+  g.appName = Env.appName.trim().isEmpty
+      ? 'Hobby Sphere — Activity'
+      : Env.appName.trim();
+
+  final rawLogo = Env.appLogoUrl.trim();
+  g.appLogoUrl = rawLogo.isEmpty
+      ? ''
+      : (rawLogo.startsWith('http')
+            ? rawLogo
+            : '${serverRoot.replaceAll(RegExp(r"/$"), "")}'
+                  '${rawLogo.startsWith("/") ? "" : "/"}$rawLogo');
+  debugPrint('[Branding] appName=${g.appName} logo=${g.appLogoUrl}');
+
+  // shared Dio
   g.makeDefaultDio(baseWithApi);
 }
 
@@ -111,7 +124,8 @@ class ActivityApp extends StatelessWidget {
       create: (_) => ConnectionCubit(serverProbeUrl: healthUrl),
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
-        title: 'Hobby Sphere — Activity',
+        title:
+            g.appName, // system/task-switcher title (ok to use Env.appName too)
         routerConfig: router,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
