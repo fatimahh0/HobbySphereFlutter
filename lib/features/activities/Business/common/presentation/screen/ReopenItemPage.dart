@@ -12,9 +12,9 @@ import 'package:hobby_sphere/core/network/globals.dart'
     as g; // serverRootNoApi()
 import 'package:hobby_sphere/app/router/legacy_nav.dart';
 // Create Activity stack (repo + usecase)
-import 'package:hobby_sphere/features/activities/Business/createActivity/data/repositories/create_item_repository_impl.dart'; // Create repo
-import 'package:hobby_sphere/features/activities/Business/createActivity/domain/usecases/create_item.dart'; // Create usecase
-import '../../../createActivity/data/services/create_item_service.dart'; // Create service
+import 'package:hobby_sphere/features/activities/business/createActivity/data/repositories/create_item_repository_impl.dart'; // Create repo
+import 'package:hobby_sphere/features/activities/business/createActivity/domain/usecases/create_item.dart'; // Create usecase
+import 'package:hobby_sphere/features/activities/business/createActivity/data/services/create_item_service.dart'; // Create service
 
 // Lookups (currency + item types)
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart'; // Currency UC
