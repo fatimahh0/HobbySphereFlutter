@@ -55,12 +55,12 @@ import 'package:hobby_sphere/features/activities/business/businessBooking/domain
 import 'package:hobby_sphere/features/activities/business/businessBooking/presentation/bloc/business_booking_bloc.dart';
 import 'package:hobby_sphere/features/activities/business/businessBooking/presentation/bloc/business_booking_event.dart';
 import 'package:hobby_sphere/features/activities/business/businessBooking/presentation/screen/business_booking_screen.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/data/repositories/business_analytics_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/data/services/business_analytics_service.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/domain/usecases/get_business_analytics.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/presentation/bloc/business_analytics_bloc.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/presentation/bloc/business_analytics_event.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/presentation/screen/business_analytics_screen.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/data/repositories/business_analytics_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/data/services/business_analytics_service.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/domain/usecases/get_business_analytics.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/bloc/business_analytics_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
 import 'package:hobby_sphere/features/activities/business/businessActivity/presentation/screen/business_activities_screen.dart';
 import 'package:hobby_sphere/features/activities/business/businessProfile/presentation/screen/business_profile_screen.dart';
 

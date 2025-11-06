@@ -11,7 +11,7 @@ import 'package:hobby_sphere/core/network/globals.dart' as g;
 import 'package:hobby_sphere/features/activities/business/common/domain/entities/business_activity.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
-import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart';
+import 'package:hobby_sphere/features/activities/common/presentation/onboardingScreen.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/PrivacyPolicyScreen.dart';
 import 'package:hobby_sphere/features/activities/routes_activity.dart';
 import 'package:hobby_sphere/features/activities/user/social/domain/entities/user_min.dart';

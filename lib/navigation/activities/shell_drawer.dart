@@ -56,12 +56,12 @@ import 'package:hobby_sphere/features/activities/business/businessBooking/presen
 import 'package:hobby_sphere/features/activities/business/businessBooking/presentation/screen/business_booking_screen.dart';
 
 // ==== Business Analytics ====
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/data/repositories/business_analytics_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/data/services/business_analytics_service.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/domain/usecases/get_business_analytics.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/presentation/bloc/business_analytics_bloc.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/presentation/bloc/business_analytics_event.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/presentation/screen/business_analytics_screen.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/data/repositories/business_analytics_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/data/services/business_analytics_service.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/domain/usecases/get_business_analytics.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/bloc/business_analytics_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
 
 // ==== Common UseCases ====
 import 'package:hobby_sphere/features/activities/business/common/data/repositories/business_activity_repository_impl.dart';

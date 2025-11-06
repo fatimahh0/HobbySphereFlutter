@@ -6,7 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 import 'package:hobby_sphere/core/constants/app_role.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/domain/usecases/get_business_analytics.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/domain/usecases/get_business_analytics.dart';
 import 'package:hobby_sphere/features/activities/business/businessActivity/presentation/bloc/business_activities_bloc.dart';
 import 'package:hobby_sphere/features/activities/business/businessActivity/presentation/bloc/business_activities_event.dart';
 import 'package:hobby_sphere/features/activities/business/businessActivity/presentation/screen/business_activities_screen.dart';
@@ -24,7 +24,7 @@ import 'package:hobby_sphere/features/activities/business/editBusinessProfile/pr
 // Common
 import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
-import 'package:hobby_sphere/features/activities/common/presentation/OnboardingScreen.dart';
+import 'package:hobby_sphere/features/activities/common/presentation/onboardingScreen.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/PrivacyPolicyScreen.dart';
 import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart';
 import 'package:hobby_sphere/features/activities/common/data/services/currency_service.dart';
@@ -143,11 +143,11 @@ import 'package:hobby_sphere/features/activities/business/businessNotification/p
 import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/bloc/business_notification_event.dart';
 import 'package:hobby_sphere/features/activities/business/businessNotification/data/services/business_notification_service.dart';
 import 'package:hobby_sphere/features/activities/business/businessNotification/data/repositories/business_notification_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/presentation/screen/business_analytics_screen.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/presentation/bloc/business_analytics_bloc.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/presentation/bloc/business_analytics_event.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/data/services/business_analytics_service.dart';
-import 'package:hobby_sphere/features/activities/business/businessAnalytics/data/repositories/business_analytics_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/bloc/business_analytics_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/data/services/business_analytics_service.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/data/repositories/business_analytics_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/business/businessBooking/presentation/screen/business_booking_screen.dart'
     hide BusinessBookingBloc;
 import 'package:hobby_sphere/features/activities/business/businessBooking/presentation/bloc/business_booking_bloc.dart';
@@ -531,15 +531,9 @@ List<RouteBase> buildActivityRoutes({
           BusinessAnalyticsService(),
         );
         return BlocProvider(
-          create: (_) =>
-              BusinessAnalyticsBloc(
-                getBusinessAnalytics: GetBusinessAnalytics(repo),
-              )..add(
-                LoadBusinessAnalytics(
-                  token: bh.token,
-                  businessId: bh.businessId,
-                ),
-              ),
+          create: (_) => BusinessAnalyticsBloc(
+            getBusinessAnalytics: GetBusinessAnalytics(repo),
+          ),
           child: BusinessAnalyticsScreen(
             token: bh.token,
             businessId: bh.businessId,
