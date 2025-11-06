@@ -85,28 +85,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ---------- OPTIONAL: extract the asset URL (purely for logs) ----------
+      # ---------- EXTRACT ASSET URL(S) ----------
       - name: Ensure jq
         run: |
           if ! command -v jq >/dev/null 2>&1; then
             sudo apt-get update && sudo apt-get install -y jq
           fi
 
-      # Use GitHub API to fetch the release by the tag we just created
-      - name: Extract asset URL
+      - name: Extract asset URLs (and set first as output)
+        id: extract
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           TAG: app-test-${{ github.run_id }}
         run: |
-          echo "Fetching release assets for tag: $TAG"
+          echo "Fetching release by tag: $TAG"
           json=$(curl -sSL \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${REPO}/releases/tags/${TAG}")
 
-          echo "Assets JSON (minified):"
-          echo "$json" | jq -c '.assets'
+          echo "Assets JSON (pretty):"
+          echo "$json" | jq '.assets'
 
           urls=$(echo "$json" | jq -r '.assets[]? | select(.name|test("\\.apk$")) | .browser_download_url')
           if [ -z "$urls" ]; then
@@ -116,3 +116,9 @@ jobs:
 
           echo "Resolved APK URL(s):"
           echo "$urls"
+
+          first_url=$(echo "$urls" | head -n 1)
+          echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
+
+      - name: Echo first APK URL
+        run: echo "First APK URL: ${{ steps.extract.outputs.apk_url }}"
