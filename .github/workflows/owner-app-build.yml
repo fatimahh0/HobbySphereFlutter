@@ -53,14 +53,14 @@ jobs:
         run: |
           flutter build apk --release \
             -t lib/app/main_activity.dart \
-            --dart-define=API_BASE_URL=http://192.168.1.9:8080 \
+            --dart-define=API_BASE_URL=http://192.168.1.6:8080 \
             --dart-define=OWNER_PROJECT_LINK_ID=1 \
             --dart-define=OWNER_ATTACH_MODE=header \
             --dart-define=APP_ROLE=both \
             --dart-define=WS_PATH=/api/ws \
             --dart-define=PROJECT_ID=1 \
             --dart-define=APP_NAME="test" \
-            --dart-define=APP_LOGO_URL="http://192.168.1.9:8080/uploads/apk/1/1/test_20251106_175330.apk"
+            --dart-define=APP_LOGO_URL="http://192.168.1.6:8080/uploads/apk/1/1/test_20251106_175330.apk"
 
       - name: List APK outputs (debug)
         run: |
