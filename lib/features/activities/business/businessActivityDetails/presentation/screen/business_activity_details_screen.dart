@@ -1,4 +1,4 @@
-// ===== lib/features/activities/business/BusinessActivityDetails/presentation/screen/business_activity_details_screen.dart
+// ===== lib/features/activities/business/businessActivityDetails/presentation/screen/business_activity_details_screen.dart
 // Flutter 3.35.x — Fix: extract businessId safely and use it for Reopen.
 
 import 'package:flutter/material.dart';
@@ -10,9 +10,9 @@ import 'package:hobby_sphere/core/network/globals.dart'
     as g; // + add: to resolve absolute image URLs
 import 'package:hobby_sphere/app/router/legacy_nav.dart';
 // Bloc details
-import 'package:hobby_sphere/features/activities/business/BusinessActivityDetails/presentation/bloc/business_activity_details_bloc.dart';
-import 'package:hobby_sphere/features/activities/business/BusinessActivityDetails/presentation/bloc/business_activity_details_event.dart';
-import 'package:hobby_sphere/features/activities/business/BusinessActivityDetails/presentation/bloc/business_activity_details_state.dart';
+import 'package:hobby_sphere/features/activities/business/businessActivityDetails/presentation/bloc/business_activity_details_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/businessActivityDetails/presentation/bloc/business_activity_details_event.dart';
+import 'package:hobby_sphere/features/activities/business/businessActivityDetails/presentation/bloc/business_activity_details_state.dart';
 
 // Domain
 import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activity_by_id.dart';

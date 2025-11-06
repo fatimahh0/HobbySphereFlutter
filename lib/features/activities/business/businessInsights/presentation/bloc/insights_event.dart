@@ -1,4 +1,4 @@
-// lib/features/activities/business/BusinessInsights/presentation/bloc/insights_event.dart
+// lib/features/activities/business/businessInsights/presentation/bloc/insights_event.dart
 // tie this file to the bloc file that declared `part 'insights_event.dart';`
 part of 'insights_bloc.dart';
 

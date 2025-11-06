@@ -12,7 +12,7 @@ import 'package:hobby_sphere/core/network/globals.dart' as g; // server root
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
 
 // Invite manager route args
-import 'package:hobby_sphere/features/activities/business/BusinessUserInvite/presentation/screens/invite_manager_screen.dart'; // invite args
+import 'package:hobby_sphere/features/activities/business/businessUserInvite/presentation/screens/invite_manager_screen.dart'; // invite args
 
 // Profile BLoC
 import 'package:hobby_sphere/features/activities/business/businessProfile/presentation/bloc/business_profile_bloc.dart'; // bloc
