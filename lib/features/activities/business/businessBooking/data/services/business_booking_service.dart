@@ -1,4 +1,4 @@
-// lib/features/activities/Business/businessBooking/data/services/business_booking_service.dart
+// lib/features/activities/business/businessBooking/data/services/business_booking_service.dart
 //// Flutter 3.35.x
 //// Service layer that hits backend endpoints via ApiFetch
 

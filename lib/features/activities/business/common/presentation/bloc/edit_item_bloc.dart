@@ -14,7 +14,7 @@ import 'edit_item_event.dart'; // events
 import 'edit_item_state.dart'; // state
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activity_by_id.dart';
 
 class EditItemBloc extends Bloc<EditItemEvent, EditItemState> {
   final UpdateItem updateItem; // use case

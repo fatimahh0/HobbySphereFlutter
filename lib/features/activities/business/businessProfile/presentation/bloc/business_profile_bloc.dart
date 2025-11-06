@@ -6,12 +6,12 @@ import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC core
 import 'package:url_launcher/url_launcher_string.dart'; // open external URLs
 
 // Usecases
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart'; // check stripe
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/delete_business.dart'; // delete business
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/get_business_by_id.dart'; // get business
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart'; // update status
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_visibility.dart'; // update visibility
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/create_stripe_connect_link.dart'; // NEW: create link
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/check_stripe_status.dart'; // check stripe
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/delete_business.dart'; // delete business
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/get_business_by_id.dart'; // get business
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/update_business_status.dart'; // update status
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/update_business_visibility.dart'; // update visibility
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/create_stripe_connect_link.dart'; // NEW: create link
 
 // Events/States
 import 'business_profile_event.dart'; // events

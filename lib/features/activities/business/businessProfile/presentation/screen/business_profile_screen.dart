@@ -12,19 +12,19 @@ import 'package:hobby_sphere/core/network/globals.dart' as g; // server root
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
 
 // Invite manager route args
-import 'package:hobby_sphere/features/activities/Business/BusinessUserInvite/presentation/screens/invite_manager_screen.dart'; // invite args
+import 'package:hobby_sphere/features/activities/business/BusinessUserInvite/presentation/screens/invite_manager_screen.dart'; // invite args
 
 // Profile BLoC
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_bloc.dart'; // bloc
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_event.dart'; // events
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_state.dart'; // states
+import 'package:hobby_sphere/features/activities/business/businessProfile/presentation/bloc/business_profile_bloc.dart'; // bloc
+import 'package:hobby_sphere/features/activities/business/businessProfile/presentation/bloc/business_profile_event.dart'; // events
+import 'package:hobby_sphere/features/activities/business/businessProfile/presentation/bloc/business_profile_state.dart'; // states
 
 // OLD stack for deactivate dialog
-import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart'; // service
-import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart'; // repo impl
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/cubit/deactivate_account_cubit.dart'; // cubit
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/widgets/deactivate_account_dialog.dart'; // dialog
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart'; // usecase
+import 'package:hobby_sphere/features/activities/business/businessProfile/data/services/business_service.dart'; // service
+import 'package:hobby_sphere/features/activities/business/businessProfile/data/repositories/business_repository_impl.dart'; // repo impl
+import 'package:hobby_sphere/features/activities/business/businessProfile/presentation/cubit/deactivate_account_cubit.dart'; // cubit
+import 'package:hobby_sphere/features/activities/business/businessProfile/presentation/widgets/deactivate_account_dialog.dart'; // dialog
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/update_business_status.dart'; // usecase
 
 class BusinessProfileScreen extends StatelessWidget {
   final String token; // auth token

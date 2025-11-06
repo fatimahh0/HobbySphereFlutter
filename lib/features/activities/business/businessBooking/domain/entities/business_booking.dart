@@ -1,4 +1,4 @@
-// lib/features/activities/Business/businessBooking/domain/entities/business_booking.dart
+// lib/features/activities/business/businessBooking/domain/entities/business_booking.dart
 //// Flutter 3.35.x
 //// BusinessBooking entity with a normalized statusKey
 

@@ -1,4 +1,4 @@
-// lib/features/activities/Business/businessBooking/presentation/widgets/booking_card_business.dart
+// lib/features/activities/business/businessBooking/presentation/widgets/booking_card_business.dart
 //// Flutter 3.35.x
 //// Compact booking card for business with normalized status handling
 

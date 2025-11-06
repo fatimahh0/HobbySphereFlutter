@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/entities/business_activity.dart';
 
 /// Base type for business feed events.
 abstract class BusinessEvent {}

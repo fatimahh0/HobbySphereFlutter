@@ -9,10 +9,10 @@ import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/shared/utils/PdfHelper.dart';
 import 'package:hobby_sphere/shared/widgets/app_button.dart';
 
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_state.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/widgets/analytics_widgets.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/bloc/business_analytics_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/bloc/business_analytics_state.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/presentation/widgets/analytics_widgets.dart';
 
 class BusinessAnalyticsScreen extends StatelessWidget {
   final String token;

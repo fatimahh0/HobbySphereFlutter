@@ -1,4 +1,4 @@
-// lib/features/activities/Business/businessBooking/domain/usecases/get_business_bookings.dart
+// lib/features/activities/business/businessBooking/domain/usecases/get_business_bookings.dart
 //// Flutter 3.35.x
 //// Use case: load all bookings for current business
 

@@ -2,7 +2,7 @@
 import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart';
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/update_business_status.dart';
 
 
 sealed class DeactivateState extends Equatable {

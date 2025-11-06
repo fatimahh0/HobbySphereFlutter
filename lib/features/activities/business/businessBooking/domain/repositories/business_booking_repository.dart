@@ -1,4 +1,4 @@
-// lib/features/activities/Business/businessBooking/domain/repositories/business_booking_repository.dart
+// lib/features/activities/business/businessBooking/domain/repositories/business_booking_repository.dart
 //// Flutter 3.35.x
 //// Repository contract for business bookings
 

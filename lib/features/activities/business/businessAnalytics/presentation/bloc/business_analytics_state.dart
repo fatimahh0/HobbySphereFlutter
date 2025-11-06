@@ -1,7 +1,7 @@
 
 // ===== business_analytics_state.dart =====
 import 'package:equatable/equatable.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/domain/entities/business_analytics.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/domain/entities/business_analytics.dart';
 
 abstract class BusinessAnalyticsState extends Equatable {
   const BusinessAnalyticsState();

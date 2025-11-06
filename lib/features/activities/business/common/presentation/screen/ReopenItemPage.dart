@@ -38,10 +38,10 @@ import '../../../createActivity/presentation/widgets/map_location_picker.dart'; 
 import '../../domain/entities/business_activity.dart'; // Old item
 
 // ✅ Stripe check via Business Profile domain (same stack used in Profile)
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart'; // UC
-import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart'
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/check_stripe_status.dart'; // UC
+import 'package:hobby_sphere/features/activities/business/businessProfile/data/services/business_service.dart'
     as bprof_svc; // Service
-import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart'
+import 'package:hobby_sphere/features/activities/business/businessProfile/data/repositories/business_repository_impl.dart'
     as bprof_repo; // Repo
 
 // ✅ Router to open BusinessProfile and come back

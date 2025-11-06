@@ -2,7 +2,7 @@
 // Business profile states — compact and clear.
 
 import 'package:equatable/equatable.dart'; // for equality
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/entities/business.dart'; // business entity
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/entities/business.dart'; // business entity
 
 // Base state
 abstract class BusinessProfileState extends Equatable {

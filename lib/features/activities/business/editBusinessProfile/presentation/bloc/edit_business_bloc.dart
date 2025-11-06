@@ -1,9 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/delete_banner.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/delete_business.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/delete_logo.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/get_business_by_id.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/update_business.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/domain/usecases/delete_banner.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/domain/usecases/delete_business.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/domain/usecases/delete_logo.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/domain/usecases/get_business_by_id.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/domain/usecases/update_business.dart';
 
 import 'edit_business_event.dart';
 import 'edit_business_state.dart';

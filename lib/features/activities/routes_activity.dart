@@ -6,22 +6,21 @@ import 'package:dio/dio.dart';
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 import 'package:hobby_sphere/core/constants/app_role.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/domain/usecases/get_business_analytics.dart';
-import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart';
-import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/screen/business_activities_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/usecases/get_business_notifications.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/data/repositories/edit_business_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/data/services/edit_business_service.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/delete_banner.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/delete_business.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/delete_logo.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/get_business_by_id.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/usecases/update_business.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/presentation/bloc/edit_business_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/presentation/screens/edit_business_screen.dart';
+import 'package:hobby_sphere/features/activities/business/businessAnalytics/domain/usecases/get_business_analytics.dart';
+import 'package:hobby_sphere/features/activities/business/businessActivity/presentation/bloc/business_activities_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/businessActivity/presentation/bloc/business_activities_event.dart';
+import 'package:hobby_sphere/features/activities/business/businessActivity/presentation/screen/business_activities_screen.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/domain/usecases/get_business_notifications.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/data/repositories/edit_business_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/data/services/edit_business_service.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/domain/usecases/delete_banner.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/domain/usecases/delete_business.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/domain/usecases/delete_logo.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/domain/usecases/get_business_by_id.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/domain/usecases/update_business.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/presentation/bloc/edit_business_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/presentation/screens/edit_business_screen.dart';
 
-// ====== IMPORT شاشات وخدمات/ريبو/يوزكيس (نفس اللي عندك) ======
 // Common
 import 'package:hobby_sphere/features/activities/common/presentation/splash_page.dart';
 import 'package:hobby_sphere/features/activities/common/presentation/onboarding_page.dart';
@@ -33,7 +32,7 @@ import 'package:hobby_sphere/features/activities/common/data/repositories/item_t
 import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/entities/business_activity.dart';
 
 // Auth
 import 'package:hobby_sphere/features/authentication/login&register/presentation/login/screen/login_page.dart';
@@ -100,63 +99,63 @@ import 'package:hobby_sphere/features/activities/user/tickets/domain/entities/bo
 import 'package:hobby_sphere/features/activities/user/tickets/presentation/screens/calendar_tickets_screen.dart';
 
 // Business Home / Activities
-import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/bloc/business_home_event.dart';
-import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
-import 'package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
-import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/edit_item_page.dart';
-import 'package:hobby_sphere/features/activities/Business/createActivity/presentation/screen/create_item_page.dart';
-import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/ReopenItemPage.dart';
+import 'package:hobby_sphere/features/activities/business/businessHome/presentation/screen/business_home_screen.dart';
+import 'package:hobby_sphere/features/activities/business/businessHome/presentation/bloc/business_home_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/businessHome/presentation/bloc/business_home_event.dart';
+import 'package:hobby_sphere/features/activities/business/common/data/services/business_activity_service.dart';
+import 'package:hobby_sphere/features/activities/business/common/data/repositories/business_activity_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activity_by_id.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activities.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/delete_business_activity.dart';
+import 'package:hobby_sphere/features/activities/business/common/presentation/screen/edit_item_page.dart';
+import 'package:hobby_sphere/features/activities/business/createActivity/presentation/screen/create_item_page.dart';
+import 'package:hobby_sphere/features/activities/business/common/presentation/screen/ReopenItemPage.dart';
 
 // Business Details / Profile
-import 'package:hobby_sphere/features/activities/Business/BusinessActivityDetails/presentation/screen/business_activity_details_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/bloc/business_profile_event.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/presentation/screen/business_profile_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart'
+import 'package:hobby_sphere/features/activities/business/businessActivityDetails/presentation/screen/business_activity_details_screen.dart';
+import 'package:hobby_sphere/features/activities/business/businessProfile/presentation/bloc/business_profile_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/businessProfile/presentation/bloc/business_profile_event.dart';
+import 'package:hobby_sphere/features/activities/business/businessProfile/presentation/screen/business_profile_screen.dart';
+import 'package:hobby_sphere/features/activities/business/businessProfile/data/services/business_service.dart'
     as bprof_svc;
-import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart'
+import 'package:hobby_sphere/features/activities/business/businessProfile/data/repositories/business_repository_impl.dart'
     as bprof_repo;
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/get_business_by_id.dart'
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/get_business_by_id.dart'
     as bprof_uc;
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_visibility.dart'
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/update_business_visibility.dart'
     as bprof_uc;
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/update_business_status.dart'
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/update_business_status.dart'
     as bprof_uc;
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/delete_business.dart'
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/delete_business.dart'
     as bprof_uc;
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/check_stripe_status.dart'
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/check_stripe_status.dart'
     as bprof_uc;
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/usecases/create_stripe_connect_link.dart'
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/usecases/create_stripe_connect_link.dart'
     as bprof_uc;
 
 // Business Reviews / Insights / Users / Notifications / Analytics / Bookings
-import 'package:hobby_sphere/features/activities/Business/BusinessReviews/presentation/screens/business_reviews_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessInsights/presentation/screens/business_insights_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessUser/presentation/screens/business_users_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessUserInvite/presentation/screens/invite_manager_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/screens/business_notification_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_event.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/data/services/business_notification_service.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/data/repositories/business_notification_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/screen/business_analytics_screen.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/presentation/bloc/business_analytics_event.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/data/services/business_analytics_service.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/data/repositories/business_analytics_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart'
+import 'package:hobby_sphere/features/activities/business/businessReviews/presentation/screens/business_reviews_screen.dart';
+import 'package:hobby_sphere/features/activities/business/businessInsights/presentation/screens/business_insights_screen.dart';
+import 'package:hobby_sphere/features/activities/business/businessUser/presentation/screens/business_users_screen.dart';
+import 'package:hobby_sphere/features/activities/business/businessUserInvite/presentation/screens/invite_manager_screen.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/screens/business_notification_screen.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/bloc/business_notification_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/bloc/business_notification_event.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/data/services/business_notification_service.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/data/repositories/business_notification_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/business/businessAnalytics/presentation/screen/business_analytics_screen.dart';
+import 'package:hobby_sphere/features/activities/business/businessAnalytics/presentation/bloc/business_analytics_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/businessAnalytics/presentation/bloc/business_analytics_event.dart';
+import 'package:hobby_sphere/features/activities/business/businessAnalytics/data/services/business_analytics_service.dart';
+import 'package:hobby_sphere/features/activities/business/businessAnalytics/data/repositories/business_analytics_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/business/businessBooking/presentation/screen/business_booking_screen.dart'
     hide BusinessBookingBloc;
-import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/bloc/business_booking_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessBooking/presentation/bloc/business_booking_event.dart';
-import 'package:hobby_sphere/features/activities/Business/businessBooking/domain/usecases/get_business_bookings.dart';
-import 'package:hobby_sphere/features/activities/Business/businessBooking/domain/usecases/update_booking_status.dart';
-import 'package:hobby_sphere/features/activities/Business/businessBooking/data/services/business_booking_service.dart';
-import 'package:hobby_sphere/features/activities/Business/businessBooking/data/repositories/business_booking_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/business/businessBooking/presentation/bloc/business_booking_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/businessBooking/presentation/bloc/business_booking_event.dart';
+import 'package:hobby_sphere/features/activities/business/businessBooking/domain/usecases/get_business_bookings.dart';
+import 'package:hobby_sphere/features/activities/business/businessBooking/domain/usecases/update_booking_status.dart';
+import 'package:hobby_sphere/features/activities/business/businessBooking/data/services/business_booking_service.dart';
+import 'package:hobby_sphere/features/activities/business/businessBooking/data/repositories/business_booking_repository_impl.dart';
 
 // Shell / Nav
 import 'package:hobby_sphere/navigation/nav_bootstrap.dart';

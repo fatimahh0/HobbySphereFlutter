@@ -5,11 +5,11 @@ import 'dart:async'; // StreamSubscription for realtime
 import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc base
 
 // domain + repo + event/state
-import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/entities/business_notification.dart'; // entity
-import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/usecases/get_business_notifications.dart'; // use case
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_event.dart'; // events
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_state.dart'; // state
-import 'package:hobby_sphere/features/activities/Business/businessNotification/data/repositories/business_notification_repository_impl.dart'; // repo
+import 'package:hobby_sphere/features/activities/business/businessNotification/domain/entities/business_notification.dart'; // entity
+import 'package:hobby_sphere/features/activities/business/businessNotification/domain/usecases/get_business_notifications.dart'; // use case
+import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/bloc/business_notification_event.dart'; // events
+import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/bloc/business_notification_state.dart'; // state
+import 'package:hobby_sphere/features/activities/business/businessNotification/data/repositories/business_notification_repository_impl.dart'; // repo
 
 // realtime bus
 import 'package:hobby_sphere/core/realtime/realtime_bus.dart'; // global bus

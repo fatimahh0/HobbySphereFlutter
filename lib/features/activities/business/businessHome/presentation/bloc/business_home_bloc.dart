@@ -3,9 +3,9 @@
 
 import 'dart:async'; // StreamSubscription
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activities.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activity_by_id.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/delete_business_activity.dart';
 import 'package:hobby_sphere/features/activities/common/events/business_feed.dart';
 
 // currency

@@ -2,7 +2,7 @@
 // State for BusinessNotificationBloc
 
 import 'package:equatable/equatable.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/entities/business_notification.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/domain/entities/business_notification.dart';
 
 class BusinessNotificationState extends Equatable {
   final List<BusinessNotification> notifications;

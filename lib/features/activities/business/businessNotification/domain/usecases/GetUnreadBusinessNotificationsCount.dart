@@ -1,5 +1,5 @@
 
-import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/repositories/business_notification_repository.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/domain/repositories/business_notification_repository.dart';
 
 class GetUnreadBusinessNotificationsCount {
   final BusinessNotificationRepository repository;

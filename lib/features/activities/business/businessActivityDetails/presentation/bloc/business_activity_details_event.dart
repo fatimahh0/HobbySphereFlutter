@@ -1,4 +1,4 @@
-// lib/features/activities/Business/businessActivity/presentation/bloc/business_activity_details_event.dart
+// lib/features/activities/business/businessActivity/presentation/bloc/business_activity_details_event.dart
 import 'package:equatable/equatable.dart';
 
 abstract class BusinessActivityDetailsEvent extends Equatable {

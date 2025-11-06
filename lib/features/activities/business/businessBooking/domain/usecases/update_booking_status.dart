@@ -1,4 +1,4 @@
-// lib/features/activities/Business/businessBooking/domain/usecases/update_booking_status.dart
+// lib/features/activities/business/businessBooking/domain/usecases/update_booking_status.dart
 //// Flutter 3.35.x
 //// Use case: update booking status by action keyword
 

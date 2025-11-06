@@ -9,7 +9,7 @@ import 'package:printing/printing.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 // If you have the BusinessAnalytics entity, import it:
-import 'package:hobby_sphere/features/activities/Business/BusinessAnalytics/domain/entities/business_analytics.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessAnalytics/domain/entities/business_analytics.dart';
 
 class PdfHelper {
   /// Build the PDF document with a clean table layout

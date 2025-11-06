@@ -1,4 +1,4 @@
-// ===== lib/features/activities/Business/createActivity/data/repositories/create_item_repository_impl.dart =====
+// ===== lib/features/activities/business/createActivity/data/repositories/create_item_repository_impl.dart =====
 // Flutter 3.35.x
 import 'package:dio/dio.dart'; // Dio for HTTP errors and response types
 import '../../domain/entities/create_item_request.dart'; // Request entity (data to send)

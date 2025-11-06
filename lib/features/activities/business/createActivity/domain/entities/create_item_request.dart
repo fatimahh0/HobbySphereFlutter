@@ -1,4 +1,4 @@
-// ===== lib/features/activities/Business/createActivity/domain/entities/create_item_request.dart =====
+// ===== lib/features/activities/business/createActivity/domain/entities/create_item_request.dart =====
 // Flutter 3.35.x
 import 'dart:io'; // File type
 

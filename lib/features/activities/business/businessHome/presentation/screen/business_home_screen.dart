@@ -1,4 +1,4 @@
-// lib/features/activities/Business/businessHome/presentation/screen/business_home_screen.dart
+// lib/features/activities/business/businessHome/presentation/screen/business_home_screen.dart
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -6,21 +6,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/app/router/router.dart';
 import 'package:hobby_sphere/app/router/legacy_nav.dart'; // ✅ Legacy bridge
 import 'package:hobby_sphere/core/network/globals.dart' as g;
-import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/widgets/welcome_section.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_event.dart';
+import 'package:hobby_sphere/features/activities/business/businessHome/presentation/widgets/welcome_section.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/bloc/business_notification_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/bloc/business_notification_event.dart';
 
 // Domain
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activities.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activity_by_id.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/delete_business_activity.dart';
 
 // Data
-import 'package:hobby_sphere/features/activities/Business/common/data/repositories/business_activity_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/Business/common/data/services/business_activity_service.dart';
+import 'package:hobby_sphere/features/activities/business/common/data/repositories/business_activity_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/business/common/data/services/business_activity_service.dart';
 
 // UI widgets
-import 'package:hobby_sphere/features/activities/Business/businessHome/presentation/widgets/header.dart';
+import 'package:hobby_sphere/features/activities/business/businessHome/presentation/widgets/header.dart';
 import 'package:hobby_sphere/shared/widgets/BusinessListItemCard.dart';
 
 import 'package:hobby_sphere/shared/widgets/top_toast.dart';

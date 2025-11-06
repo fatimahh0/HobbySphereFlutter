@@ -3,12 +3,12 @@
 
 import 'dart:async'; // StreamSubscription for realtime
 import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
-import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_state';
+import 'package:hobby_sphere/features/activities/business/businessActivity/presentation/bloc/business_activities_state';
 import 'business_activities_event.dart'; // events
 
 // Use cases (your domain layer)
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activities.dart'; // fetch list
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart'; // delete item
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activities.dart'; // fetch list
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/delete_business_activity.dart'; // delete item
 
 // Realtime bus (global)
 import 'package:hobby_sphere/core/realtime/realtime_bus.dart'; // bus singleton

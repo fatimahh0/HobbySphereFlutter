@@ -18,7 +18,7 @@ import '../../domain/usecases/create_item.dart';
 import '../../domain/entities/create_item_request.dart';
 
 // ✅ Same Business repo used by BusinessProfile
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/repositories/business_repository.dart';
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/repositories/business_repository.dart';
 
 import 'create_item_event.dart';
 import 'create_item_state.dart';

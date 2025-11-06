@@ -7,11 +7,11 @@ import 'package:flutter/material.dart'; // flutter ui
 import 'package:flutter_bloc/flutter_bloc.dart'; // bloc
 import 'package:hobby_sphere/core/network/globals.dart' as g; // server helpers
 import 'package:hobby_sphere/app/router/router.dart'; // routes + args
-import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_bloc.dart'; // bloc
-import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_event.dart'; // events
-import 'package:hobby_sphere/features/activities/Business/businessActivity/presentation/bloc/business_activities_state';
+import 'package:hobby_sphere/features/activities/business/businessActivity/presentation/bloc/business_activities_bloc.dart'; // bloc
+import 'package:hobby_sphere/features/activities/business/businessActivity/presentation/bloc/business_activities_event.dart'; // events
+import 'package:hobby_sphere/features/activities/business/businessActivity/presentation/bloc/business_activities_state';
 
-import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/ReopenItemPage.dart'; // reopen page
+import 'package:hobby_sphere/features/activities/business/common/presentation/screen/ReopenItemPage.dart'; // reopen page
 import 'package:hobby_sphere/app/router/legacy_nav.dart'; // legacy nav
 import 'package:hobby_sphere/features/activities/common/data/repositories/currency_repository_impl.dart'; // currency repo
 import 'package:hobby_sphere/features/activities/common/data/repositories/item_type_repository_impl.dart'; // type repo
@@ -19,7 +19,7 @@ import 'package:hobby_sphere/features/activities/common/data/services/currency_s
 import 'package:hobby_sphere/features/activities/common/data/services/item_types_service.dart'; // type api
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart'; // currency usecase
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart'; // type usecase
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart'; // details args
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activity_by_id.dart'; // details args
 
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
 import 'package:hobby_sphere/shared/widgets/app_search_bar.dart'; // search bar

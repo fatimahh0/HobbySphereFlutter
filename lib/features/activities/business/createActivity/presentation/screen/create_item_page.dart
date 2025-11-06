@@ -26,9 +26,9 @@ import 'package:hobby_sphere/features/activities/common/domain/usecases/get_curr
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart'; // types
 
 // ✅ Bring the SAME BusinessRepository you use in BusinessProfile
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/repositories/business_repository.dart'; // contract
-import 'package:hobby_sphere/features/activities/Business/businessProfile/data/services/business_service.dart'; // service
-import 'package:hobby_sphere/features/activities/Business/businessProfile/data/repositories/business_repository_impl.dart'; // impl
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/repositories/business_repository.dart'; // contract
+import 'package:hobby_sphere/features/activities/business/businessProfile/data/services/business_service.dart'; // service
+import 'package:hobby_sphere/features/activities/business/businessProfile/data/repositories/business_repository_impl.dart'; // impl
 
 // BLoC parts
 import '../bloc/create_item_bloc.dart'; // bloc

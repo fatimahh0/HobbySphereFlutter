@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:hobby_sphere/features/activities/Business/editBusinessProfile/domain/entities/business.dart';
+import 'package:hobby_sphere/features/activities/business/editBusinessProfile/domain/entities/business.dart';
 
 abstract class EditBusinessState extends Equatable {
   @override

@@ -1,4 +1,4 @@
-// lib/features/activities/Business/businessBooking/data/repositories/business_booking_repository_impl.dart
+// lib/features/activities/business/businessBooking/data/repositories/business_booking_repository_impl.dart
 //// Flutter 3.35.x
 //// Repository implementation that maps json to entities
 

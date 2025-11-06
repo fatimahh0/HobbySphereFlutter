@@ -1,6 +1,6 @@
-// lib/features/activities/Business/businessActivity/presentation/bloc/business_activity_details_state.dart
+// lib/features/activities/business/businessActivity/presentation/bloc/business_activity_details_state.dart
 import 'package:equatable/equatable.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/entities/business_activity.dart';
 
 abstract class BusinessActivityDetailsState extends Equatable {
   const BusinessActivityDetailsState();

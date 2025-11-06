@@ -10,14 +10,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/app/router/router.dart';
 
-import 'package:hobby_sphere/features/activities/Business/businessNotification/data/repositories/business_notification_repository_impl.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/data/services/business_notification_service.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/data/repositories/business_notification_repository_impl.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/data/services/business_notification_service.dart';
 
-import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/entities/business_notification.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/domain/usecases/get_business_notifications.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_event.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_state.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/domain/entities/business_notification.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/domain/usecases/get_business_notifications.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/bloc/business_notification_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/bloc/business_notification_event.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/bloc/business_notification_state.dart';
 
 import 'package:hobby_sphere/core/constants/app_role.dart';
 

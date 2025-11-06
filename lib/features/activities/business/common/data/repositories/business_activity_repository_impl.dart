@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart'; // debug only (ok to keep)
 import 'package:hobby_sphere/core/network/globals.dart' as g; // base url
-import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/repositories/business_activity_repository.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/entities/business_activity.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/repositories/business_activity_repository.dart';
 import '../services/business_activity_service.dart';
 
 /// Make image URL absolute for display

@@ -4,8 +4,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
 import 'business_activity_details_event.dart'; // events
 import 'business_activity_details_state.dart'; // states
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activity_by_id.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/delete_business_activity.dart';
 
 // ⬇️ NEW: realtime bus + event model
 import 'package:hobby_sphere/core/realtime/realtime_bus.dart'; // send realtime events

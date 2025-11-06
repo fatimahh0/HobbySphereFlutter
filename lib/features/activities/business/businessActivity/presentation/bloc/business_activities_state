@@ -2,7 +2,7 @@
 // States for BusinessActivitiesBloc (initial, loading, loaded, error)
 
 import 'package:equatable/equatable.dart'; // value equality
-import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart'; // entity
+import 'package:hobby_sphere/features/activities/business/common/domain/entities/business_activity.dart'; // entity
 
 // Base class for all states
 abstract class BusinessActivitiesState extends Equatable {

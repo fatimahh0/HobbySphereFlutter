@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hobby_sphere/features/activities/Business/businessProfile/domain/entities/business.dart';
+import 'package:hobby_sphere/features/activities/business/businessProfile/domain/entities/business.dart';
 
 class ProfileHeader extends StatelessWidget {
   final Business business;

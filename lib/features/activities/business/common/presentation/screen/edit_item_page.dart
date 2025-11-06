@@ -4,17 +4,17 @@
 import 'dart:io'; // File handling for images
 import 'package:flutter/material.dart'; // Flutter UI
 import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
-import 'package:hobby_sphere/features/activities/Business/common/data/services/edit_activity_service.dart'; // Edit service
+import 'package:hobby_sphere/features/activities/business/common/data/services/edit_activity_service.dart'; // Edit service
 import 'package:image_picker/image_picker.dart'; // Image picker
 import 'package:intl/intl.dart'; // Date formatting
 import 'package:google_maps_flutter/google_maps_flutter.dart'
     show LatLng; // LatLng type
 
-import 'package:hobby_sphere/features/activities/Business/createActivity/data/services/create_item_service.dart'; // Not used directly, but kept if other parts rely on it
+import 'package:hobby_sphere/features/activities/business/createActivity/data/services/create_item_service.dart'; // Not used directly, but kept if other parts rely on it
 
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart'; // Currency use case
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_item_types.dart'; // Types use case
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart'; // Get item by id
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activity_by_id.dart'; // Get item by id
 
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
 import 'package:hobby_sphere/shared/widgets/app_button.dart'; // Button

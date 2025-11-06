@@ -1,4 +1,4 @@
-// lib/features/activities/Business/businessBooking/presentation/screen/business_booking_screen.dart
+// lib/features/activities/business/businessBooking/presentation/screen/business_booking_screen.dart
 // Flutter 3.35.x
 // BusinessBookingScreen — fixed Canceled > Approved filter to include
 // both "CancelApproved" AND final "Canceled/CANCELLED" statuses.

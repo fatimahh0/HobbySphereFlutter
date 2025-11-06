@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:equatable/equatable.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/entities/business_activity.dart';
 
 abstract class BusinessHomeEvent extends Equatable {
   const BusinessHomeEvent();

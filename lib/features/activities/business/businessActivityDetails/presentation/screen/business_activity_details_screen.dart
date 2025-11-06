@@ -1,24 +1,24 @@
-// ===== lib/features/activities/Business/BusinessActivityDetails/presentation/screen/business_activity_details_screen.dart
+// ===== lib/features/activities/business/BusinessActivityDetails/presentation/screen/business_activity_details_screen.dart
 // Flutter 3.35.x — Fix: extract businessId safely and use it for Reopen.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/common/presentation/screen/ReopenItemPage.dart';
+import 'package:hobby_sphere/features/activities/business/common/presentation/screen/ReopenItemPage.dart';
 import 'package:intl/intl.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart';
 import 'package:hobby_sphere/core/network/globals.dart'
     as g; // + add: to resolve absolute image URLs
 import 'package:hobby_sphere/app/router/legacy_nav.dart';
 // Bloc details
-import 'package:hobby_sphere/features/activities/Business/BusinessActivityDetails/presentation/bloc/business_activity_details_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessActivityDetails/presentation/bloc/business_activity_details_event.dart';
-import 'package:hobby_sphere/features/activities/Business/BusinessActivityDetails/presentation/bloc/business_activity_details_state.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessActivityDetails/presentation/bloc/business_activity_details_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessActivityDetails/presentation/bloc/business_activity_details_event.dart';
+import 'package:hobby_sphere/features/activities/business/BusinessActivityDetails/presentation/bloc/business_activity_details_state.dart';
 
 // Domain
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/get_business_activity_by_id.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/get_business_activity_by_id.dart';
 import 'package:hobby_sphere/features/activities/common/domain/usecases/get_current_currency.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/usecases/delete_business_activity.dart';
-import 'package:hobby_sphere/features/activities/Business/common/domain/entities/business_activity.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/usecases/delete_business_activity.dart';
+import 'package:hobby_sphere/features/activities/business/common/domain/entities/business_activity.dart';
 
 // Widgets
 import 'package:hobby_sphere/shared/widgets/app_button.dart';

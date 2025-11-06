@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
 
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_bloc.dart';
-import 'package:hobby_sphere/features/activities/Business/businessNotification/presentation/bloc/business_notification_state.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/bloc/business_notification_bloc.dart';
+import 'package:hobby_sphere/features/activities/business/businessNotification/presentation/bloc/business_notification_state.dart';
 
 class WelcomeSection extends StatelessWidget {
   final VoidCallback? onOpenNotifications;
