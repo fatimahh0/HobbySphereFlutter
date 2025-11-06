@@ -118,15 +118,16 @@ jobs:
       # -------------------- Build APK --------------------
       - name: Build APK (release)
         run: |
-          flutter build apk --release \
-            -t lib/app/main_activity.dart \
-            --dart-define=API_BASE_URL=${{ steps.defs.outputs.API_BASE_URL }} \
-            --dart-define=WS_PATH=${{ steps.defs.outputs.WS_PATH }} \
-            --dart-define=OWNER_PROJECT_LINK_ID=${{ steps.defs.outputs.OWNER_PROJECT_LINK_ID }} \
-            --dart-define=PROJECT_ID=${{ steps.defs.outputs.PROJECT_ID }} \
-            --dart-define=STRIPE_PUBLISHABLE_KEY=${{ steps.defs.outputs.STRIPE_PUBLISHABLE_KEY }} \
-            --dart-define=APP_ROLE=both \
-            --dart-define=OWNER_ATTACH_MODE=header
+           flutter build apk --release \
+              -t lib/app/main_activity.dart \
+              --dart-define=API_BASE_URL=http://192.168.1.9:8080 \
+              --dart-define=OWNER_PROJECT_LINK_ID=1 \
+              --dart-define=OWNER_ATTACH_MODE=header \
+              --dart-define=APP_ROLE=both \
+              --dart-define=WS_PATH=/api/ws \
+              --dart-define=PROJECT_ID=1 \
+              --dart-define=APP_NAME="test" \
+              --dart-define=APP_LOGO_URL="http://192.168.1.9:8080/uploads/apk/1/1/test_20251106_175330.apk"
         # working-directory: apps/owner_app
 
       - name: List APK outputs (debug)
