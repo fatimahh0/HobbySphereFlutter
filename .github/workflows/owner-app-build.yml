@@ -1,7 +1,6 @@
 name: Owner App Build (Android APK)
 
 on:
-  # keep both triggers; you can remove repository_dispatch if you don't use it
   repository_dispatch:
     types: [owner_app_build]
   workflow_dispatch:
@@ -22,7 +21,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: 'gradle'
+          cache: gradle
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -59,8 +58,8 @@ jobs:
             --dart-define=APP_ROLE=both \
             --dart-define=WS_PATH=/api/ws \
             --dart-define=PROJECT_ID=1 \
-            --dart-define=APP_NAME="test" \
-            --dart-define=APP_LOGO_URL="http://192.168.1.6:8080/uploads/apk/1/1/test_20251106_175330.apk"
+            --dart-define=APP_NAME=test \
+            --dart-define=APP_LOGO_URL=http://192.168.1.6:8080/uploads/owner/1/1/test/logo_20251106.png
 
       - name: List APK outputs (debug)
         run: |
@@ -93,11 +92,27 @@ jobs:
             sudo apt-get update && sudo apt-get install -y jq
           fi
 
+      # Use GitHub API to fetch the release by the tag we just created
       - name: Extract asset URL
-        id: asset
-        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: app-test-${{ github.run_id }}
         run: |
-          echo "Assets JSON:"
-          echo '${{ steps.rel.outputs.assets }}'
-          url=$(jq -r '.[0].browser_download_url' <<< "${{ steps.rel.outputs.assets }}")
-          echo "Resolved APK URL: $url"
+          echo "Fetching release assets for tag: $TAG"
+          json=$(curl -sSL \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/releases/tags/${TAG}")
+
+          echo "Assets JSON (minified):"
+          echo "$json" | jq -c '.assets'
+
+          urls=$(echo "$json" | jq -r '.assets[]? | select(.name|test("\\.apk$")) | .browser_download_url')
+          if [ -z "$urls" ]; then
+            echo "No APK assets found on the release."
+            exit 1
+          fi
+
+          echo "Resolved APK URL(s):"
+          echo "$urls"
