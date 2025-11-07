@@ -5,40 +5,46 @@ on:
     types: [owner_app_build]
   workflow_dispatch:
     inputs:
-      OWNER_ID: { description: "Owner ID", required: true, default: "1" }
-      PROJECT_ID: { description: "Project ID", required: true, default: "1" }
-      OWNER_PROJECT_LINK_ID: { description: "Owner-Project Link ID", required: false }
-      SLUG: { description: "App slug", required: true, default: "app" }
-      APP_NAME: { description: "App name", required: true, default: "MyApp" }
-      APP_LOGO_URL: { description: "Logo URL", required: false }
-      THEME_ID: { description: "Theme ID", required: false }
-      API_BASE_URL: { description: "Backend base URL", required: true, default: "http://192.168.1.6:8080" }
-      WS_PATH: { description: "WebSocket path", required: true, default: "/api/ws" }
-      OWNER_ATTACH_MODE: { description: "owner attach mode", required: true, default: "header" }
-      APP_ROLE: { description: "App role", required: true, default: "both" }
-      CALLBACK_BASE: { description: "Backend CI callback base (ends with /api/ci)", required: true, default: "http://192.168.1.6:8080/api/ci" }
-      CALLBACK_TOKEN: { description: "Callback shared token", required: true, default: "changeme" }
+      OWNER_ID:               { description: "Owner ID", required: false, default: "1" }
+      PROJECT_ID:             { description: "Project ID", required: false, default: "1" }
+      OWNER_PROJECT_LINK_ID:  { description: "Owner-Project Link ID", required: false }
+      SLUG:                   { description: "App slug", required: false, default: "app" }
+      APP_NAME:               { description: "App name", required: false, default: "MyApp" }
+      APP_LOGO_URL:           { description: "Logo URL", required: false, default: "" }
+      THEME_ID:               { description: "Theme ID", required: false }
+      API_BASE_URL:           { description: "Backend base URL", required: false, default: "http://localhost:8080" }
+      WS_PATH:                { description: "WebSocket path", required: false, default: "/api/ws" }
+      OWNER_ATTACH_MODE:      { description: "owner attach mode", required: false, default: "header" }
+      APP_ROLE:               { description: "App role", required: false, default: "both" }
+      CALLBACK_BASE:          { description: "Backend CI callback base (ends with /api/ci)", required: false, default: "" }
+      CALLBACK_TOKEN:         { description: "Callback shared token", required: false, default: "" }
 
 permissions:
   contents: write
 
+concurrency:
+  group: owner_app_build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
+
+    # Coalesce: client_payload → manual inputs → repo secrets → defaults
     env:
-      OWNER_ID: ${{ github.event.client_payload.OWNER_ID || inputs.OWNER_ID }}
-      PROJECT_ID: ${{ github.event.client_payload.PROJECT_ID || inputs.PROJECT_ID }}
+      OWNER_ID:              ${{ github.event.client_payload.OWNER_ID || inputs.OWNER_ID || '1' }}
+      PROJECT_ID:            ${{ github.event.client_payload.PROJECT_ID || inputs.PROJECT_ID || '1' }}
       OWNER_PROJECT_LINK_ID: ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID || inputs.OWNER_PROJECT_LINK_ID }}
-      SLUG: ${{ github.event.client_payload.SLUG || inputs.SLUG }}
-      APP_NAME: ${{ github.event.client_payload.APP_NAME || inputs.APP_NAME }}
-      APP_LOGO_URL: ${{ github.event.client_payload.APP_LOGO_URL || inputs.APP_LOGO_URL }}
-      THEME_ID: ${{ github.event.client_payload.THEME_ID || inputs.THEME_ID }}
-      API_BASE_URL: ${{ github.event.client_payload.API_BASE_URL || inputs.API_BASE_URL }}
-      WS_PATH: ${{ github.event.client_payload.WS_PATH || inputs.WS_PATH || '/api/ws' }}
-      OWNER_ATTACH_MODE: ${{ github.event.client_payload.OWNER_ATTACH_MODE || inputs.OWNER_ATTACH_MODE || 'header' }}
-      APP_ROLE: ${{ github.event.client_payload.APP_ROLE || inputs.APP_ROLE || 'both' }}
-      CALLBACK_BASE: ${{ github.event.client_payload.BACKEND_CI_BASE || inputs.CALLBACK_BASE }}
-      CALLBACK_TOKEN: ${{ github.event.client_payload.CI_CALLBACK_TOKEN || inputs.CALLBACK_TOKEN }}
+      SLUG:                  ${{ github.event.client_payload.SLUG || inputs.SLUG || 'app' }}
+      APP_NAME:              ${{ github.event.client_payload.APP_NAME || inputs.APP_NAME || 'MyApp' }}
+      APP_LOGO_URL:          ${{ github.event.client_payload.APP_LOGO_URL || inputs.APP_LOGO_URL || '' }}
+      THEME_ID:              ${{ github.event.client_payload.THEME_ID || inputs.THEME_ID }}
+      API_BASE_URL:          ${{ github.event.client_payload.API_BASE_URL || inputs.API_BASE_URL || 'http://localhost:8080' }}
+      WS_PATH:               ${{ github.event.client_payload.WS_PATH || inputs.WS_PATH || '/api/ws' }}
+      OWNER_ATTACH_MODE:     ${{ github.event.client_payload.OWNER_ATTACH_MODE || inputs.OWNER_ATTACH_MODE || 'header' }}
+      APP_ROLE:              ${{ github.event.client_payload.APP_ROLE || inputs.APP_ROLE || 'both' }}
+      CALLBACK_BASE:         ${{ github.event.client_payload.BACKEND_CI_BASE || inputs.CALLBACK_BASE || secrets.CALLBACK_BASE_URL || '' }}
+      CALLBACK_TOKEN:        ${{ github.event.client_payload.CI_CALLBACK_TOKEN || inputs.CALLBACK_TOKEN || secrets.CI_CALLBACK_TOKEN || '' }}
 
     steps:
       - name: Echo inputs
@@ -55,13 +61,6 @@ jobs:
           echo "OWNER_ATTACH_MODE=$OWNER_ATTACH_MODE"
           echo "APP_ROLE=$APP_ROLE"
           echo "CALLBACK_BASE=$CALLBACK_BASE"
-
-      - name: Validate required inputs
-        run: |
-          set -e
-          for v in OWNER_ID PROJECT_ID SLUG APP_NAME API_BASE_URL CALLBACK_BASE CALLBACK_TOKEN; do
-            if [ -z "${!v:-}" ]; then echo "Missing $v" >&2; exit 1; fi
-          done
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -98,6 +97,7 @@ jobs:
         run: test -f lib/app/main_activity.dart || (echo "Missing lib/app/main_activity.dart" && exit 1)
 
       - name: Build APK (release)
+        timeout-minutes: 30
         run: |
           set -e
           OPL="${OWNER_PROJECT_LINK_ID:-$OWNER_ID-$PROJECT_ID}"
@@ -165,7 +165,7 @@ jobs:
           fi
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
 
-      - name: Callback to backend with APK URL
+      - name: Callback to backend with APK URL (optional)
         if: ${{ env.CALLBACK_BASE != '' && env.CALLBACK_TOKEN != '' }}
         env:
           APK_URL: ${{ steps.extract.outputs.apk_url }}
