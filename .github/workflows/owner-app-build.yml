@@ -26,7 +26,6 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     env:
-      # Read from repository_dispatch.client_payload if present, otherwise from workflow_dispatch.inputs
       OWNER_ID: ${{ github.event.client_payload.OWNER_ID || inputs.OWNER_ID }}
       PROJECT_ID: ${{ github.event.client_payload.PROJECT_ID || inputs.PROJECT_ID }}
       OWNER_PROJECT_LINK_ID: ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID || inputs.OWNER_PROJECT_LINK_ID }}
@@ -40,8 +39,6 @@ jobs:
       APP_ROLE: ${{ github.event.client_payload.APP_ROLE || inputs.APP_ROLE || 'both' }}
       CALLBACK_BASE: ${{ github.event.client_payload.BACKEND_CI_BASE || inputs.CALLBACK_BASE }}
       CALLBACK_TOKEN: ${{ github.event.client_payload.CI_CALLBACK_TOKEN || inputs.CALLBACK_TOKEN }}
-      # Fallback: build an OPL if none
-      OPL_FALLBACK: ${{ format('{0}-{1}', env.OWNER_ID, env.PROJECT_ID) }}
 
     steps:
       - name: Echo inputs
@@ -58,6 +55,13 @@ jobs:
           echo "OWNER_ATTACH_MODE=$OWNER_ATTACH_MODE"
           echo "APP_ROLE=$APP_ROLE"
           echo "CALLBACK_BASE=$CALLBACK_BASE"
+
+      - name: Validate required inputs
+        run: |
+          set -e
+          for v in OWNER_ID PROJECT_ID SLUG APP_NAME API_BASE_URL CALLBACK_BASE CALLBACK_TOKEN; do
+            if [ -z "${!v:-}" ]; then echo "Missing $v" >&2; exit 1; fi
+          done
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -96,8 +100,7 @@ jobs:
       - name: Build APK (release)
         run: |
           set -e
-          OPL="${OWNER_PROJECT_LINK_ID:-$OPL_FALLBACK}"
-          # Optional theme flag
+          OPL="${OWNER_PROJECT_LINK_ID:-$OWNER_ID-$PROJECT_ID}"
           THEME_FLAG=""
           if [ -n "${THEME_ID:-}" ]; then THEME_FLAG="--dart-define=THEME_ID=$THEME_ID"; fi
           flutter build apk --release \
