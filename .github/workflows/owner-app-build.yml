@@ -1,7 +1,16 @@
 name: Owner App Build (Android APK)
 
 on:
-  workflow_dispatch: {}   # manual runs only (button)
+  repository_dispatch:
+    types: [owner_app_build]   # backend can trigger this
+  workflow_dispatch:
+    inputs:
+      OWNER_ID:              { description: "Owner ID",              required: false, default: "1" }
+      PROJECT_ID:            { description: "Project ID",            required: false, default: "1" }
+      SLUG:                  { description: "App slug",              required: false, default: "app" }
+      CONFIG_URL:            { description: "Config API URL (optional)", required: false, default: "" }
+      CALLBACK_BASE:         { description: "Callback base (/api/ci)",    required: false, default: "" }
+      CALLBACK_TOKEN:        { description: "Callback token",             required: false, default: "" }
 
 permissions:
   contents: write
@@ -9,6 +18,32 @@ permissions:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+
+    env:
+      # Prefer repository_dispatch client_payload; fall back to manual inputs; then to secrets
+      OWNER_ID:              ${{ github.event.client_payload.OWNER_ID || inputs.OWNER_ID || '1' }}
+      PROJECT_ID:            ${{ github.event.client_payload.PROJECT_ID || inputs.PROJECT_ID || '1' }}
+      SLUG:                  ${{ github.event.client_payload.SLUG || inputs.SLUG || 'app' }}
+
+      # Config can arrive 3 ways:
+      # 1) client_payload fields (backend dispatch)
+      # 2) fetched from CONFIG_URL (below step)
+      # 3) defaults (safe fallbacks)
+      APP_NAME:              ${{ github.event.client_payload.APP_NAME || 'MyApp' }}
+      APP_LOGO_URL:          ${{ github.event.client_payload.APP_LOGO_URL || '' }}
+      API_BASE_URL:          ${{ github.event.client_payload.API_BASE_URL || '' }}
+      WS_PATH:               ${{ github.event.client_payload.WS_PATH || '' }}
+      OWNER_ATTACH_MODE:     ${{ github.event.client_payload.OWNER_ATTACH_MODE || '' }}
+      APP_ROLE:              ${{ github.event.client_payload.APP_ROLE || '' }}
+      OWNER_PROJECT_LINK_ID: ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID || '' }}
+      THEME_ID:              ${{ github.event.client_payload.THEME_ID || '' }}
+
+      # Where to fetch config if not provided above
+      CONFIG_URL:            ${{ github.event.client_payload.CONFIG_URL || inputs.CONFIG_URL || secrets.BUILD_CONFIG_URL || '' }}
+
+      # Callback (optional)
+      CALLBACK_BASE:         ${{ github.event.client_payload.CALLBACK_BASE || inputs.CALLBACK_BASE || secrets.CALLBACK_BASE_URL || '' }}
+      CALLBACK_TOKEN:        ${{ github.event.client_payload.CALLBACK_TOKEN || inputs.CALLBACK_TOKEN || secrets.CI_CALLBACK_TOKEN || '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -35,34 +70,124 @@ jobs:
       - run: flutter pub get
       - run: test -f lib/app/main_activity.dart || (echo "Missing lib/app/main_activity.dart" && exit 1)
 
+      - name: Ensure jq
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
+      # If API_BASE_URL (and friends) are empty, fetch them from your backend API.
+      # Expected JSON (example):
+      # {
+      #   "ownerProjectLinkId": 1,
+      #   "projectId": 1,
+      #   "slug": "hobby",
+      #   "appName": "Hobby",
+      #   "apiBaseUrl": "http://192.168.1.6:8080",
+      #   "wsPath": "/api/ws",
+      #   "appRole": "both",
+      #   "ownerAttachMode": "header",
+      #   "appLogoUrl": "http://.../uploads/owner/.../logo.png",
+      #   "themeId": 1
+      # }
+      - name: Resolve config (client_payload or API)
+        shell: bash
+        run: |
+          set -e
+
+          # Prefer values from client_payload. If API_BASE_URL is still empty, try CONFIG_URL.
+          if [ -z "${API_BASE_URL:-}" ] && [ -n "${CONFIG_URL:-}" ]; then
+            echo "Fetching config from: ${CONFIG_URL}?ownerId=${OWNER_ID}&projectId=${PROJECT_ID}&slug=${SLUG}"
+            json="$(curl -fsS "${CONFIG_URL}?ownerId=${OWNER_ID}&projectId=${PROJECT_ID}&slug=${SLUG}")"
+
+            # Write results into the job env
+            echo "APP_NAME=$(echo "$json" | jq -r '.appName // "MyApp"')" >> "$GITHUB_ENV"
+            echo "APP_LOGO_URL=$(echo "$json" | jq -r '.appLogoUrl // ""')" >> "$GITHUB_ENV"
+            echo "API_BASE_URL=$(echo "$json" | jq -r '.apiBaseUrl // ""')" >> "$GITHUB_ENV"
+            echo "WS_PATH=$(echo "$json" | jq -r '.wsPath // "/api/ws"')" >> "$GITHUB_ENV"
+            echo "APP_ROLE=$(echo "$json" | jq -r '.appRole // "both"')" >> "$GITHUB_ENV"
+            echo "OWNER_ATTACH_MODE=$(echo "$json" | jq -r '.ownerAttachMode // "header"')" >> "$GITHUB_ENV"
+            echo "OWNER_PROJECT_LINK_ID=$(echo "$json" | jq -r '.ownerProjectLinkId // ""')" >> "$GITHUB_ENV"
+            echo "THEME_ID=$(echo "$json" | jq -r '.themeId // ""')" >> "$GITHUB_ENV"
+            echo "SLUG=$(echo "$json" | jq -r '.slug // "'"$SLUG"'"')" >> "$GITHUB_ENV"
+          fi
+
+          # Final safety defaults (if still empty)
+          echo "API_BASE_URL=${API_BASE_URL:-http://192.168.1.9:8080}" >> "$GITHUB_ENV"
+          echo "WS_PATH=${WS_PATH:-/api/ws}" >> "$GITHUB_ENV"
+          echo "APP_ROLE=${APP_ROLE:-both}" >> "$GITHUB_ENV"
+          echo "OWNER_ATTACH_MODE=${OWNER_ATTACH_MODE:-header}" >> "$GITHUB_ENV"
+          echo "APP_NAME=${APP_NAME:-MyApp}" >> "$GITHUB_ENV"
+
       - name: Build APK (release)
         run: |
           set -e
+          OPL="${OWNER_PROJECT_LINK_ID:-$OWNER_ID-$PROJECT_ID}"
+          THEME_FLAG=""
+          if [ -n "${THEME_ID:-}" ]; then THEME_FLAG="--dart-define=THEME_ID=$THEME_ID"; fi
+
+          echo "Building with:"
+          echo "  API_BASE_URL=$API_BASE_URL"
+          echo "  OWNER_PROJECT_LINK_ID=$OPL"
+          echo "  APP_NAME=$APP_NAME"
+          echo "  SLUG=$SLUG"
+
           flutter build apk --release \
             -t lib/app/main_activity.dart \
-            --dart-define=API_BASE_URL=http://192.168.1.9:8080 \
-            --dart-define=OWNER_PROJECT_LINK_ID=1 \
-            --dart-define=OWNER_ATTACH_MODE=header \
-            --dart-define=APP_ROLE=both \
-            --dart-define=WS_PATH=/api/ws \
-            --dart-define=PROJECT_ID=1 \
-            --dart-define=APP_NAME="test" \
-            --dart-define=APP_LOGO_URL="http://192.168.1.9:8080/uploads/apk/1/1/test_20251106_175330.apk"
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=OWNER_PROJECT_LINK_ID="$OPL" \
+            --dart-define=OWNER_ATTACH_MODE="$OWNER_ATTACH_MODE" \
+            --dart-define=APP_ROLE="$APP_ROLE" \
+            --dart-define=WS_PATH="$WS_PATH" \
+            --dart-define=PROJECT_ID="$PROJECT_ID" \
+            --dart-define=APP_NAME="$APP_NAME" \
+            --dart-define=APP_LOGO_URL="$APP_LOGO_URL" \
+            --dart-define=SLUG="$SLUG" \
+            $THEME_FLAG
 
       - name: List APK outputs
         run: ls -R build/app/outputs/flutter-apk || true
 
       - uses: actions/upload-artifact@v4
         with:
-          name: test-apk
+          name: ${{ env.SLUG }}-apk
           path: build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
 
       - id: rel
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: app-test-${{ github.run_id }}
-          name: "Test Owner App (run ${{ github.run_id }})"
+          tag_name: app-${{ env.SLUG }}-${{ github.run_id }}
+          name: "${{ env.APP_NAME }} (run ${{ github.run_id }})"
           files: build/app/outputs/flutter-apk/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract first APK URL
+        id: extract
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: app-${{ env.SLUG }}-${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          json="$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/releases/tags/${TAG}")"
+          urls="$(echo "$json" | jq -e -r '.assets[]? | select(.name|test("\\.apk$")) | .browser_download_url')"
+          first_url="$(echo "$urls" | head -n 1 || true)"
+          echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
+          echo "Resolved APK: $first_url"
+
+      - name: Callback to backend with APK URL (optional)
+        if: ${{ env.CALLBACK_BASE != '' && env.CALLBACK_TOKEN != '' && steps.extract.outputs.apk_url != '' }}
+        env:
+          APK_URL: ${{ steps.extract.outputs.apk_url }}
+        run: |
+          set -e
+          echo "Calling: ${CALLBACK_BASE}/owner-projects/${OWNER_ID}/${PROJECT_ID}/apps/${SLUG}/apk-url"
+          curl -sS -X PUT \
+            -H "Content-Type: application/json" \
+            -H "X-Auth-Token: ${CALLBACK_TOKEN}" \
+            -d "{\"apkUrl\":\"${APK_URL}\"}" \
+            "${CALLBACK_BASE}/owner-projects/${OWNER_ID}/${PROJECT_ID}/apps/${SLUG}/apk-url" \
+            | sed -e 's/.*/[backend] &/'
