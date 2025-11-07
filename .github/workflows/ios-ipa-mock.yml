@@ -1,0 +1,79 @@
+name: iOS Mock IPA (Unsigned, Not Installable)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  mock-ipa:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Install CocoaPods
+        working-directory: ios
+        run: |
+          sudo gem install cocoapods -N
+          pod repo update
+          pod install
+
+ 
+      - name: Flutter iOS build (no codesign)
+        run: |
+          flutter build ios --release --no-codesign
+
+      - name: Xcode archive (iphoneos, unsigned)
+        env:
+          SCHEME: Runner
+        run: |
+          set -euo pipefail
+          xcodebuild -workspace ios/Runner.xcworkspace \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive \
+            -archivePath build/ios/archive/Runner
+
+     
+      - name: Package mock IPA (zip Payload)
+        run: |
+          set -euo pipefail
+          APP_PATH="build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
+          test -d "$APP_PATH" || (echo "Runner.app not found" && exit 1)
+
+          mkdir -p build/mockipa/Payload
+          cp -R "$APP_PATH" build/mockipa/Payload/Runner.app
+
+          
+          cd build/mockipa
+          /usr/bin/zip -r mock-unsigned.ipa Payload
+
+          cd Payload
+          /usr/bin/zip -r Runner.app.zip Runner.app
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-mock-ipa-and-app
+          path: |
+            build/mockipa/mock-unsigned.ipa
+            build/mockipa/Payload/Runner.app.zip
+          if-no-files-found: error
+          retention-days: 14
