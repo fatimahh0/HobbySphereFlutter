@@ -2,11 +2,11 @@ name: Owner App Build (Android APK)
 
 on:
   repository_dispatch:
-    types: [owner_app_build]        # You can trigger with client_payload.CONFIG_URL
+    types: [owner_app_build]       # trigger with client_payload.CONFIG_URL
   workflow_dispatch:
     inputs:
       CONFIG_URL:
-        description: "Absolute URL that returns full app config JSON"
+        description: "URL that returns full config JSON"
         required: true
         default: ""
 
@@ -16,9 +16,7 @@ permissions:
 jobs:
   build-android:
     runs-on: ubuntu-latest
-
     env:
-      # Accept CONFIG_URL from dispatch or manual run
       CONFIG_URL: ${{ github.event.client_payload.CONFIG_URL || inputs.CONFIG_URL }}
 
     steps:
@@ -39,22 +37,22 @@ jobs:
       - run: flutter pub get
       - run: test -f lib/app/main_activity.dart || (echo "Missing lib/app/main_activity.dart" && exit 1)
 
-      - name: Ensure jq
+      - name: Ensure jq + dirs
         run: |
           if ! command -v jq >/dev/null 2>&1; then
             sudo apt-get update && sudo apt-get install -y jq
           fi
+          mkdir -p assets/icons assets/splash
 
-      - name: Fetch & validate config (SINGLE source of truth)
+      - name: Fetch & export config
         shell: bash
         run: |
           set -euo pipefail
           [ -n "${CONFIG_URL:-}" ] || { echo "CONFIG_URL is required"; exit 1; }
+          echo "Fetching: $CONFIG_URL"
+          json="$(curl -fsS "$CONFIG_URL")"
 
-          echo "Fetching config from: $CONFIG_URL"
-          json="$(curl -fsS "$CONFIG_URL")" || { echo "Failed to fetch CONFIG_URL"; exit 1; }
-
-          # Extract all fields
+          # required
           OWNER_ID="$(echo "$json" | jq -er '.ownerId')"
           PROJECT_ID="$(echo "$json" | jq -er '.projectId')"
           OPL="$(echo "$json" | jq -er '.ownerProjectLinkId')"
@@ -66,10 +64,11 @@ jobs:
           APP_ROLE="$(echo "$json" | jq -er '.appRole')"
           OWNER_ATTACH_MODE="$(echo "$json" | jq -er '.ownerAttachMode')"
           THEME_ID="$(echo "$json" | jq -er '.themeId')"
+
+          # optional
           CALLBACK_BASE="$(echo "$json" | jq -r '.callbackBase // ""')"
           CALLBACK_TOKEN="$(echo "$json" | jq -r '.callbackToken // ""')"
 
-          # Export to job env
           {
             echo "OWNER_ID=$OWNER_ID"
             echo "PROJECT_ID=$PROJECT_ID"
@@ -86,14 +85,18 @@ jobs:
             echo "CALLBACK_TOKEN=$CALLBACK_TOKEN"
           } >> "$GITHUB_ENV"
 
-          echo "Resolved config OK:"
-          echo "  owner=$OWNER_ID project=$PROJECT_ID opl=$OPL slug=$SLUG name=$APP_NAME"
+      - name: Download logo → icon + splash
+        shell: bash
+        run: |
+          set -e
+          curl -fsSL "$APP_LOGO_URL" -o assets/icons/app_icon.png
+          cp assets/icons/app_icon.png assets/splash/splash.png
+          dart run flutter_launcher_icons
+          dart run flutter_native_splash:create
 
       - name: Build APK (release)
         run: |
           set -e
-          echo "Building $APP_NAME ($SLUG)…"
-          THEME_FLAG="--dart-define=THEME_ID=$THEME_ID"
           flutter build apk --release \
             -t lib/app/main_activity.dart \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
@@ -105,9 +108,9 @@ jobs:
             --dart-define=APP_NAME="$APP_NAME" \
             --dart-define=APP_LOGO_URL="$APP_LOGO_URL" \
             --dart-define=SLUG="$SLUG" \
-            $THEME_FLAG
+            --dart-define=THEME_ID="$THEME_ID"
 
-      - name: List APK outputs
+      - name: List outputs
         run: ls -R build/app/outputs/flutter-apk || true
 
       - uses: actions/upload-artifact@v4
@@ -141,16 +144,15 @@ jobs:
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
           echo "Resolved APK: $first_url"
 
-      - name: Callback to backend with APK URL (if provided)
+      - name: Callback (optional)
         if: ${{ env.CALLBACK_BASE != '' && env.CALLBACK_TOKEN != '' && steps.extract.outputs.apk_url != '' }}
         env:
           APK_URL: ${{ steps.extract.outputs.apk_url }}
         run: |
           set -e
-          echo "Calling: ${CALLBACK_BASE}/owner-projects/${OWNER_ID}/${PROJECT_ID}/apps/${SLUG}/apk-url"
           curl -sS -X PUT \
             -H "Content-Type: application/json" \
             -H "X-Auth-Token: ${CALLBACK_TOKEN}" \
             -d "{\"apkUrl\":\"${APK_URL}\"}" \
             "${CALLBACK_BASE}/owner-projects/${OWNER_ID}/${PROJECT_ID}/apps/${SLUG}/apk-url" \
-            | sed -e 's/.*/[backend] &/'
+          | sed -e 's/.*/[backend] &/'
