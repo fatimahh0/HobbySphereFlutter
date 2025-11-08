@@ -11,7 +11,9 @@ permissions:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+
     env:
+      # Payload from repository_dispatch (≤10 props in client_payload; RUNTIME is nested)
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
       OWNER_PROJECT_LINK_ID:  ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}
@@ -25,34 +27,40 @@ jobs:
       OWNER_ATTACH_MODE:      ${{ github.event.client_payload.RUNTIME.OWNER_ATTACH_MODE }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
 
-      - uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
         with:
           api-level: 34
           build-tools: '34.0.0'
 
-      - run: yes | sdkmanager --licenses
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses
 
-      - uses: subosito/flutter-action@v2
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
-        # cache: true  # optional
 
-      - run: flutter doctor -v
-      - run: flutter pub get
-      - run: test -f lib/app/main_activity.dart || (echo "Missing lib/app/main_activity.dart" && exit 1)
+      - name: Flutter doctor & deps
+        run: |
+          flutter doctor -v
+          flutter pub get
+          test -f lib/app/main_activity.dart || (echo "Missing lib/app/main_activity.dart" && exit 1)
 
       - name: Ensure tools + dirs
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq
+          sudo apt-get install -y jq openssh-client
           mkdir -p assets/icons assets/splash
 
       - name: Prepare logo (download public URL)
@@ -88,14 +96,16 @@ jobs:
       - name: List outputs
         run: ls -R build/app/outputs/flutter-apk || true
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact (for debugging / manual download)
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.SLUG }}-apk
           path: build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
           retention-days: 14
 
-      - id: rel
+      - name: Create GitHub Release (optional public link)
+        id: rel
         uses: softprops/action-gh-release@v2
         with:
           tag_name: app-${{ env.SLUG }}-${{ github.run_id }}
@@ -104,7 +114,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract first APK URL
+      - name: Extract first APK URL from release
         id: extract
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -117,6 +127,72 @@ jobs:
           urls="$(echo "$json" | jq -e -r '.assets[]? | select(.name|test("\\.apk$")) | .browser_download_url')"
           first_url="$(echo "$urls" | head -n 1 || true)"
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
-          echo "Resolved APK: $first_url"
+          echo "Resolved Release APK: $first_url"
 
-      # If you enable backend callback, add a curl PUT here using callbackBase/callbackToken from CONFIG_URL flow.
+      # ---------- OPTIONAL: Copy APK to your backend server (SCP) ----------
+      # Skips automatically if any of these secrets is missing.
+      - name: Copy APK to server via SCP (optional)
+        if: ${{ secrets.SSH_HOST && secrets.SSH_USER && secrets.SSH_KEY && secrets.APK_ROOT }}
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}         # e.g. 203.0.113.10
+          SSH_USER: ${{ secrets.SSH_USER }}         # e.g. ubuntu
+          SSH_KEY:  ${{ secrets.SSH_KEY }}          # private key (OpenSSH format)
+          APK_ROOT: ${{ secrets.APK_ROOT }}         # e.g. /var/www/build4all/uploads/apk
+        run: |
+          set -euo pipefail
+          apk_file="$(ls -1 build/app/outputs/flutter-apk/*.apk | head -n1)"
+          [ -n "$apk_file" ] || { echo "No APK found"; exit 1; }
+
+          dest_dir="${APK_ROOT}/${OWNER_ID}/${PROJECT_ID}/${SLUG}"
+          dest_file="${SLUG}-${GITHUB_RUN_ID}.apk"
+
+          # Prepare SSH key
+          umask 077
+          echo "$SSH_KEY" > id_rsa
+          chmod 600 id_rsa
+
+          # Ensure destination directory exists
+          ssh -i id_rsa -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" "mkdir -p '$dest_dir'"
+
+          # Copy APK
+          scp -i id_rsa -o StrictHostKeyChecking=no "$apk_file" "$SSH_USER@$SSH_HOST:$dest_dir/$dest_file"
+
+          # Export relative URL for callback
+          echo "apk_rel=/uploads/apk/${OWNER_ID}/${PROJECT_ID}/${SLUG}/${dest_file}" >> $GITHUB_ENV
+          echo "Saved on server as: $dest_dir/$dest_file"
+
+      # ---------- OPTIONAL: Callback your backend to save apkUrl ----------
+      # Uses linkId endpoint if OWNER_PROJECT_LINK_ID looks numeric; otherwise falls back to slug endpoint.
+      - name: Callback backend with apkUrl (optional)
+        if: ${{ secrets.BACKEND_BASE_URL && secrets.CI_CALLBACK_TOKEN }}
+        env:
+          BACKEND_BASE_URL:  ${{ secrets.BACKEND_BASE_URL }}   # e.g. https://your.domain or http://IP:8080
+          CI_CALLBACK_TOKEN: ${{ secrets.CI_CALLBACK_TOKEN }}  # must match application.properties ci.callbackToken
+        run: |
+          set -euo pipefail
+
+          # Prefer server-hosted relative URL if present; else use GitHub Release URL
+          apk_url="${apk_rel:-${{ steps.extract.outputs.apk_url }}}"
+          if [ -z "$apk_url" ]; then
+            echo "No APK URL available for callback; skipping."
+            exit 0
+          fi
+
+          # Choose endpoint: by linkId if numeric, else by slug
+          if echo "$OWNER_PROJECT_LINK_ID" | grep -Eq '^[0-9]+$'; then
+            echo "Calling linkId callback..."
+            curl -fsS -X PUT \
+              -H "Content-Type: application/json" \
+              -H "X-Auth-Token: ${CI_CALLBACK_TOKEN}" \
+              -d "{\"apkUrl\":\"${apk_url}\"}" \
+              "${BACKEND_BASE_URL}/api/ci/owner-project-links/${OWNER_PROJECT_LINK_ID}/apk-url"
+          else
+            echo "Calling slug callback..."
+            curl -fsS -X PUT \
+              -H "Content-Type: application/json" \
+              -H "X-Auth-Token: ${CI_CALLBACK_TOKEN}" \
+              -d "{\"apkUrl\":\"${apk_url}\"}" \
+              "${BACKEND_BASE_URL}/api/ci/owner-projects/${OWNER_ID}/${PROJECT_ID}/apps/${SLUG}/apk-url"
+          fi
+
+          echo "Backend updated with apkUrl ✅"
