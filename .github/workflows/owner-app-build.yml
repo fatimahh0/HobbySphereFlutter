@@ -12,8 +12,9 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
 
+    # 1) Map dispatch payload + secrets to ENV (so we can use env.* in if:)
     env:
-      # Payload from repository_dispatch (≤10 props in client_payload; RUNTIME is nested)
+      # ---- payload (≤10 top-level props; RUNTIME is nested) ----
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
       OWNER_PROJECT_LINK_ID:  ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}
@@ -25,6 +26,14 @@ jobs:
       WS_PATH:                ${{ github.event.client_payload.RUNTIME.WS_PATH }}
       APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
       OWNER_ATTACH_MODE:      ${{ github.event.client_payload.RUNTIME.OWNER_ATTACH_MODE }}
+
+      # ---- secrets mirrored into env (for step if:) ----
+      SSH_HOST:               ${{ secrets.SSH_HOST }}
+      SSH_USER:               ${{ secrets.SSH_USER }}
+      SSH_KEY:                ${{ secrets.SSH_KEY }}
+      APK_ROOT:               ${{ secrets.APK_ROOT }}
+      BACKEND_BASE_URL:       ${{ secrets.BACKEND_BASE_URL }}
+      CI_CALLBACK_TOKEN:      ${{ secrets.CI_CALLBACK_TOKEN }}
 
     steps:
       - name: Checkout
@@ -96,7 +105,7 @@ jobs:
       - name: List outputs
         run: ls -R build/app/outputs/flutter-apk || true
 
-      - name: Upload artifact (for debugging / manual download)
+      - name: Upload artifact (manual download)
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.SLUG }}-apk
@@ -130,14 +139,9 @@ jobs:
           echo "Resolved Release APK: $first_url"
 
       # ---------- OPTIONAL: Copy APK to your backend server (SCP) ----------
-      # Skips automatically if any of these secrets is missing.
+      # Use env.* in if:, NOT secrets.*
       - name: Copy APK to server via SCP (optional)
-        if: ${{ secrets.SSH_HOST && secrets.SSH_USER && secrets.SSH_KEY && secrets.APK_ROOT }}
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}         # e.g. 203.0.113.10
-          SSH_USER: ${{ secrets.SSH_USER }}         # e.g. ubuntu
-          SSH_KEY:  ${{ secrets.SSH_KEY }}          # private key (OpenSSH format)
-          APK_ROOT: ${{ secrets.APK_ROOT }}         # e.g. /var/www/build4all/uploads/apk
+        if: ${{ env.SSH_HOST != '' && env.SSH_USER != '' && env.SSH_KEY != '' && env.APK_ROOT != '' }}
         run: |
           set -euo pipefail
           apk_file="$(ls -1 build/app/outputs/flutter-apk/*.apk | head -n1)"
@@ -162,15 +166,10 @@ jobs:
           echo "Saved on server as: $dest_dir/$dest_file"
 
       # ---------- OPTIONAL: Callback your backend to save apkUrl ----------
-      # Uses linkId endpoint if OWNER_PROJECT_LINK_ID looks numeric; otherwise falls back to slug endpoint.
       - name: Callback backend with apkUrl (optional)
-        if: ${{ secrets.BACKEND_BASE_URL && secrets.CI_CALLBACK_TOKEN }}
-        env:
-          BACKEND_BASE_URL:  ${{ secrets.BACKEND_BASE_URL }}   # e.g. https://your.domain or http://IP:8080
-          CI_CALLBACK_TOKEN: ${{ secrets.CI_CALLBACK_TOKEN }}  # must match application.properties ci.callbackToken
+        if: ${{ env.BACKEND_BASE_URL != '' && env.CI_CALLBACK_TOKEN != '' }}
         run: |
           set -euo pipefail
-
           # Prefer server-hosted relative URL if present; else use GitHub Release URL
           apk_url="${apk_rel:-${{ steps.extract.outputs.apk_url }}}"
           if [ -z "$apk_url" ]; then
