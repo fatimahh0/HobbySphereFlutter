@@ -12,17 +12,13 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     env:
-      # From repository_dispatch payload
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
       OWNER_PROJECT_LINK_ID:  ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}
       SLUG:                   ${{ github.event.client_payload.SLUG }}
       APP_NAME:               ${{ github.event.client_payload.APP_NAME }}
       THEME_ID:               ${{ github.event.client_payload.THEME_ID }}
-      # Logo: either Base64 or URL (we prefer LOGO_B64)
-      LOGO_B64:               ${{ github.event.client_payload.LOGO_B64 }}
       APP_LOGO_URL:           ${{ github.event.client_payload.APP_LOGO_URL }}
-      # Nested runtime
       API_BASE_URL:           ${{ github.event.client_payload.RUNTIME.API_BASE_URL }}
       WS_PATH:                ${{ github.event.client_payload.RUNTIME.WS_PATH }}
       APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
@@ -47,7 +43,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          cache: true
+        # cache: true  # optional
 
       - run: flutter doctor -v
       - run: flutter pub get
@@ -56,24 +52,17 @@ jobs:
       - name: Ensure tools + dirs
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq python3
+          sudo apt-get install -y jq
           mkdir -p assets/icons assets/splash
 
-      - name: Prepare logo (Base64 or URL)
+      - name: Prepare logo (download public URL)
         shell: bash
         run: |
           set -euo pipefail
-          if [ -n "${LOGO_B64:-}" ]; then
-            echo "Decoding LOGO_B64 → assets/icons/app_icon.png"
-            python3 - << 'PY'
-import os,base64,sys
-b = os.environ.get("LOGO_B64","")
-if not b:
-    print("LOGO_B64 missing", file=sys.stderr); sys.exit(1)
-open("assets/icons/app_icon.png","wb").write(base64.b64decode(b))
-PY
+          if [ -z "${APP_LOGO_URL:-}" ]; then
+            echo "APP_LOGO_URL is empty. Using a 1x1 placeholder."
+            printf '\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\0\x01\0\0\0\x01\x08\x06\0\0\0\x1f\x15\xc4\x89\0\0\0\x0cIDATx\x9cc```\0\0\0\x04\0\x01\r\n-\xb4\0\0\0\0IEND\xaeB`\x82' > assets/icons/app_icon.png
           else
-            echo "Downloading APP_LOGO_URL → assets/icons/app_icon.png: $APP_LOGO_URL"
             curl -fsSL "$APP_LOGO_URL" -o assets/icons/app_icon.png
           fi
           cp assets/icons/app_icon.png assets/splash/splash.png
@@ -92,7 +81,7 @@ PY
             --dart-define=WS_PATH="$WS_PATH" \
             --dart-define=PROJECT_ID="$PROJECT_ID" \
             --dart-define=APP_NAME="$APP_NAME" \
-            --dart-define=APP_LOGO_URL="" \
+            --dart-define=APP_LOGO_URL="$APP_LOGO_URL" \
             --dart-define=SLUG="$SLUG" \
             --dart-define=THEME_ID="$THEME_ID"
 
@@ -130,4 +119,4 @@ PY
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
           echo "Resolved APK: $first_url"
 
-      # If you later add a backend callback, PUT apkUrl back here.
+      # If you enable backend callback, add a curl PUT here using callbackBase/callbackToken from CONFIG_URL flow.
