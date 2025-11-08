@@ -12,15 +12,17 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     env:
-      # Pull from the repository_dispatch payload
+      # From repository_dispatch payload
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
       OWNER_PROJECT_LINK_ID:  ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}
       SLUG:                   ${{ github.event.client_payload.SLUG }}
       APP_NAME:               ${{ github.event.client_payload.APP_NAME }}
-      APP_LOGO_URL:           ${{ github.event.client_payload.APP_LOGO_URL }}
       THEME_ID:               ${{ github.event.client_payload.THEME_ID }}
-      # Nested runtime (1 property on the payload -> RUNTIME.* here)
+      # Logo: either Base64 or URL (we prefer LOGO_B64)
+      LOGO_B64:               ${{ github.event.client_payload.LOGO_B64 }}
+      APP_LOGO_URL:           ${{ github.event.client_payload.APP_LOGO_URL }}
+      # Nested runtime
       API_BASE_URL:           ${{ github.event.client_payload.RUNTIME.API_BASE_URL }}
       WS_PATH:                ${{ github.event.client_payload.RUNTIME.WS_PATH }}
       APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
@@ -51,18 +53,29 @@ jobs:
       - run: flutter pub get
       - run: test -f lib/app/main_activity.dart || (echo "Missing lib/app/main_activity.dart" && exit 1)
 
-      - name: Ensure jq + dirs
+      - name: Ensure tools + dirs
         run: |
-          if ! command -v jq >/dev/null 2>&1; then
-            sudo apt-get update && sudo apt-get install -y jq
-          fi
+          sudo apt-get update
+          sudo apt-get install -y jq python3
           mkdir -p assets/icons assets/splash
 
-      - name: Download logo → icon + splash
+      - name: Prepare logo (Base64 or URL)
         shell: bash
         run: |
-          set -e
-          curl -fsSL "$APP_LOGO_URL" -o assets/icons/app_icon.png
+          set -euo pipefail
+          if [ -n "${LOGO_B64:-}" ]; then
+            echo "Decoding LOGO_B64 → assets/icons/app_icon.png"
+            python3 - << 'PY'
+import os,base64,sys
+b = os.environ.get("LOGO_B64","")
+if not b:
+    print("LOGO_B64 missing", file=sys.stderr); sys.exit(1)
+open("assets/icons/app_icon.png","wb").write(base64.b64decode(b))
+PY
+          else
+            echo "Downloading APP_LOGO_URL → assets/icons/app_icon.png: $APP_LOGO_URL"
+            curl -fsSL "$APP_LOGO_URL" -o assets/icons/app_icon.png
+          fi
           cp assets/icons/app_icon.png assets/splash/splash.png
           dart run flutter_launcher_icons
           dart run flutter_native_splash:create
@@ -79,7 +92,7 @@ jobs:
             --dart-define=WS_PATH="$WS_PATH" \
             --dart-define=PROJECT_ID="$PROJECT_ID" \
             --dart-define=APP_NAME="$APP_NAME" \
-            --dart-define=APP_LOGO_URL="$APP_LOGO_URL" \
+            --dart-define=APP_LOGO_URL="" \
             --dart-define=SLUG="$SLUG" \
             --dart-define=THEME_ID="$THEME_ID"
 
@@ -117,4 +130,4 @@ jobs:
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
           echo "Resolved APK: $first_url"
 
-      # (Optional) If you re-enable backend callback later, add a PUT step here.
+      # If you later add a backend callback, PUT apkUrl back here.
