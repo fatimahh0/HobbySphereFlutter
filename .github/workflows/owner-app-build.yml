@@ -2,7 +2,7 @@ name: Owner App Build (Android APK)
 
 on:
   repository_dispatch:
-    types: [owner_app_build]       # trigger with client_payload.CONFIG_URL
+    types: [owner_app_build]
   workflow_dispatch:
     inputs:
       CONFIG_URL:
@@ -52,10 +52,9 @@ jobs:
           echo "Fetching: $CONFIG_URL"
           json="$(curl -fsS "$CONFIG_URL")"
 
-          # required
           OWNER_ID="$(echo "$json" | jq -er '.ownerId')"
           PROJECT_ID="$(echo "$json" | jq -er '.projectId')"
-          OPL="$(echo "$json" | jq -er '.ownerProjectLinkId')"
+          OWNER_PROJECT_LINK_ID="$(echo "$json" | jq -er '.ownerProjectLinkId')"
           SLUG="$(echo "$json" | jq -er '.slug')"
           APP_NAME="$(echo "$json" | jq -er '.appName')"
           APP_LOGO_URL="$(echo "$json" | jq -er '.appLogoUrl')"
@@ -64,15 +63,13 @@ jobs:
           APP_ROLE="$(echo "$json" | jq -er '.appRole')"
           OWNER_ATTACH_MODE="$(echo "$json" | jq -er '.ownerAttachMode')"
           THEME_ID="$(echo "$json" | jq -er '.themeId')"
-
-          # optional
           CALLBACK_BASE="$(echo "$json" | jq -r '.callbackBase // ""')"
           CALLBACK_TOKEN="$(echo "$json" | jq -r '.callbackToken // ""')"
 
           {
             echo "OWNER_ID=$OWNER_ID"
             echo "PROJECT_ID=$PROJECT_ID"
-            echo "OWNER_PROJECT_LINK_ID=$OPL"
+            echo "OWNER_PROJECT_LINK_ID=$OWNER_PROJECT_LINK_ID"
             echo "SLUG=$SLUG"
             echo "APP_NAME=$APP_NAME"
             echo "APP_LOGO_URL=$APP_LOGO_URL"
