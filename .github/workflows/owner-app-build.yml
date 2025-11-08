@@ -20,7 +20,7 @@ jobs:
       APP_NAME:               ${{ github.event.client_payload.APP_NAME }}
       APP_LOGO_URL:           ${{ github.event.client_payload.APP_LOGO_URL }}
       THEME_ID:               ${{ github.event.client_payload.THEME_ID }}
-      # Nested runtime
+      # Nested runtime (1 property on the payload -> RUNTIME.* here)
       API_BASE_URL:           ${{ github.event.client_payload.RUNTIME.API_BASE_URL }}
       WS_PATH:                ${{ github.event.client_payload.RUNTIME.WS_PATH }}
       APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
@@ -117,4 +117,4 @@ jobs:
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
           echo "Resolved APK: $first_url"
 
-      # If you ever re-enable backend callback, add a step here to PUT apkUrl back.
+      # (Optional) If you re-enable backend callback later, add a PUT step here.
