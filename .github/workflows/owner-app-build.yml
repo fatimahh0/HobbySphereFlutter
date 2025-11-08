@@ -5,10 +5,18 @@ on:
     types: [owner_app_build]
   workflow_dispatch:
     inputs:
-      CONFIG_URL:
-        description: "URL that returns full config JSON"
-        required: true
-        default: ""
+      BUILD_ID: { description: "Manual build id", required: false }
+      OWNER_ID: { required: false }
+      PROJECT_ID: { required: false }
+      OWNER_PROJECT_LINK_ID: { required: false }
+      SLUG: { required: false }
+      APP_NAME: { required: false }
+      APP_LOGO_URL: { required: false }
+      API_BASE_URL: { required: false }
+      WS_PATH: { required: false }
+      APP_ROLE: { required: false }
+      OWNER_ATTACH_MODE: { required: false }
+      THEME_ID: { required: false }
 
 permissions:
   contents: write
@@ -17,10 +25,31 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     env:
-      CONFIG_URL: ${{ github.event.client_payload.CONFIG_URL || inputs.CONFIG_URL }}
+      # Prefer repository_dispatch payload; fallback to workflow_dispatch inputs
+      BUILD_ID: ${{ github.event.client_payload.BUILD_ID || inputs.BUILD_ID }}
+      OWNER_ID: ${{ github.event.client_payload.OWNER_ID || inputs.OWNER_ID }}
+      PROJECT_ID: ${{ github.event.client_payload.PROJECT_ID || inputs.PROJECT_ID }}
+      OWNER_PROJECT_LINK_ID: ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID || inputs.OWNER_PROJECT_LINK_ID }}
+      SLUG: ${{ github.event.client_payload.SLUG || inputs.SLUG }}
+      APP_NAME: ${{ github.event.client_payload.APP_NAME || inputs.APP_NAME }}
+      APP_LOGO_URL: ${{ github.event.client_payload.APP_LOGO_URL || inputs.APP_LOGO_URL }}
+      API_BASE_URL: ${{ github.event.client_payload.API_BASE_URL || inputs.API_BASE_URL }}
+      WS_PATH: ${{ github.event.client_payload.WS_PATH || inputs.WS_PATH }}
+      APP_ROLE: ${{ github.event.client_payload.APP_ROLE || inputs.APP_ROLE }}
+      OWNER_ATTACH_MODE: ${{ github.event.client_payload.OWNER_ATTACH_MODE || inputs.OWNER_ATTACH_MODE }}
+      THEME_ID: ${{ github.event.client_payload.THEME_ID || inputs.THEME_ID }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate required env
+        shell: bash
+        run: |
+          set -euo pipefail
+          for v in BUILD_ID OWNER_ID PROJECT_ID SLUG APP_NAME APP_LOGO_URL API_BASE_URL WS_PATH APP_ROLE OWNER_ATTACH_MODE; do
+            if [ -z "${!v:-}" ]; then echo "Missing $v"; exit 1; fi
+          done
+          echo "OK: payload present"
 
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17', cache: 'gradle' }
@@ -37,55 +66,10 @@ jobs:
       - run: flutter pub get
       - run: test -f lib/app/main_activity.dart || (echo "Missing lib/app/main_activity.dart" && exit 1)
 
-      - name: Ensure jq + dirs
-        run: |
-          if ! command -v jq >/dev/null 2>&1; then
-            sudo apt-get update && sudo apt-get install -y jq
-          fi
-          mkdir -p assets/icons assets/splash
-
-      - name: Fetch & export config
-        shell: bash
-        run: |
-          set -euo pipefail
-          [ -n "${CONFIG_URL:-}" ] || { echo "CONFIG_URL is required"; exit 1; }
-          echo "Fetching: $CONFIG_URL"
-          json="$(curl -fsS "$CONFIG_URL")"
-
-          OWNER_ID="$(echo "$json" | jq -er '.ownerId')"
-          PROJECT_ID="$(echo "$json" | jq -er '.projectId')"
-          OWNER_PROJECT_LINK_ID="$(echo "$json" | jq -er '.ownerProjectLinkId')"
-          SLUG="$(echo "$json" | jq -er '.slug')"
-          APP_NAME="$(echo "$json" | jq -er '.appName')"
-          APP_LOGO_URL="$(echo "$json" | jq -er '.appLogoUrl')"
-          API_BASE_URL="$(echo "$json" | jq -er '.apiBaseUrl')"
-          WS_PATH="$(echo "$json" | jq -er '.wsPath')"
-          APP_ROLE="$(echo "$json" | jq -er '.appRole')"
-          OWNER_ATTACH_MODE="$(echo "$json" | jq -er '.ownerAttachMode')"
-          THEME_ID="$(echo "$json" | jq -er '.themeId')"
-          CALLBACK_BASE="$(echo "$json" | jq -r '.callbackBase // ""')"
-          CALLBACK_TOKEN="$(echo "$json" | jq -r '.callbackToken // ""')"
-
-          {
-            echo "OWNER_ID=$OWNER_ID"
-            echo "PROJECT_ID=$PROJECT_ID"
-            echo "OWNER_PROJECT_LINK_ID=$OWNER_PROJECT_LINK_ID"
-            echo "SLUG=$SLUG"
-            echo "APP_NAME=$APP_NAME"
-            echo "APP_LOGO_URL=$APP_LOGO_URL"
-            echo "API_BASE_URL=$API_BASE_URL"
-            echo "WS_PATH=$WS_PATH"
-            echo "APP_ROLE=$APP_ROLE"
-            echo "OWNER_ATTACH_MODE=$OWNER_ATTACH_MODE"
-            echo "THEME_ID=$THEME_ID"
-            echo "CALLBACK_BASE=$CALLBACK_BASE"
-            echo "CALLBACK_TOKEN=$CALLBACK_TOKEN"
-          } >> "$GITHUB_ENV"
-
-      - name: Download logo → icon + splash
-        shell: bash
+      - name: Prepare assets
         run: |
           set -e
+          mkdir -p assets/icons assets/splash
           curl -fsSL "$APP_LOGO_URL" -o assets/icons/app_icon.png
           cp assets/icons/app_icon.png assets/splash/splash.png
           dart run flutter_launcher_icons
@@ -120,8 +104,8 @@ jobs:
       - id: rel
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: app-${{ env.SLUG }}-${{ github.run_id }}
-          name: "${{ env.APP_NAME }} (run ${{ github.run_id }})"
+          tag_name: app-${{ env.SLUG }}-${{ env.BUILD_ID }}
+          name: "${{ env.APP_NAME }} (build ${{ env.BUILD_ID }})"
           files: build/app/outputs/flutter-apk/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -131,7 +115,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          TAG: app-${{ env.SLUG }}-${{ github.run_id }}
+          TAG: app-${{ env.SLUG }}-${{ env.BUILD_ID }}
         run: |
           set -euo pipefail
           json="$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
@@ -141,15 +125,28 @@ jobs:
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
           echo "Resolved APK: $first_url"
 
-      - name: Callback (optional)
-        if: ${{ env.CALLBACK_BASE != '' && env.CALLBACK_TOKEN != '' && steps.extract.outputs.apk_url != '' }}
-        env:
-          APK_URL: ${{ steps.extract.outputs.apk_url }}
+      - name: Publish build manifest (JSON inside repo)
+        if: ${{ steps.extract.outputs.apk_url != '' }}
         run: |
           set -e
-          curl -sS -X PUT \
-            -H "Content-Type: application/json" \
-            -H "X-Auth-Token: ${CALLBACK_TOKEN}" \
-            -d "{\"apkUrl\":\"${APK_URL}\"}" \
-            "${CALLBACK_BASE}/owner-projects/${OWNER_ID}/${PROJECT_ID}/apps/${SLUG}/apk-url" \
-          | sed -e 's/.*/[backend] &/'
+          mkdir -p builds
+          cat > "builds/${BUILD_ID}.json" <<EOF
+          {
+            "buildId": "${BUILD_ID}",
+            "ownerId": ${OWNER_ID},
+            "projectId": ${PROJECT_ID},
+            "slug": "${SLUG}",
+            "appName": "${APP_NAME}",
+            "apkUrl": "${{ steps.extract.outputs.apk_url }}"
+          }
+          EOF
+
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add "builds/${BUILD_ID}.json"
+          git commit -m "build manifest ${BUILD_ID}"
+          git push
+
+      - name: Echo manifest URL
+        run: |
+          echo "Manifest: https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/builds/${BUILD_ID}.json"
