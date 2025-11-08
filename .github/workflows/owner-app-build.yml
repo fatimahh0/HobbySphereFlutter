@@ -12,9 +12,9 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
 
-    # 1) Map dispatch payload + secrets to ENV (so we can use env.* in if:)
+    # Map payload + secrets to env so we can use env.* inside `if:`
     env:
-      # ---- payload (≤10 top-level props; RUNTIME is nested) ----
+      # ---- payload (≤10 props; RUNTIME is nested) ----
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
       OWNER_PROJECT_LINK_ID:  ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}
@@ -27,7 +27,7 @@ jobs:
       APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
       OWNER_ATTACH_MODE:      ${{ github.event.client_payload.RUNTIME.OWNER_ATTACH_MODE }}
 
-      # ---- secrets mirrored into env (for step if:) ----
+      # ---- secrets mirrored to env (so we can test in `if:`) ----
       SSH_HOST:               ${{ secrets.SSH_HOST }}
       SSH_USER:               ${{ secrets.SSH_USER }}
       SSH_KEY:                ${{ secrets.SSH_KEY }}
@@ -64,6 +64,7 @@ jobs:
         run: |
           flutter doctor -v
           flutter pub get
+          test -f pubspec.yaml || (echo "Missing pubspec.yaml" && exit 1)
           test -f lib/app/main_activity.dart || (echo "Missing lib/app/main_activity.dart" && exit 1)
 
       - name: Ensure tools + dirs
@@ -139,29 +140,19 @@ jobs:
           echo "Resolved Release APK: $first_url"
 
       # ---------- OPTIONAL: Copy APK to your backend server (SCP) ----------
-      # Use env.* in if:, NOT secrets.*
       - name: Copy APK to server via SCP (optional)
         if: ${{ env.SSH_HOST != '' && env.SSH_USER != '' && env.SSH_KEY != '' && env.APK_ROOT != '' }}
         run: |
           set -euo pipefail
           apk_file="$(ls -1 build/app/outputs/flutter-apk/*.apk | head -n1)"
           [ -n "$apk_file" ] || { echo "No APK found"; exit 1; }
-
           dest_dir="${APK_ROOT}/${OWNER_ID}/${PROJECT_ID}/${SLUG}"
           dest_file="${SLUG}-${GITHUB_RUN_ID}.apk"
-
-          # Prepare SSH key
           umask 077
           echo "$SSH_KEY" > id_rsa
           chmod 600 id_rsa
-
-          # Ensure destination directory exists
           ssh -i id_rsa -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" "mkdir -p '$dest_dir'"
-
-          # Copy APK
           scp -i id_rsa -o StrictHostKeyChecking=no "$apk_file" "$SSH_USER@$SSH_HOST:$dest_dir/$dest_file"
-
-          # Export relative URL for callback
           echo "apk_rel=/uploads/apk/${OWNER_ID}/${PROJECT_ID}/${SLUG}/${dest_file}" >> $GITHUB_ENV
           echo "Saved on server as: $dest_dir/$dest_file"
 
@@ -170,14 +161,11 @@ jobs:
         if: ${{ env.BACKEND_BASE_URL != '' && env.CI_CALLBACK_TOKEN != '' }}
         run: |
           set -euo pipefail
-          # Prefer server-hosted relative URL if present; else use GitHub Release URL
           apk_url="${apk_rel:-${{ steps.extract.outputs.apk_url }}}"
           if [ -z "$apk_url" ]; then
             echo "No APK URL available for callback; skipping."
             exit 0
           fi
-
-          # Choose endpoint: by linkId if numeric, else by slug
           if echo "$OWNER_PROJECT_LINK_ID" | grep -Eq '^[0-9]+$'; then
             echo "Calling linkId callback..."
             curl -fsS -X PUT \
@@ -193,5 +181,4 @@ jobs:
               -d "{\"apkUrl\":\"${apk_url}\"}" \
               "${BACKEND_BASE_URL}/api/ci/owner-projects/${OWNER_ID}/${PROJECT_ID}/apps/${SLUG}/apk-url"
           fi
-
           echo "Backend updated with apkUrl ✅"
