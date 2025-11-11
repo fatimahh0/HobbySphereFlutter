@@ -6,15 +6,15 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: write
+  contents: write   # needed to commit/push the manifest
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
 
-    # Map payload + secrets to env so we can use env.* inside `if:`
+    # Map payload + secrets to env so we can use env.* inside steps
     env:
-      # ---- payload (≤10 props; RUNTIME is nested) ----
+      # ---- payload (≤10 top-level props; RUNTIME is nested) ----
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
       OWNER_PROJECT_LINK_ID:  ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}
@@ -27,13 +27,13 @@ jobs:
       APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
       OWNER_ATTACH_MODE:      ${{ github.event.client_payload.RUNTIME.OWNER_ATTACH_MODE }}
 
-      # ---- secrets mirrored to env (so we can test in `if:`) ----
-      SSH_HOST:               ${{ secrets.SSH_HOST }}
-      SSH_USER:               ${{ secrets.SSH_USER }}
-      SSH_KEY:                ${{ secrets.SSH_KEY }}
-      APK_ROOT:               ${{ secrets.APK_ROOT }}
-      BACKEND_BASE_URL:       ${{ secrets.BACKEND_BASE_URL }}
-      CI_CALLBACK_TOKEN:      ${{ secrets.CI_CALLBACK_TOKEN }}
+      # ---- (No server/SSH/callback in pull model) ----
+      # BACKEND_BASE_URL:
+      # CI_CALLBACK_TOKEN:
+      # SSH_HOST:
+      # SSH_USER:
+      # SSH_KEY:
+      # APK_ROOT:
 
     steps:
       - name: Checkout
@@ -63,17 +63,17 @@ jobs:
       - name: Flutter doctor & deps
         run: |
           flutter doctor -v
-          flutter pub get
           test -f pubspec.yaml || (echo "Missing pubspec.yaml" && exit 1)
+          flutter pub get
           test -f lib/app/main_activity.dart || (echo "Missing lib/app/main_activity.dart" && exit 1)
 
       - name: Ensure tools + dirs
         run: |
-          sudo apt-get update
-          sudo apt-get install -y jq openssh-client
+          sudo apt-get update -y
+          sudo apt-get install -y jq
           mkdir -p assets/icons assets/splash
 
-      - name: Prepare logo (download public URL)
+      - name: Prepare logo (public URL or placeholder)
         shell: bash
         run: |
           set -euo pipefail
@@ -101,7 +101,7 @@ jobs:
             --dart-define=APP_NAME="$APP_NAME" \
             --dart-define=APP_LOGO_URL="$APP_LOGO_URL" \
             --dart-define=SLUG="$SLUG" \
-            --dart-define=THEME_ID="$THEME_ID"
+            --dart-define=THEME_ID="${THEME_ID:-}"
 
       - name: List outputs
         run: ls -R build/app/outputs/flutter-apk || true
@@ -114,7 +114,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Create GitHub Release (optional public link)
+      - name: Create GitHub Release (public link)
         id: rel
         uses: softprops/action-gh-release@v2
         with:
@@ -139,46 +139,40 @@ jobs:
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
           echo "Resolved Release APK: $first_url"
 
-      # ---------- OPTIONAL: Copy APK to your backend server (SCP) ----------
-      - name: Copy APK to server via SCP (optional)
-        if: ${{ env.SSH_HOST != '' && env.SSH_USER != '' && env.SSH_KEY != '' && env.APK_ROOT != '' }}
+      # ---------------------- PULL MODEL: write manifest in repo ----------------------
+      - name: Write manifest (apkUrl/runId/timestamp)
         run: |
-          set -euo pipefail
-          apk_file="$(ls -1 build/app/outputs/flutter-apk/*.apk | head -n1)"
-          [ -n "$apk_file" ] || { echo "No APK found"; exit 1; }
-          dest_dir="${APK_ROOT}/${OWNER_ID}/${PROJECT_ID}/${SLUG}"
-          dest_file="${SLUG}-${GITHUB_RUN_ID}.apk"
-          umask 077
-          echo "$SSH_KEY" > id_rsa
-          chmod 600 id_rsa
-          ssh -i id_rsa -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" "mkdir -p '$dest_dir'"
-          scp -i id_rsa -o StrictHostKeyChecking=no "$apk_file" "$SSH_USER@$SSH_HOST:$dest_dir/$dest_file"
-          echo "apk_rel=/uploads/apk/${OWNER_ID}/${PROJECT_ID}/${SLUG}/${dest_file}" >> $GITHUB_ENV
-          echo "Saved on server as: $dest_dir/$dest_file"
+          set -e
+          mkdir -p builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}
+          jq -n \
+            --arg url "${{ steps.extract.outputs.apk_url }}" \
+            --arg run "${{ github.run_id }}" \
+            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg owner "${OWNER_ID}" \
+            --arg project "${PROJECT_ID}" \
+            --arg linkId "${OWNER_PROJECT_LINK_ID}" \
+            --arg slug "${SLUG}" \
+            --arg app "${APP_NAME}" \
+            '{
+              apkUrl: $url,
+              runId: $run,
+              uploadedAt: $ts,
+              ownerId: $owner|tonumber,
+              projectId: $project|tonumber,
+              ownerProjectLinkId: $linkId,
+              slug: $slug,
+              appName: $app
+            }' \
+            > builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json
+          echo "Wrote builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json"
 
-      # ---------- OPTIONAL: Callback your backend to save apkUrl ----------
-      - name: Callback backend with apkUrl (optional)
-        if: ${{ env.BACKEND_BASE_URL != '' && env.CI_CALLBACK_TOKEN != '' }}
+      - name: Commit & push manifest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          apk_url="${apk_rel:-${{ steps.extract.outputs.apk_url }}}"
-          if [ -z "$apk_url" ]; then
-            echo "No APK URL available for callback; skipping."
-            exit 0
-          fi
-          if echo "$OWNER_PROJECT_LINK_ID" | grep -Eq '^[0-9]+$'; then
-            echo "Calling linkId callback..."
-            curl -fsS -X PUT \
-              -H "Content-Type: application/json" \
-              -H "X-Auth-Token: ${CI_CALLBACK_TOKEN}" \
-              -d "{\"apkUrl\":\"${apk_url}\"}" \
-              "${BACKEND_BASE_URL}/api/ci/owner-project-links/${OWNER_PROJECT_LINK_ID}/apk-url"
-          else
-            echo "Calling slug callback..."
-            curl -fsS -X PUT \
-              -H "Content-Type: application/json" \
-              -H "X-Auth-Token: ${CI_CALLBACK_TOKEN}" \
-              -d "{\"apkUrl\":\"${apk_url}\"}" \
-              "${BACKEND_BASE_URL}/api/ci/owner-projects/${OWNER_ID}/${PROJECT_ID}/apps/${SLUG}/apk-url"
-          fi
-          echo "Backend updated with apkUrl ✅"
+          set -e
+          git config user.email "ci@users.noreply.github.com"
+          git config user.name "CI Bot"
+          git add builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json
+          git commit -m "Update manifest for ${SLUG} (run ${{ github.run_id }})" || echo "No changes to commit"
+          git push
