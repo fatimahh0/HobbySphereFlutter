@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write   # create release + commit manifest
 
+concurrency:
+  group: builds-main
+  cancel-in-progress: false
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -29,6 +33,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0              # needed for rebase
+          persist-credentials: true   # use GITHUB_TOKEN for push
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -163,31 +170,57 @@ jobs:
               apkUrl: $url,
               runId: $run,
               uploadedAt: $ts,
-              ownerId: $owner|tonumber,
-              projectId: $project|tonumber,
-              ownerProjectLinkId: $linkId,
+              ownerId: ($owner|tonumber),
+              projectId: ($project|tonumber),
+              ownerProjectLinkId: ($linkId|tonumber),
               slug: $slug,
               appName: $app
             }' \
             > builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json
           echo "Wrote builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json"
 
-      - name: Commit & push manifest
+      - name: Commit & push manifest (rebase + retry)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
+          set -euo pipefail
+
           git config user.email "ci@users.noreply.github.com"
           git config user.name "CI Bot"
-          git add builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json
-          git commit -m "Update manifest for ${SLUG} (run ${{ github.run_id }})" || echo "No changes to commit"
-          git push
+
+          git add "builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json"
+          git commit -m "Update manifest for ${SLUG} (run ${GITHUB_RUN_ID})" || echo "No changes to commit"
+
+          attempt=0
+          max_attempts=3
+          while (( attempt < max_attempts )); do
+            attempt=$((attempt+1))
+            git fetch origin main
+
+            # Rebase on latest main; if conflict, keep CI-generated file
+            if ! git rebase origin/main; then
+              echo "Rebase conflict; favoring CI output for generated files"
+              git rebase --abort
+              git merge -s ours origin/main -m "Merge main (ours for generated files)"
+            fi
+
+            if git push origin HEAD:main; then
+              echo "✅ Pushed to main"
+              exit 0
+            fi
+
+            echo "Push race; retrying in 3s (attempt $attempt/$max_attempts)"
+            sleep 3
+          done
+
+          echo "❌ Could not push after $max_attempts attempts"
+          exit 1
 
       - name: Summarize
         run: |
           echo "### Build complete" >> $GITHUB_STEP_SUMMARY
           echo "- **APK URL:** ${{ steps.extract.outputs.apk_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Manifest:** builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json" >> $GITHUB_STEP_SUMMARY
+          echo "- **Manifest:** builds/${{ env.OWNER_ID }}/${{ env.PROJECT_ID }}/${{ env.SLUG }}/latest.json" >> $GITHUB_STEP_SUMMARY
 
       # --- Safety check for secrets before hitting backend ---
       - name: Verify callback secrets
