@@ -27,14 +27,6 @@ jobs:
       APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
       OWNER_ATTACH_MODE:      ${{ github.event.client_payload.RUNTIME.OWNER_ATTACH_MODE }}
 
-      # ---- (No server/SSH/callback in pull model) ----
-      # BACKEND_BASE_URL:
-      # CI_CALLBACK_TOKEN:
-      # SSH_HOST:
-      # SSH_USER:
-      # SSH_KEY:
-      # APK_ROOT:
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,14 +38,16 @@ jobs:
           java-version: '17'
           cache: gradle
 
+      # ✅ v3 expects 'packages', not 'api-level'/'build-tools'
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 34
-          build-tools: '34.0.0'
-
-      - name: Accept Android licenses
-        run: yes | sdkmanager --licenses
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: true
+          packages: |
+            platforms;android-34
+            build-tools;34.0.0
+            platform-tools
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
