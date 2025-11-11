@@ -6,14 +6,14 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: write   # needed to commit/push the manifest + create release
+  contents: write   # needed to create release + commit manifest
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
 
-    # Map payload to env (≤10 top-level props; nest runtime under RUNTIME)
     env:
+      # ---- payload (≤10 top-level props; RUNTIME is nested) ----
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
       OWNER_PROJECT_LINK_ID:  ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}
@@ -37,14 +37,12 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      # Install only cmdline-tools here; we’ll install platforms/build-tools with sdkmanager
-      - name: Setup Android SDK (cmdline-tools)
+      # Use preinstalled cmdline-tools on the runner (v12). Do NOT pin a version.
+      - name: Setup Android SDK (env + licenses)
         uses: android-actions/setup-android@v3
         with:
           accept-android-sdk-licenses: true
           log-accepted-android-sdk-licenses: true
-          # pin tools if you want (optional)
-          cmdline-tools-version: 16.0
 
       - name: Install Android platforms/build-tools
         run: |
@@ -109,8 +107,7 @@ jobs:
             --dart-define=THEME_ID="${THEME_ID:-}"
 
       - name: List outputs
-        run: |
-          ls -R build/app/outputs/flutter-apk || true
+        run: ls -R build/app/outputs/flutter-apk || true
 
       - name: Upload artifact (manual download)
         uses: actions/upload-artifact@v4
@@ -145,7 +142,7 @@ jobs:
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
           echo "Resolved Release APK: $first_url"
 
-      # ---------------------- PULL MODEL: write manifest in repo ----------------------
+      # Pull model: commit a manifest with the public apkUrl
       - name: Write manifest (apkUrl/runId/timestamp)
         run: |
           set -e
