@@ -6,14 +6,14 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: write   # needed to create release + commit manifest
+  contents: write   # create release + commit manifest
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
 
     env:
-      # ---- payload (≤10 top-level props; RUNTIME is nested) ----
+      # ----- client_payload fields (keep ≤10 top-level props) -----
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
       OWNER_PROJECT_LINK_ID:  ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}
@@ -37,7 +37,6 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      # Use preinstalled cmdline-tools; accept licenses
       - name: Setup Android SDK (env + licenses)
         uses: android-actions/setup-android@v3
         with:
@@ -81,7 +80,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${APP_LOGO_URL:-}" ]; then
-            echo "APP_LOGO_URL is empty. Using a 1x1 placeholder."
+            echo "APP_LOGO_URL empty → using 1x1 placeholder"
             printf '\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\0\x01\0\0\0\x01\x08\x06\0\0\0\x1f\x15\xc4\x89\0\0\0\x0cIDATx\x9cc```\0\0\0\x04\0\x01\r\n-\xb4\0\0\0\0IEND\xaeB`\x82' > assets/icons/app_icon.png
           else
             curl -fsSL "$APP_LOGO_URL" -o assets/icons/app_icon.png
@@ -117,7 +116,6 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      # Create a public Release with the APK attached
       - name: Create GitHub Release (public link)
         id: rel
         uses: softprops/action-gh-release@v2
@@ -128,7 +126,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Pull the asset's browser_download_url
       - name: Extract first APK URL from release
         id: extract
         env:
@@ -143,12 +140,12 @@ jobs:
           first_url="$(echo "$urls" | head -n 1 || true)"
           if [ -z "$first_url" ]; then
             echo "Could not resolve APK URL from release assets"
+            echo "$json" | jq . >/dev/null 2>&1 || true
             exit 1
           fi
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
           echo "Resolved Release APK: $first_url"
 
-      # Commit a manifest (pull model)
       - name: Write manifest (apkUrl/runId/timestamp)
         run: |
           set -e
@@ -192,26 +189,49 @@ jobs:
           echo "- **APK URL:** ${{ steps.extract.outputs.apk_url }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Manifest:** builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json" >> $GITHUB_STEP_SUMMARY
 
-      # ✅ Push model: tell backend the final APK URL (fixes your previous error)
-      - name: Save APK URL to backend
-        if: ${{ success() }}
+      # --- Safety check for secrets before hitting backend ---
+      - name: Verify callback secrets
+        shell: bash
         env:
           CALLBACK_BASE: ${{ secrets.CALLBACK_BASE }}
           CALLBACK_TOKEN: ${{ secrets.CALLBACK_TOKEN }}
-          LINK_ID: ${{ env.OWNER_PROJECT_LINK_ID }}              # from client_payload
-          APK_URL: ${{ steps.extract.outputs.apk_url }}          # <- use extracted URL
+          LINK_ID: ${{ env.OWNER_PROJECT_LINK_ID }}
+          APK_URL: ${{ steps.extract.outputs.apk_url }}
         run: |
-          set -e
-          echo "Calling backend to persist APK url..."
-          echo "CALLBACK_BASE=$CALLBACK_BASE"
-          echo "LINK_ID=$LINK_ID"
-          echo "APK_URL=$APK_URL"
-          if [ -z "$CALLBACK_BASE" ] || [ -z "$CALLBACK_TOKEN" ] || [ -z "$LINK_ID" ] || [ -z "$APK_URL" ]; then
+          set -euo pipefail
+          echo "CALLBACK_BASE=${CALLBACK_BASE:-<empty>}"
+          echo "CALLBACK_TOKEN=${CALLBACK_TOKEN:+<set>}"
+          echo "LINK_ID=${LINK_ID:-<empty>}"
+          echo "APK_URL=${APK_URL:-<empty>}"
+          if [ -z "${CALLBACK_BASE:-}" ] || [ -z "${CALLBACK_TOKEN:-}" ] || [ -z "${LINK_ID:-}" ] || [ -z "${APK_URL:-}" ]; then
             echo "Missing one of CALLBACK_BASE/CALLBACK_TOKEN/LINK_ID/APK_URL"
             exit 1
           fi
-          curl -sS -X PUT "$CALLBACK_BASE/owner-project-links/$LINK_ID/apk-url" \
-            -H "X-Auth-Token: $CALLBACK_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data "{\"apkUrl\":\"$APK_URL\"}"
-          echo "✅ Backend updated."
+
+      # ✅ Push model: persist APK URL in your backend (with retry + status check)
+      - name: Save APK URL to backend
+        shell: bash
+        env:
+          CALLBACK_BASE: ${{ secrets.CALLBACK_BASE }}
+          CALLBACK_TOKEN: ${{ secrets.CALLBACK_TOKEN }}
+          LINK_ID: ${{ env.OWNER_PROJECT_LINK_ID }}
+          APK_URL: ${{ steps.extract.outputs.apk_url }}
+        run: |
+          set -euo pipefail
+          echo "Calling backend to persist APK url..."
+          for try in 1 2 3; do
+            http=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
+              -X PUT "$CALLBACK_BASE/owner-project-links/$LINK_ID/apk-url" \
+              -H "X-Auth-Token: $CALLBACK_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data "{\"apkUrl\":\"$APK_URL\"}") || true
+            echo "Backend HTTP: $http"
+            cat /tmp/resp.json || true
+            if [ "$http" = "200" ]; then
+              echo "✅ Backend updated."
+              break
+            fi
+            echo "Retry $try failed; sleeping 5s..."
+            sleep 5
+          done
+          test "$http" = "200" || { echo "❌ Backend update failed"; exit 1; }
