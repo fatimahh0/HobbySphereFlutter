@@ -37,7 +37,7 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      # Use preinstalled cmdline-tools on the runner (v12). Do NOT pin a version.
+      # Use preinstalled cmdline-tools; accept licenses
       - name: Setup Android SDK (env + licenses)
         uses: android-actions/setup-android@v3
         with:
@@ -117,6 +117,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      # Create a public Release with the APK attached
       - name: Create GitHub Release (public link)
         id: rel
         uses: softprops/action-gh-release@v2
@@ -127,6 +128,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Pull the asset's browser_download_url
       - name: Extract first APK URL from release
         id: extract
         env:
@@ -139,10 +141,14 @@ jobs:
             "https://api.github.com/repos/${REPO}/releases/tags/${TAG}")"
           urls="$(echo "$json" | jq -e -r '.assets[]? | select(.name|test("\\.apk$")) | .browser_download_url')"
           first_url="$(echo "$urls" | head -n 1 || true)"
+          if [ -z "$first_url" ]; then
+            echo "Could not resolve APK URL from release assets"
+            exit 1
+          fi
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
           echo "Resolved Release APK: $first_url"
 
-      # Pull model: commit a manifest with the public apkUrl
+      # Commit a manifest (pull model)
       - name: Write manifest (apkUrl/runId/timestamp)
         run: |
           set -e
@@ -186,16 +192,26 @@ jobs:
           echo "- **APK URL:** ${{ steps.extract.outputs.apk_url }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Manifest:** builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json" >> $GITHUB_STEP_SUMMARY
 
+      # ✅ Push model: tell backend the final APK URL (fixes your previous error)
       - name: Save APK URL to backend
         if: ${{ success() }}
         env:
           CALLBACK_BASE: ${{ secrets.CALLBACK_BASE }}
           CALLBACK_TOKEN: ${{ secrets.CALLBACK_TOKEN }}
-          LINK_ID: ${{ env.OWNER_PROJECT_LINK_ID }} # this came from client_payload
-          APK_URL: ${{ env.APK_URL }}               # set this earlier when you upload the release asset
+          LINK_ID: ${{ env.OWNER_PROJECT_LINK_ID }}              # from client_payload
+          APK_URL: ${{ steps.extract.outputs.apk_url }}          # <- use extracted URL
         run: |
+          set -e
           echo "Calling backend to persist APK url..."
+          echo "CALLBACK_BASE=$CALLBACK_BASE"
+          echo "LINK_ID=$LINK_ID"
+          echo "APK_URL=$APK_URL"
+          if [ -z "$CALLBACK_BASE" ] || [ -z "$CALLBACK_TOKEN" ] || [ -z "$LINK_ID" ] || [ -z "$APK_URL" ]; then
+            echo "Missing one of CALLBACK_BASE/CALLBACK_TOKEN/LINK_ID/APK_URL"
+            exit 1
+          fi
           curl -sS -X PUT "$CALLBACK_BASE/owner-project-links/$LINK_ID/apk-url" \
             -H "X-Auth-Token: $CALLBACK_TOKEN" \
             -H "Content-Type: application/json" \
-            --data "{\"apkUrl\":\"$APK_URL\"}"     
+            --data "{\"apkUrl\":\"$APK_URL\"}"
+          echo "✅ Backend updated."
