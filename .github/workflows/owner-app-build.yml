@@ -6,15 +6,14 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: write   # needed to commit/push the manifest
+  contents: write   # needed to commit/push the manifest + create release
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
 
-    # Map payload + secrets to env so we can use env.* inside steps
+    # Map payload to env (≤10 top-level props; nest runtime under RUNTIME)
     env:
-      # ---- payload (≤10 top-level props; RUNTIME is nested) ----
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
       OWNER_PROJECT_LINK_ID:  ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}
@@ -38,16 +37,26 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      # ✅ v3 expects 'packages', not 'api-level'/'build-tools'
-      - name: Setup Android SDK
+      # Install only cmdline-tools here; we’ll install platforms/build-tools with sdkmanager
+      - name: Setup Android SDK (cmdline-tools)
         uses: android-actions/setup-android@v3
         with:
           accept-android-sdk-licenses: true
           log-accepted-android-sdk-licenses: true
-          packages: |
-            platforms;android-34
-            build-tools;34.0.0
-            platform-tools
+          # pin tools if you want (optional)
+          cmdline-tools-version: 16.0
+
+      - name: Install Android platforms/build-tools
+        run: |
+          set -e
+          yes | sdkmanager --licenses >/dev/null
+          for i in 1 2; do
+            sdkmanager --install \
+              "platforms;android-34" \
+              "build-tools;34.0.0" \
+              "platform-tools" && break || (echo "retrying sdkmanager ($i)..." && sleep 5)
+          done
+          sdkmanager --list | head -n 50
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -56,6 +65,7 @@ jobs:
 
       - name: Flutter doctor & deps
         run: |
+          set -e
           flutter doctor -v
           test -f pubspec.yaml || (echo "Missing pubspec.yaml" && exit 1)
           flutter pub get
@@ -63,8 +73,9 @@ jobs:
 
       - name: Ensure tools + dirs
         run: |
+          set -e
           sudo apt-get update -y
-          sudo apt-get install -y jq
+          sudo apt-get install -y jq curl
           mkdir -p assets/icons assets/splash
 
       - name: Prepare logo (public URL or placeholder)
@@ -98,7 +109,8 @@ jobs:
             --dart-define=THEME_ID="${THEME_ID:-}"
 
       - name: List outputs
-        run: ls -R build/app/outputs/flutter-apk || true
+        run: |
+          ls -R build/app/outputs/flutter-apk || true
 
       - name: Upload artifact (manual download)
         uses: actions/upload-artifact@v4
@@ -170,3 +182,9 @@ jobs:
           git add builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json
           git commit -m "Update manifest for ${SLUG} (run ${{ github.run_id }})" || echo "No changes to commit"
           git push
+
+      - name: Summarize
+        run: |
+          echo "### Build complete" >> $GITHUB_STEP_SUMMARY
+          echo "- **APK URL:** ${{ steps.extract.outputs.apk_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Manifest:** builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json" >> $GITHUB_STEP_SUMMARY
