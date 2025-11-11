@@ -179,7 +179,7 @@ jobs:
             > builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json
           echo "Wrote builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json"
 
-      - name: Commit & push manifest (rebase + retry)
+      - name: Commit & push manifest (clean -> rebase -> retry)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -187,7 +187,9 @@ jobs:
 
           git config user.email "ci@users.noreply.github.com"
           git config user.name "CI Bot"
+          git config core.autocrlf false
 
+          # Stage and commit the generated manifest
           git add "builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json"
           git commit -m "Update manifest for ${SLUG} (run ${GITHUB_RUN_ID})" || echo "No changes to commit"
 
@@ -195,15 +197,23 @@ jobs:
           max_attempts=3
           while (( attempt < max_attempts )); do
             attempt=$((attempt+1))
-            git fetch origin main
 
-            # Rebase on latest main; if conflict, keep CI-generated file
+            # 1) Ensure a clean working tree (discard build byproducts & lockfile drift)
+            git reset --hard
+            git clean -fdx
+
+            # 2) Rebase on latest main
+            git fetch origin main
             if ! git rebase origin/main; then
-              echo "Rebase conflict; favoring CI output for generated files"
-              git rebase --abort
+              echo "Rebase failed; checking if a rebase is in progress..."
+              if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ]; then
+                git rebase --abort || true
+              fi
+              echo "Falling back to merge -s ours (keep CI-generated files)"
               git merge -s ours origin/main -m "Merge main (ours for generated files)"
             fi
 
+            # 3) Push
             if git push origin HEAD:main; then
               echo "✅ Pushed to main"
               exit 0
