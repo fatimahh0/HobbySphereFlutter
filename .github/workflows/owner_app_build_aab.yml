@@ -1,0 +1,282 @@
+name: Owner App Build (Android AAB)
+
+on:
+  repository_dispatch:
+    types: [owner_app_build_aab]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # create release + commit manifest
+
+concurrency:
+  group: builds-main-aab
+  cancel-in-progress: false
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    env:
+      # ----- client_payload fields (keep ≤10 top-level props) -----
+      OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
+      PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
+      OWNER_PROJECT_LINK_ID:  ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}
+      SLUG:                   ${{ github.event.client_payload.SLUG }}
+      APP_NAME:               ${{ github.event.client_payload.APP_NAME }}
+      THEME_ID:               ${{ github.event.client_payload.THEME_ID }}
+      APP_LOGO_URL:           ${{ github.event.client_payload.APP_LOGO_URL }}
+      API_BASE_URL:           ${{ github.event.client_payload.RUNTIME.API_BASE_URL }}
+      WS_PATH:                ${{ github.event.client_payload.RUNTIME.WS_PATH }}
+      APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
+      OWNER_ATTACH_MODE:      ${{ github.event.client_payload.RUNTIME.OWNER_ATTACH_MODE }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0              # needed for rebase
+          persist-credentials: true   # use GITHUB_TOKEN for push
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Setup Android SDK (env + licenses)
+        uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: true
+
+      - name: Install Android platforms/build-tools
+        run: |
+          set -e
+          yes | sdkmanager --licenses >/dev/null
+          for i in 1 2; do
+            sdkmanager --install \
+              "platforms;android-34" \
+              "build-tools;34.0.0" \
+              "platform-tools" && break || (echo "retrying sdkmanager ($i)..." && sleep 5)
+          done
+          sdkmanager --list | head -n 50
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter doctor & deps
+        run: |
+          set -e
+          flutter doctor -v
+          test -f pubspec.yaml || (echo "Missing pubspec.yaml" && exit 1)
+          flutter pub get
+          test -f lib/app/main_activity.dart || (echo "Missing lib/app/main_activity.dart" && exit 1)
+
+      - name: Ensure tools + dirs
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y jq curl
+          mkdir -p assets/icons assets/splash
+
+      - name: Prepare logo (public URL or placeholder)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_LOGO_URL:-}" ]; then
+            echo "APP_LOGO_URL empty → using 1x1 placeholder"
+            printf '\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\0\x01\0\0\0\x01\x08\x06\0\0\0\x1f\x15\xc4\x89\0\0\0\x0cIDATx\x9cc```\0\0\0\x04\0\x01\r\n-\xb4\0\0\0\0IEND\xaeB`\x82' > assets/icons/app_icon.png
+          else
+            curl -fsSL "$APP_LOGO_URL" -o assets/icons/app_icon.png
+          fi
+          cp assets/icons/app_icon.png assets/splash/splash.png
+          dart run flutter_launcher_icons
+          dart run flutter_native_splash:create
+
+      # ⬇⬇⬇ هنا الفرق الأساسي: AAB بدل APK ⬇⬇⬇
+      - name: Build AAB (release)
+        run: |
+          set -e
+          flutter build appbundle --release \
+            -t lib/app/main_activity.dart \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=OWNER_PROJECT_LINK_ID="$OWNER_PROJECT_LINK_ID" \
+            --dart-define=OWNER_ATTACH_MODE="$OWNER_ATTACH_MODE" \
+            --dart-define=APP_ROLE="$APP_ROLE" \
+            --dart-define=WS_PATH="$WS_PATH" \
+            --dart-define=PROJECT_ID="$PROJECT_ID" \
+            --dart-define=APP_NAME="$APP_NAME" \
+            --dart-define=APP_LOGO_URL="$APP_LOGO_URL" \
+            --dart-define=SLUG="$SLUG" \
+            --dart-define=THEME_ID="${THEME_ID:-}"
+
+      - name: List outputs
+        run: ls -R build/app/outputs/bundle || true
+
+      - name: Upload artifact (manual download)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.SLUG }}-aab
+          path: build/app/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Create GitHub Release (public link)
+        id: rel
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: aab-${{ env.SLUG }}-${{ github.run_id }}
+          name: "${{ env.APP_NAME }} AAB (run ${{ github.run_id }})"
+          files: build/app/outputs/bundle/release/*.aab
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract first AAB URL from release
+        id: extract
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: aab-${{ env.SLUG }}-${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          json="$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/releases/tags/${TAG}")"
+          urls="$(echo "$json" | jq -e -r '.assets[]? | select(.name|test("\\.aab$")) | .browser_download_url')"
+          first_url="$(echo "$urls" | head -n 1 || true)"
+          if [ -z "$first_url" ]; then
+            echo "Could not resolve AAB URL from release assets"
+            echo "$json" | jq . >/dev/null 2>&1 || true
+            exit 1
+          fi
+          echo "aab_url=$first_url" >> "$GITHUB_OUTPUT"
+          echo "Resolved Release AAB: $first_url"
+
+      - name: Write manifest (aabUrl/runId/timestamp)
+        run: |
+          set -e
+          mkdir -p builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}
+          jq -n \
+            --arg url "${{ steps.extract.outputs.aab_url }}" \
+            --arg run "${{ github.run_id }}" \
+            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg owner "${OWNER_ID}" \
+            --arg project "${PROJECT_ID}" \
+            --arg linkId "${OWNER_PROJECT_LINK_ID}" \
+            --arg slug "${SLUG}" \
+            --arg app "${APP_NAME}" \
+            '{
+              aabUrl: $url,
+              runId: $run,
+              uploadedAt: $ts,
+              ownerId: ($owner|tonumber),
+              projectId: ($project|tonumber),
+              ownerProjectLinkId: ($linkId|tonumber),
+              slug: $slug,
+              appName: $app
+            }' \
+            > builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json
+          echo "Wrote builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json"
+
+      - name: Commit & push manifest (clean -> rebase -> retry)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          git config user.email "ci@users.noreply.github.com"
+          git config user.name "CI Bot"
+          git config core.autocrlf false
+
+          # Stage and commit the generated manifest
+          git add "builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json"
+          git commit -m "Update AAB manifest for ${SLUG} (run ${GITHUB_RUN_ID})" || echo "No changes to commit"
+
+          attempt=0
+          max_attempts=3
+          while (( attempt < max_attempts )); do
+            attempt=$((attempt+1))
+
+            # 1) Ensure a clean working tree (discard build byproducts & lockfile drift)
+            git reset --hard
+            git clean -fdx
+
+            # 2) Rebase on latest main
+            git fetch origin main
+            if ! git rebase origin/main; then
+              echo "Rebase failed; checking if a rebase is in progress..."
+              if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ]; then
+                git rebase --abort || true
+              fi
+              echo "Falling back to merge -s ours (keep CI-generated files)"
+              git merge -s ours origin/main -m "Merge main (ours for generated files)"
+            fi
+
+            # 3) Push
+            if git push origin HEAD:main; then
+              echo "✅ Pushed to main"
+              exit 0
+            fi
+
+            echo "Push race; retrying in 3s (attempt $attempt/$max_attempts)"
+            sleep 3
+          done
+
+          echo "❌ Could not push after $max_attempts attempts"
+          exit 1
+
+      - name: Summarize
+        run: |
+          echo "### AAB Build complete" >> $GITHUB_STEP_SUMMARY
+          echo "- **AAB URL:** ${{ steps.extract.outputs.aab_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Manifest:** builds/${{ env.OWNER_ID }}/${{ env.PROJECT_ID }}/${{ env.SLUG }}/latest.json" >> $GITHUB_STEP_SUMMARY
+
+      # --- Safety check for secrets before hitting backend ---
+      - name: Verify callback secrets
+        shell: bash
+        env:
+          CALLBACK_BASE: ${{ secrets.CALLBACK_BASE }}
+          CALLBACK_TOKEN: ${{ secrets.CALLBACK_TOKEN }}
+          LINK_ID: ${{ env.OWNER_PROJECT_LINK_ID }}
+          AAB_URL: ${{ steps.extract.outputs.aab_url }}
+        run: |
+          set -euo pipefail
+          echo "CALLBACK_BASE=${CALLBACK_BASE:-<empty>}"
+          echo "CALLBACK_TOKEN=${CALLBACK_TOKEN:+<set>}"
+          echo "LINK_ID=${LINK_ID:-<empty>}"
+          echo "AAB_URL=${AAB_URL:-<empty>}"
+          if [ -z "${CALLBACK_BASE:-}" ] || [ -z "${CALLBACK_TOKEN:-}" ] || [ -z "${LINK_ID:-}" ] || [ -z "${AAB_URL:-}" ]; then
+            echo "Missing one of CALLBACK_BASE/CALLBACK_TOKEN/LINK_ID/AAB_URL"
+            exit 1
+          fi
+
+      # ✅ Push model: persist AAB URL in your backend (with retry + status check)
+      # NOTE: adjust backend endpoint to match (e.g. /aab-url) + payload key (aabUrl)
+      - name: Save AAB URL to backend
+        shell: bash
+        env:
+          CALLBACK_BASE: ${{ secrets.CALLBACK_BASE }}
+          CALLBACK_TOKEN: ${{ secrets.CALLBACK_TOKEN }}
+          LINK_ID: ${{ env.OWNER_PROJECT_LINK_ID }}
+          AAB_URL: ${{ steps.extract.outputs.aab_url }}
+        run: |
+          set -euo pipefail
+          echo "Calling backend to persist AAB url..."
+          for try in 1 2 3; do
+            http=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
+              -X PUT "$CALLBACK_BASE/owner-project-links/$LINK_ID/aab-url" \
+              -H "X-Auth-Token: $CALLBACK_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data "{\"aabUrl\":\"$AAB_URL\"}") || true
+            echo "Backend HTTP: $http"
+            cat /tmp/resp.json || true
+            if [ "$http" = "200" ]; then
+              echo "✅ Backend updated."
+              break
+            fi
+            echo "Retry $try failed; sleeping 5s..."
+            sleep 5
+          done
+          test "$http" = "200" || { echo "❌ Backend update failed"; exit 1; }
