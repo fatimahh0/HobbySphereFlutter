@@ -30,7 +30,7 @@ jobs:
       APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
       OWNER_ATTACH_MODE:      ${{ github.event.client_payload.RUNTIME.OWNER_ATTACH_MODE }}
 
-      # 🔹  env للـ dynamic applicationId
+      # 🔹 dynamic applicationId (read in build.gradle.kts)
       APP_SLUG:               ${{ github.event.client_payload.SLUG }}
       APPLICATION_ID:         com.build4all.${{ github.event.client_payload.SLUG }}
 
@@ -116,7 +116,8 @@ jobs:
             --dart-define=APP_NAME="$APP_NAME" \
             --dart-define=APP_LOGO_URL="$APP_LOGO_URL" \
             --dart-define=SLUG="$SLUG" \
-            --dart-define=THEME_ID="${THEME_ID:-}"
+            --dart-define=THEME_ID="${THEME_ID:-}" \
+            --dart-define=APPLICATION_ID="$APPLICATION_ID"
 
       - name: List outputs
         run: ls -R build/app/outputs/flutter-apk || true
