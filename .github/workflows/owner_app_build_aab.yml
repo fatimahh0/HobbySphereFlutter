@@ -30,6 +30,10 @@ jobs:
       APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
       OWNER_ATTACH_MODE:      ${{ github.event.client_payload.RUNTIME.OWNER_ATTACH_MODE }}
 
+      # 🔹 جديد: env للـ dynamic applicationId
+      APP_SLUG:               ${{ github.event.client_payload.SLUG }}
+      APPLICATION_ID:         com.build4all.${{ github.event.client_payload.SLUG }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -96,10 +100,12 @@ jobs:
           dart run flutter_launcher_icons
           dart run flutter_native_splash:create
 
-      # ⬇⬇⬇ هنا الفرق الأساسي: AAB بدل APK ⬇⬇⬇
+      
       - name: Build AAB (release)
         run: |
           set -e
+          echo "Using APPLICATION_ID=$APPLICATION_ID"
+          echo "Using APP_SLUG=$APP_SLUG"
           flutter build appbundle --release \
             -t lib/app/main_activity.dart \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
