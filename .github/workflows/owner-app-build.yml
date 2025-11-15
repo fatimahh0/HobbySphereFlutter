@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # ----- client_payload fields (keep ≤10 top-level props) -----
+      # ----- client_payload fields -----
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
       OWNER_PROJECT_LINK_ID:  ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}
@@ -29,6 +29,10 @@ jobs:
       WS_PATH:                ${{ github.event.client_payload.RUNTIME.WS_PATH }}
       APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
       OWNER_ATTACH_MODE:      ${{ github.event.client_payload.RUNTIME.OWNER_ATTACH_MODE }}
+
+      # 🔹  env للـ dynamic applicationId
+      APP_SLUG:               ${{ github.event.client_payload.SLUG }}
+      APPLICATION_ID:         com.build4all.${{ github.event.client_payload.SLUG }}
 
     steps:
       - name: Checkout
@@ -99,6 +103,8 @@ jobs:
       - name: Build APK (release)
         run: |
           set -e
+          echo "Using APPLICATION_ID=$APPLICATION_ID"
+          echo "Using APP_SLUG=$APP_SLUG"
           flutter build apk --release \
             -t lib/app/main_activity.dart \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
@@ -189,7 +195,6 @@ jobs:
           git config user.name "CI Bot"
           git config core.autocrlf false
 
-          # Stage and commit the generated manifest
           git add "builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json"
           git commit -m "Update manifest for ${SLUG} (run ${GITHUB_RUN_ID})" || echo "No changes to commit"
 
@@ -198,11 +203,9 @@ jobs:
           while (( attempt < max_attempts )); do
             attempt=$((attempt+1))
 
-            # 1) Ensure a clean working tree (discard build byproducts & lockfile drift)
             git reset --hard
             git clean -fdx
 
-            # 2) Rebase on latest main
             git fetch origin main
             if ! git rebase origin/main; then
               echo "Rebase failed; checking if a rebase is in progress..."
@@ -213,7 +216,6 @@ jobs:
               git merge -s ours origin/main -m "Merge main (ours for generated files)"
             fi
 
-            # 3) Push
             if git push origin HEAD:main; then
               echo "✅ Pushed to main"
               exit 0
@@ -251,7 +253,6 @@ jobs:
             exit 1
           fi
 
-      # ✅ Push model: persist APK URL in your backend (with retry + status check)
       - name: Save APK URL to backend
         shell: bash
         env:
