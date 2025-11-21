@@ -1,15 +1,15 @@
-name: Owner App Build (Android APK)
+name: Owner App Build (Android AAB)
 
 on:
   repository_dispatch:
-    types: [owner_app_build]
+    types: [owner_app_build_aab]
   workflow_dispatch: {}
 
 permissions:
   contents: write   # create release + commit manifest
 
 concurrency:
-  group: builds-main
+  group: builds-main-aab
   cancel-in-progress: false
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # ----- client_payload fields -----
+      # ----- client_payload fields (keep ≤10 top-level props) -----
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
       OWNER_PROJECT_LINK_ID:  ${{ github.event.client_payload.OWNER_PROJECT_LINK_ID }}
@@ -30,7 +30,7 @@ jobs:
       APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
       OWNER_ATTACH_MODE:      ${{ github.event.client_payload.RUNTIME.OWNER_ATTACH_MODE }}
 
-      # 🔹 dynamic applicationId (read in build.gradle.kts)
+      # dynamic applicationId (read in build.gradle.kts)
       APP_SLUG:               ${{ github.event.client_payload.SLUG }}
       APPLICATION_ID:         com.build4all.${{ github.event.client_payload.SLUG }}
 
@@ -38,8 +38,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0              # needed for rebase
-          persist-credentials: true   # use GITHUB_TOKEN for push
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -100,12 +100,12 @@ jobs:
           dart run flutter_launcher_icons
           dart run flutter_native_splash:create
 
-      - name: Build APK (release)
+      - name: Build AAB (release)
         run: |
           set -e
           echo "Using APPLICATION_ID=$APPLICATION_ID"
           echo "Using APP_SLUG=$APP_SLUG"
-          flutter build apk --release \
+          flutter build appbundle --release \
             -t lib/app/main_activity.dart \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=OWNER_PROJECT_LINK_ID="$OWNER_PROJECT_LINK_ID" \
@@ -120,13 +120,13 @@ jobs:
             --dart-define=APPLICATION_ID="$APPLICATION_ID"
 
       - name: List outputs
-        run: ls -R build/app/outputs/flutter-apk || true
+        run: ls -R build/app/outputs/bundle || true
 
       - name: Upload artifact (manual download)
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.SLUG }}-apk
-          path: build/app/outputs/flutter-apk/*.apk
+          name: ${{ env.SLUG }}-aab
+          path: build/app/outputs/bundle/release/*.aab
           if-no-files-found: error
           retention-days: 14
 
@@ -134,38 +134,38 @@ jobs:
         id: rel
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: app-${{ env.SLUG }}-${{ github.run_id }}
-          name: "${{ env.APP_NAME }} (run ${{ github.run_id }})"
-          files: build/app/outputs/flutter-apk/*.apk
+          tag_name: aab-${{ env.SLUG }}-${{ github.run_id }}
+          name: "${{ env.APP_NAME }} AAB (run ${{ github.run_id }})"
+          files: build/app/outputs/bundle/release/*.aab
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract first APK URL from release
+      - name: Extract first AAB URL from release
         id: extract
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          TAG: app-${{ env.SLUG }}-${{ github.run_id }}
+          TAG: aab-${{ env.SLUG }}-${{ github.run_id }}
         run: |
           set -euo pipefail
           json="$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${REPO}/releases/tags/${TAG}")"
-          urls="$(echo "$json" | jq -e -r '.assets[]? | select(.name|test("\\.apk$")) | .browser_download_url')"
+          urls="$(echo "$json" | jq -e -r '.assets[]? | select(.name|test("\\.aab$")) | .browser_download_url')"
           first_url="$(echo "$urls" | head -n 1 || true)"
           if [ -z "$first_url" ]; then
-            echo "Could not resolve APK URL from release assets"
+            echo "Could not resolve AAB URL from release assets"
             echo "$json" | jq . >/dev/null 2>&1 || true
             exit 1
           fi
-          echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
-          echo "Resolved Release APK: $first_url"
+          echo "aab_url=$first_url" >> "$GITHUB_OUTPUT"
+          echo "Resolved Release AAB: $first_url"
 
-      - name: Write manifest (apkUrl/runId/timestamp)
+      - name: Write manifest (aabUrl/runId/timestamp)
         run: |
           set -e
           mkdir -p builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}
           jq -n \
-            --arg url "${{ steps.extract.outputs.apk_url }}" \
+            --arg url "${{ steps.extract.outputs.aab_url }}" \
             --arg run "${{ github.run_id }}" \
             --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg owner "${OWNER_ID}" \
@@ -174,7 +174,7 @@ jobs:
             --arg slug "${SLUG}" \
             --arg app "${APP_NAME}" \
             '{
-              apkUrl: $url,
+              aabUrl: $url,
               runId: $run,
               uploadedAt: $ts,
               ownerId: ($owner|tonumber),
@@ -197,7 +197,7 @@ jobs:
           git config core.autocrlf false
 
           git add "builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json"
-          git commit -m "Update manifest for ${SLUG} (run ${GITHUB_RUN_ID})" || echo "No changes to commit"
+          git commit -m "Update AAB manifest for ${SLUG} (run ${GITHUB_RUN_ID})" || echo "No changes to commit"
 
           attempt=0
           max_attempts=3
@@ -231,8 +231,8 @@ jobs:
 
       - name: Summarize
         run: |
-          echo "### Build complete" >> $GITHUB_STEP_SUMMARY
-          echo "- **APK URL:** ${{ steps.extract.outputs.apk_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "### AAB Build complete" >> $GITHUB_STEP_SUMMARY
+          echo "- **AAB URL:** ${{ steps.extract.outputs.aab_url }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Manifest:** builds/${{ env.OWNER_ID }}/${{ env.PROJECT_ID }}/${{ env.SLUG }}/latest.json" >> $GITHUB_STEP_SUMMARY
 
       # --- Safety check for secrets before hitting backend ---
@@ -242,34 +242,34 @@ jobs:
           CALLBACK_BASE: ${{ secrets.CALLBACK_BASE }}
           CALLBACK_TOKEN: ${{ secrets.CALLBACK_TOKEN }}
           LINK_ID: ${{ env.OWNER_PROJECT_LINK_ID }}
-          APK_URL: ${{ steps.extract.outputs.apk_url }}
+          AAB_URL: ${{ steps.extract.outputs.aab_url }}
         run: |
           set -euo pipefail
           echo "CALLBACK_BASE=${CALLBACK_BASE:-<empty>}"
           echo "CALLBACK_TOKEN=${CALLBACK_TOKEN:+<set>}"
           echo "LINK_ID=${LINK_ID:-<empty>}"
-          echo "APK_URL=${APK_URL:-<empty>}"
-          if [ -z "${CALLBACK_BASE:-}" ] || [ -z "${CALLBACK_TOKEN:-}" ] || [ -z "${LINK_ID:-}" ] || [ -z "${APK_URL:-}" ]; then
-            echo "Missing one of CALLBACK_BASE/CALLBACK_TOKEN/LINK_ID/APK_URL"
+          echo "AAB_URL=${AAB_URL:-<empty>}"
+          if [ -z "${CALLBACK_BASE:-}" ] || [ -z "${CALLBACK_TOKEN:-}" ] || [ -z "${LINK_ID:-}" ] || [ -z "${AAB_URL:-}" ]; then
+            echo "Missing one of CALLBACK_BASE/CALLBACK_TOKEN/LINK_ID/AAB_URL"
             exit 1
           fi
 
-      - name: Save APK URL to backend
+      - name: Save AAB URL to backend
         shell: bash
         env:
           CALLBACK_BASE: ${{ secrets.CALLBACK_BASE }}
           CALLBACK_TOKEN: ${{ secrets.CALLBACK_TOKEN }}
           LINK_ID: ${{ env.OWNER_PROJECT_LINK_ID }}
-          APK_URL: ${{ steps.extract.outputs.apk_url }}
+          AAB_URL: ${{ steps.extract.outputs.aab_url }}
         run: |
           set -euo pipefail
-          echo "Calling backend to persist APK url..."
+          echo "Calling backend to persist AAB url..."
           for try in 1 2 3; do
             http=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
-              -X PUT "$CALLBACK_BASE/owner-project-links/$LINK_ID/apk-url" \
+              -X PUT "$CALLBACK_BASE/owner-project-links/$LINK_ID/aab-url" \
               -H "X-Auth-Token: $CALLBACK_TOKEN" \
               -H "Content-Type: application/json" \
-              --data "{\"apkUrl\":\"$APK_URL\"}") || true
+              --data "{\"aabUrl\":\"$AAB_URL\"}") || true
             echo "Backend HTTP: $http"
             cat /tmp/resp.json || true
             if [ "$http" = "200" ]; then
