@@ -9,22 +9,22 @@ class BusinessBookingService {
   // shared fetch wrapper
   final _fetch = ApiFetch(); // network client
 
-  // base path for bookings
-  static const _base = '/bookings'; // base path
+  // base path for orders (was /bookings)
+  static const _base = '/orders'; // base path
 
-  // load all bookings for current business
+  // load all orders for current business
   Future<List<dynamic>> getBusinessBookings(String token) async {
     if (token.isEmpty) throw Exception('Missing business token'); // guard
     final res = await _fetch.fetch(
       HttpMethod.get, // GET
-      '$_base/mybusinessbookings', // path
+      '$_base/mybusinessorders', // /api/orders/mybusinessorders
       headers: {
         'Authorization': 'Bearer $token', // auth
         'Accept': 'application/json', // json
       },
     );
     if (res.data is List) return res.data as List<dynamic>; // ok list
-    throw Exception('Invalid bookings response'); // bad payload
+    throw Exception('Invalid orders response'); // bad payload
   }
 
   // tiny helper to send empty PUT safely
@@ -42,23 +42,25 @@ class BusinessBookingService {
     );
   }
 
-  // reject booking
+  // reject order → /api/orders/order/reject/{orderItemId}
   Future<void> rejectBooking(String token, int id) =>
-      _putNoop(token, '$_base/booking/reject/$id'); // PUT
+      _putNoop(token, '$_base/order/reject/$id'); // PUT
 
-  // unreject booking (back to pending)
+  // unreject order (back to pending) → /api/orders/order/unreject/{orderItemId}
   Future<void> unrejectBooking(String token, int id) =>
-      _putNoop(token, '$_base/booking/unreject/$id'); // PUT
+      _putNoop(token, '$_base/order/unreject/$id'); // PUT
 
   // approve cancel request → becomes canceled
+  // /api/orders/cancel/approve/{orderItemId}
   Future<void> approveCancel(String token, int id) =>
       _putNoop(token, '$_base/cancel/approve/$id'); // PUT
 
   // reject cancel request → becomes cancel rejected
+  // /api/orders/cancel/reject/{orderItemId}
   Future<void> rejectCancel(String token, int id) =>
       _putNoop(token, '$_base/cancel/reject/$id'); // PUT
 
-  // mark paid
+  // mark paid → /api/orders/mark-paid/{orderItemId}
   Future<void> markPaid(String token, int id) =>
       _putNoop(token, '$_base/mark-paid/$id'); // PUT
 }

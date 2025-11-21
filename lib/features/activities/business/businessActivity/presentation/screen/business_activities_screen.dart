@@ -1,6 +1,4 @@
 // ===== Flutter 3.35.x =====
-// BusinessActivitiesScreen — list of business activities with search, tabs, delete, edit, reopen
-// Fix: no infinite loading when there are no activities (empty state shown)
 
 import 'dart:async'; // async utils
 import 'package:flutter/material.dart'; // flutter ui
