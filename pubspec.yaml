@@ -161,15 +161,16 @@ flutter_native_splash:
   web: false
 
   # Default (Android < 12 + iOS)
-  color: "#FFFCF6F8"        # ARGB: FF (opaque) + FCF6F8
-  color_dark: "#FF383A3A"   # ARGB: FF (opaque) + 383A3A
+  color: "#FCF6F8"
+  color_dark: "#383A3A"
   image: assets/splash/splash.png
 
   # Android 12+
   android_12:
     image: assets/splash/splash.png
-    color: "#FFFCF6F8"
-    color_dark: "#FF383A3A"
+    color: "#FCF6F8"
+    color_dark: "#383A3A"
+
 
 
 
