@@ -1,16 +1,18 @@
 // lib/app.dart
 // Hosts MaterialApp.router using your GoRouter builder, i18n, themes,
-// a live connection banner, and a runtime color Palette fetched once.
+// a live connection banner, and a runtime ThemeCubit that loads remote theme.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hobby_sphere/shared/theme/app_theme.dart';
+import 'package:hobby_sphere/shared/theme/theme_cubit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:hobby_sphere/core/network/globals.dart' as g;
 
 // i18n + themes
 import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
-import 'package:hobby_sphere/shared/theme/app_theme.dart' show AppTheme;
+
 
 // GoRouter config (your builder)
 import 'router/router.dart' as app_router;
@@ -18,10 +20,6 @@ import 'router/router.dart' as app_router;
 // Connection banner infrastructure
 import 'package:hobby_sphere/shared/network/connection_cubit.dart';
 import 'package:hobby_sphere/shared/widgets/connection_banner.dart';
-
-// Runtime theme palette loader (optional)
-import 'package:hobby_sphere/features/activities/common/data/services/theme_service.dart';
-import 'package:hobby_sphere/shared/theme/palette.dart';
 
 class App extends StatefulWidget {
   const App({super.key});
@@ -42,14 +40,10 @@ class _AppState extends State<App> {
       (g.appServerRoot).replaceFirst(RegExp(r'/api/?$'), '') +
       '/actuator/health';
 
-  // Optional: fetch a server-provided palette once.
-  final _themeService = ThemeService();
-
   @override
   void initState() {
     super.initState();
     _restorePrefs();
-    _loadThemeFromBackendOnce();
   }
 
   Future<void> _restorePrefs() async {
@@ -89,15 +83,6 @@ class _AppState extends State<App> {
     _persistLocale(locale);
   }
 
-  Future<void> _loadThemeFromBackendOnce() async {
-    try {
-      final json = await _themeService.getActiveMobileTheme();
-      Palette.I.applyMobileThemeJson(json); // triggers AnimatedBuilder rebuild
-    } catch (_) {
-      // Swallow quietly: keep defaults on failure.
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     // Build your GoRouter with callbacks (theme/locale toggles if some screens need them).
@@ -108,42 +93,38 @@ class _AppState extends State<App> {
       getCurrentLocale: () => _locale,
     );
 
-    return BlocProvider(
-      create: (_) => ConnectionCubit(serverProbeUrl: _serverProbeUrl),
-      // Rebuild MaterialApp when the runtime palette changes.
-      child: AnimatedBuilder(
-        animation: Palette.I,
-        builder: (_, __) {
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => ConnectionCubit(serverProbeUrl: _serverProbeUrl),
+        ),
+        BlocProvider(
+          create: (_) => ThemeCubit(
+            dio: g.appDio!, // uses Dio you built in main/init
+            themeEndpoint: '/themes/active/mobile',
+          )..loadRemoteTheme(), // fetch remote theme once
+        ),
+      ],
+      child: BlocBuilder<ThemeCubit, ThemeState>(
+        builder: (context, themeState) {
           return MaterialApp.router(
             debugShowCheckedModeBanner: false,
             title: 'Hobby Sphere',
 
-            routerConfig: routerConfig, // GoRouter config
+            routerConfig: routerConfig,
+
             // i18n
             locale: _locale,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
 
-            // theming
+            // theming from ThemeCubit
             themeMode: _themeMode,
-            theme: AppTheme.light,
-            darkTheme: AppTheme.dark,
+            theme: themeState.themeData,
+            darkTheme: AppTheme.dark(),
 
             // Keep a global connection banner on top of every page.
             builder: (context, child) {
-              // OPTIONAL: If you’re still migrating old LegacyNav.pushNamed(...)
-              // screens, you can wrap `child` with LegacyNavHost to forward
-              // those calls to GoRouter without rewriting every screen at once:
-              //
-              // return LegacyNavHost(child: Stack(
-              //   children: [
-              //     if (child != null) child,
-              //     const Positioned(top: 0, left: 0, right: 0, child: ConnectionBanner()),
-              //   ],
-              // ));
-              //
-              // If you don’t need that bridge, keep the plain Stack below.
-
               return Stack(
                 children: [
                   if (child != null) child,

@@ -10,8 +10,10 @@ import 'package:hobby_sphere/config/env.dart';
 import 'package:hobby_sphere/features/products/app_router_product.dart';
 
 import 'package:hobby_sphere/core/network/globals.dart' as g;
-
 import 'package:hobby_sphere/shared/theme/app_theme.dart';
+import 'package:hobby_sphere/shared/theme/theme_cubit.dart';
+
+
 import 'package:hobby_sphere/shared/network/connection_cubit.dart';
 
 Future<void> _initNetworking() async {
@@ -50,15 +52,27 @@ class ProductApp extends StatelessWidget {
         g.appServerRoot.replaceFirst(RegExp(r'/api/?$'), '') +
         '/actuator/health';
 
-    return BlocProvider(
-      create: (_) => ConnectionCubit(serverProbeUrl: healthUrl),
-      child: MaterialApp.router(
-        debugShowCheckedModeBanner: false,
-        title: 'Hobby Sphere — Product',
-        routerConfig: router,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        themeMode: ThemeMode.system,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => ConnectionCubit(serverProbeUrl: healthUrl)),
+        BlocProvider(
+          create: (_) => ThemeCubit(
+            dio: g.appDio!, // reuse Dio
+            themeEndpoint: '/themes/active/mobile',
+          )..loadRemoteTheme(),
+        ),
+      ],
+      child: BlocBuilder<ThemeCubit, ThemeState>(
+        builder: (context, themeState) {
+          return MaterialApp.router(
+            debugShowCheckedModeBanner: false,
+            title: 'Hobby Sphere — Product',
+            routerConfig: router,
+            theme: themeState.themeData,
+            darkTheme: AppTheme.dark(),
+            themeMode: ThemeMode.system,
+          );
+        },
       ),
     );
   }

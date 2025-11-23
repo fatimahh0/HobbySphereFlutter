@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart'; // core UI
 import 'package:flutter_bloc/flutter_bloc.dart'; // Bloc
 import 'package:hobby_sphere/l10n/app_localizations.dart'; // i18n
+import 'package:hobby_sphere/shared/theme/theme_extensions.dart';
 import 'package:hobby_sphere/shared/widgets/app_button.dart'; // buttons
 import 'package:hobby_sphere/shared/widgets/app_search_bar.dart'; // search app bar
 import 'package:hobby_sphere/shared/widgets/top_toast.dart'; // toast
@@ -40,10 +41,10 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
   // sort key (by date/price/name)
   String _sortKey = 'date_desc';
 
-  // ------ Canceled sub-tabs keys (normalized letters only) ------
-  static const String _CANCEL_REQUESTED = 'cancelrequested'; // waiting decision
+  // ------ Canceled sub-tabs keys (normalized letters only) ------    static const String _CANCEL_REQUESTED = 'cancelrequested'; // waiting decision
   static const String _CANCEL_APPROVED = 'cancelapproved'; // approved cancel
   static const String _CANCEL_REJECTED = 'cancelrejected'; // reject cancel
+  static const String _CANCEL_REQUESTED = 'cancelrequested';
 
   // current selected canceled sub-tab
   String _cancelSubFilter = _CANCEL_REQUESTED;
@@ -115,8 +116,12 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context); // theme
     final l10n = AppLocalizations.of(context)!; // i18n
+    final tokens = theme.extension<AppThemeTokens>()!; // ✅ new tokens
 
     return Scaffold(
+      // ✅ use tokens.background instead of surface
+      backgroundColor: tokens.background,
+
       // search app bar
       appBar: AppSearchAppBar(
         hint: l10n.searchPlaceholder, // placeholder
@@ -126,7 +131,6 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
         showBack: false, // no back arrow
         filled: true, // filled
       ),
-      backgroundColor: theme.colorScheme.surface, // page bg
       body: BlocConsumer<BusinessBookingBloc, BusinessBookingState>(
         // listen for error/success toasts
         listener: (ctx, state) {
@@ -155,14 +159,16 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
             int businessId = 0; // default unknown
             try {
               final dynamic s = state; // dynamic access
-              if (s.businessId is int)
+              if (s.businessId is int) {
                 businessId = s.businessId as int; // try state field
+              }
             } catch (_) {}
             if (businessId == 0 && state.bookings.isNotEmpty) {
               try {
                 final dynamic b0 = state.bookings.first; // first booking
-                if (b0.businessId is int)
+                if (b0.businessId is int) {
                   businessId = b0.businessId as int; // try booking field
+                }
               } catch (_) {}
             }
             RealtimeBus.I.emit(
@@ -242,8 +248,9 @@ class _BusinessBookingScreenState extends State<BusinessBookingScreen> {
           final filteredByDate = filteredByStatusAndSearch.where((b) {
             if (_dateFilter == _DateFilter.all) return true; // no date filter
             final dt = b.bookingDatetime; // booking date
-            if (dt == null)
+            if (dt == null) {
               return _dateFilter == _DateFilter.all; // keep only in "All"
+            }
             return dt.isBefore(now); // past bookings
           }).toList();
 

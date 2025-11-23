@@ -1,4 +1,6 @@
 // lib/config/env.dart
+import 'dart:convert';
+
 class Env {
   /// Base REST, e.g. http://192.168.1.7:8080  (without trailing /api)
   static const apiBaseUrl = String.fromEnvironment(
@@ -52,12 +54,39 @@ class Env {
     'APP_NAME',
     defaultValue: 'build4all',
   );
+
   static const appLogoUrl = String.fromEnvironment(
     'APP_LOGO_URL',
     defaultValue: '',
   );
 
+  /// 🎨 Theme id (for backend reference only, optional)
+  static const themeId = String.fromEnvironment('THEME_ID', defaultValue: '');
+
+  /// 🎨 Raw theme JSON passed from CI (stringified)
+  ///
+  /// Set in CI as:
+  ///   --dart-define=THEME_JSON="$THEME_JSON"
+  static const themeJsonRaw = String.fromEnvironment(
+    'THEME_JSON',
+    defaultValue: '',
+  );
+
+  /// Runtime helper: parsed theme JSON (or null if missing/invalid)
+  static Map<String, dynamic>? get themeJson {
+    if (themeJsonRaw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(themeJsonRaw);
+      if (decoded is Map<String, dynamic>) return decoded;
+      return null;
+    } catch (_) {
+      // If it's invalid JSON, fail-soft and ignore theme.
+      return null;
+    }
+  }
+
   // ---------- Helpers ----------
+
   static String requiredVar(String value, String name) {
     if (value.isEmpty) {
       throw StateError('Missing: $name. Use --dart-define=$name=...');

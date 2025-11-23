@@ -1,4 +1,5 @@
 // lib/app/main_activity.dart
+
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +14,9 @@ import 'package:hobby_sphere/core/network/globals.dart' as g;
 
 import 'package:hobby_sphere/app/router/router.dart' as app_router;
 import 'package:hobby_sphere/l10n/app_localizations.dart' show AppLocalizations;
-import 'package:hobby_sphere/shared/theme/app_theme.dart' show AppTheme;
+import 'package:hobby_sphere/shared/theme/app_theme.dart';
+import 'package:hobby_sphere/shared/theme/theme_cubit.dart';
+
 import 'package:hobby_sphere/shared/network/connection_cubit.dart';
 
 Future<void> _initStripe() async {
@@ -81,7 +84,7 @@ Future<void> _initNetworking() async {
   debugPrint('[Branding] appName=${g.appName} logo=${g.appLogoUrl}');
 
   // shared Dio
-  g.makeDefaultDio(baseWithApi);
+  g.makeDefaultDio(baseWithApi); // sets g.appDio
 }
 
 void main() async {
@@ -120,18 +123,29 @@ class ActivityApp extends StatelessWidget {
         (g.appServerRoot).replaceFirst(RegExp(r'/api/?$'), '') +
         '/actuator/health';
 
-    return BlocProvider(
-      create: (_) => ConnectionCubit(serverProbeUrl: healthUrl),
-      child: MaterialApp.router(
-        debugShowCheckedModeBanner: false,
-        title:
-            g.appName, // system/task-switcher title (ok to use Env.appName too)
-        routerConfig: router,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        themeMode: ThemeMode.system,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => ConnectionCubit(serverProbeUrl: healthUrl)),
+        BlocProvider(
+          create: (_) => ThemeCubit(
+            dio: g.appDio!, // reuse shared Dio
+            themeEndpoint: '/themes/active/mobile',
+          )..loadRemoteTheme(),
+        ),
+      ],
+      child: BlocBuilder<ThemeCubit, ThemeState>(
+        builder: (context, themeState) {
+          return MaterialApp.router(
+            debugShowCheckedModeBanner: false,
+            title: g.appName,
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: themeState.themeData,
+            darkTheme: AppTheme.dark(),
+            themeMode: ThemeMode.system,
+          );
+        },
       ),
     );
   }

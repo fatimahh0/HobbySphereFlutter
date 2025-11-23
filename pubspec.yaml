@@ -160,14 +160,12 @@ flutter:
 flutter_native_splash:
   android: true
   ios: true
-  web: false
-
-  color: "#16A34A"                # your brand green background
-  image: assets/splash/splash.png
-     # logo shown on native splash (optional but recommended)
+  color: "#FCF6F8FF"
   android_12:
-    color: "#16A34A"
-    image: assets/splash/splash.png 
+    color: "#FCF6F8FF"
+  image: assets/splash/splash.png
+  color_dark: "#383A3AFF"
+
   
 flutter_icons:
   android: true
