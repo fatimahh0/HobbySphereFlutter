@@ -24,6 +24,7 @@ jobs:
       SLUG:                   ${{ github.event.client_payload.SLUG }}
       APP_NAME:               ${{ github.event.client_payload.APP_NAME }}
       THEME_ID:               ${{ github.event.client_payload.THEME_ID }}
+      THEME_JSON:             ${{ github.event.client_payload.THEME_JSON }}   # 🔹 NEW
       APP_LOGO_URL:           ${{ github.event.client_payload.APP_LOGO_URL }}
       API_BASE_URL:           ${{ github.event.client_payload.RUNTIME.API_BASE_URL }}
       WS_PATH:                ${{ github.event.client_payload.RUNTIME.WS_PATH }}
@@ -117,6 +118,7 @@ jobs:
             --dart-define=APP_LOGO_URL="$APP_LOGO_URL" \
             --dart-define=SLUG="$SLUG" \
             --dart-define=THEME_ID="${THEME_ID:-}" \
+            --dart-define=THEME_JSON="$THEME_JSON" \  # 🔹 NEW: pass theme JSON to Flutter
             --dart-define=APPLICATION_ID="$APPLICATION_ID"
 
       - name: List outputs
@@ -173,6 +175,7 @@ jobs:
             --arg linkId "${OWNER_PROJECT_LINK_ID}" \
             --arg slug "${SLUG}" \
             --arg app "${APP_NAME}" \
+            --arg themeJson "${THEME_JSON:-}" \
             '{
               apkUrl: $url,
               runId: $run,
@@ -181,7 +184,8 @@ jobs:
               projectId: ($project|tonumber),
               ownerProjectLinkId: ($linkId|tonumber),
               slug: $slug,
-              appName: $app
+              appName: $app,
+              themeJson: $themeJson
             }' \
             > builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json
           echo "Wrote builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json"
