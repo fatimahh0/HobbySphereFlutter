@@ -24,7 +24,7 @@ jobs:
       SLUG:                   ${{ github.event.client_payload.SLUG }}
       APP_NAME:               ${{ github.event.client_payload.APP_NAME }}
       THEME_ID:               ${{ github.event.client_payload.THEME_ID }}
-      THEME_JSON:             ${{ github.event.client_payload.THEME_JSON }}   # 🔹 NEW
+      THEME_JSON:             ${{ github.event.client_payload.THEME_JSON }}   # JSON string from backend
       APP_LOGO_URL:           ${{ github.event.client_payload.APP_LOGO_URL }}
       API_BASE_URL:           ${{ github.event.client_payload.RUNTIME.API_BASE_URL }}
       WS_PATH:                ${{ github.event.client_payload.RUNTIME.WS_PATH }}
@@ -118,7 +118,7 @@ jobs:
             --dart-define=APP_LOGO_URL="$APP_LOGO_URL" \
             --dart-define=SLUG="$SLUG" \
             --dart-define=THEME_ID="${THEME_ID:-}" \
-            --dart-define=THEME_JSON="$THEME_JSON" \  # 🔹 NEW: pass theme JSON to Flutter
+            --dart-define=THEME_JSON="$THEME_JSON" \
             --dart-define=APPLICATION_ID="$APPLICATION_ID"
 
       - name: List outputs
