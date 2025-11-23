@@ -7,6 +7,7 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// ---------- local.properties (for MAPS_API_KEY, etc.) ----------
 val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) f.inputStream().use { load(it) }
@@ -16,9 +17,7 @@ val mapsApiKey: String = localProps.getProperty("MAPS_API_KEY")
     ?: System.getenv("MAPS_API_KEY")
     ?: ""
 
-// ===== dynamic applicationId support (from dart-define or env) =====
-
-// APPLICATION_ID from dart-define (preferred if present)
+// ---------- dart-define helpers (for APPLICATION_ID, APP_NAME, etc.) ----------
 fun dartDefine(name: String): String? {
     val raw = project.findProperty("dart-defines") as String? ?: return null
     return raw.split(",")
@@ -36,10 +35,10 @@ fun dartDefine(name: String): String? {
         .toMap()[name]
 }
 
-// APPLICATION_ID direct from env (e.g. com.build4all.my_owner_1)
+// APPLICATION_ID direct from env (e.g. com.build4all.myhobbysphereapp)
 val appIdFromEnv: String? = System.getenv("APPLICATION_ID")
 
-// slug from env (e.g. "my-owner-1")
+// slug from env (e.g. "my-hobbysphere-app-2")
 val slugFromEnv: String? = System.getenv("APP_SLUG")
 
 // sanitize slug → lower + [a–z0–9_]
@@ -50,19 +49,33 @@ fun safeFromSlug(raw: String?): String {
         .replace(Regex("[^a-z0-9_]"), "_")
 }
 
+// ---------- keystore / signing setup (for Play Store / CI) ----------
+val keystoreProps = Properties()
+val keystoreFile = rootProject.file("key.properties")
+val hasKeystore = keystoreFile.exists()
+
+if (hasKeystore) {
+    keystoreFile.inputStream().use { keystoreProps.load(it) }
+    println("Using release keystore from key.properties")
+} else {
+    println("WARNING: key.properties not found; release builds will use DEBUG signing (not Play Store ready).")
+}
+
 android {
     namespace = "com.example.hobby_sphere"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
-    // --- signing configs for release build (Play Store) ---
+    // --- signing configs for release/debug ---
     signingConfigs {
-        create("release") {
-            val keystoreProps = Properties()
-            val keystoreFile = rootProject.file("key.properties")
-            if (keystoreFile.exists()) {
-                keystoreFile.inputStream().use { keystoreProps.load(it) }
+        // default debug config
+        getByName("debug") {
+            // nothing special needed; standard debug keystore
+        }
 
+        // release config: only valid if key.properties exists
+        create("release") {
+            if (hasKeystore) {
                 val storeFileProp = keystoreProps["storeFile"] as String?
                 if (!storeFileProp.isNullOrBlank()) {
                     storeFile = file(storeFileProp)
@@ -71,8 +84,6 @@ android {
                 storePassword = keystoreProps["storePassword"] as String?
                 keyAlias = keystoreProps["keyAlias"] as String?
                 keyPassword = keystoreProps["keyPassword"] as String?
-            } else {
-                println("WARNING: key.properties not found; release build will fail for Play Store.")
             }
         }
     }
@@ -110,7 +121,7 @@ android {
         }
     }
 
-    // turn off lint fatal for release to avoid file-lock issues
+    // turn off lint fatal for release to avoid file-lock issues on CI
     lint {
         abortOnError = false
         checkReleaseBuilds = false
@@ -128,8 +139,17 @@ android {
         getByName("release") {
             isMinifyEnabled = false
             isShrinkResources = false
-            signingConfig = signingConfigs.getByName("release")
+
+            // 🔥 IMPORTANT:
+            // - If keystore exists -> use REAL release signing (Play Store ready)
+            // - If not (like on GitHub Actions) -> fallback to debug signing so build doesn’t crash
+            signingConfig = if (hasKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
+
         getByName("debug") {
             isMinifyEnabled = false
             isShrinkResources = false
