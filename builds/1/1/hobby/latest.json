@@ -1,10 +1,11 @@
 {
-  "apkUrl": "https://github.com/fatimahh0/HobbySphereFlutter/releases/download/app-hobby-19513455359/app-release.apk",
-  "runId": "19513455359",
-  "uploadedAt": "2025-11-19T19:22:53Z",
+  "apkUrl": "https://github.com/fatimahh0/HobbySphereFlutter/releases/download/app-hobby-19617071457/app-release.apk",
+  "runId": "19617071457",
+  "uploadedAt": "2025-11-23T21:10:18Z",
   "ownerId": 1,
   "projectId": 1,
-  "ownerProjectLinkId": 1,
+  "ownerProjectLinkId": 12,
   "slug": "hobby",
-  "appName": "hobby"
+  "appName": "hobby",
+  "themeJson": ""
 }
