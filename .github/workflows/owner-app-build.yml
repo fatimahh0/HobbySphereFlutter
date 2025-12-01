@@ -16,7 +16,7 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
 
-        env:
+    env:
       # ----- client_payload fields -----
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
@@ -37,7 +37,6 @@ jobs:
       # 🔹 dynamic applicationId (read in build.gradle.kts)
       APP_SLUG:               ${{ github.event.client_payload.SLUG }}
       APPLICATION_ID:         com.build4all.${{ github.event.client_payload.SLUG }}
-
 
     steps:
       - name: Checkout
@@ -105,7 +104,7 @@ jobs:
           dart run flutter_launcher_icons
           dart run flutter_native_splash:create
 
-            - name: Build APK (release)
+      - name: Build APK (release)
         run: |
           set -e
           echo "Using APPLICATION_ID=$APPLICATION_ID"
@@ -168,7 +167,7 @@ jobs:
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
           echo "Resolved Release APK: $first_url"
 
-            - name: Write manifest (apkUrl/runId/timestamp)
+      - name: Write manifest (apkUrl/runId/timestamp)
         env:
           CURRENCY_ID: ${{ env.CURRENCY_ID }}
         run: |
