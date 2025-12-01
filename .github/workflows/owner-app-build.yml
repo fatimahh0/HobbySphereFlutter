@@ -16,7 +16,7 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
 
-    env:
+        env:
       # ----- client_payload fields -----
       OWNER_ID:               ${{ github.event.client_payload.OWNER_ID }}
       PROJECT_ID:             ${{ github.event.client_payload.PROJECT_ID }}
@@ -24,16 +24,20 @@ jobs:
       SLUG:                   ${{ github.event.client_payload.SLUG }}
       APP_NAME:               ${{ github.event.client_payload.APP_NAME }}
       THEME_ID:               ${{ github.event.client_payload.THEME_ID }}
-      THEME_JSON:             ${{ github.event.client_payload.THEME_JSON }}   # JSON string from backend
+      THEME_JSON:             ${{ github.event.client_payload.THEME_JSON }}
       APP_LOGO_URL:           ${{ github.event.client_payload.APP_LOGO_URL }}
       API_BASE_URL:           ${{ github.event.client_payload.RUNTIME.API_BASE_URL }}
       WS_PATH:                ${{ github.event.client_payload.RUNTIME.WS_PATH }}
       APP_ROLE:               ${{ github.event.client_payload.RUNTIME.APP_ROLE }}
       OWNER_ATTACH_MODE:      ${{ github.event.client_payload.RUNTIME.OWNER_ATTACH_MODE }}
 
+      # 🔹 NEW: currency id from backend
+      CURRENCY_ID:            ${{ github.event.client_payload.CURRENCY_ID }}
+
       # 🔹 dynamic applicationId (read in build.gradle.kts)
       APP_SLUG:               ${{ github.event.client_payload.SLUG }}
       APPLICATION_ID:         com.build4all.${{ github.event.client_payload.SLUG }}
+
 
     steps:
       - name: Checkout
@@ -101,11 +105,12 @@ jobs:
           dart run flutter_launcher_icons
           dart run flutter_native_splash:create
 
-      - name: Build APK (release)
+            - name: Build APK (release)
         run: |
           set -e
           echo "Using APPLICATION_ID=$APPLICATION_ID"
           echo "Using APP_SLUG=$APP_SLUG"
+          echo "Using CURRENCY_ID=$CURRENCY_ID"
           flutter build apk --release \
             -t lib/app/main_activity.dart \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
@@ -119,7 +124,8 @@ jobs:
             --dart-define=SLUG="$SLUG" \
             --dart-define=THEME_ID="${THEME_ID:-}" \
             --dart-define=THEME_JSON="$THEME_JSON" \
-            --dart-define=APPLICATION_ID="$APPLICATION_ID"
+            --dart-define=APPLICATION_ID="$APPLICATION_ID" \
+            --dart-define=CURRENCY_ID="$CURRENCY_ID"
 
       - name: List outputs
         run: ls -R build/app/outputs/flutter-apk || true
@@ -162,7 +168,9 @@ jobs:
           echo "apk_url=$first_url" >> "$GITHUB_OUTPUT"
           echo "Resolved Release APK: $first_url"
 
-      - name: Write manifest (apkUrl/runId/timestamp)
+            - name: Write manifest (apkUrl/runId/timestamp)
+        env:
+          CURRENCY_ID: ${{ env.CURRENCY_ID }}
         run: |
           set -e
           mkdir -p builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}
@@ -176,6 +184,7 @@ jobs:
             --arg slug "${SLUG}" \
             --arg app "${APP_NAME}" \
             --arg themeJson "${THEME_JSON:-}" \
+            --arg currencyId "${CURRENCY_ID:-0}" \
             '{
               apkUrl: $url,
               runId: $run,
@@ -185,7 +194,8 @@ jobs:
               ownerProjectLinkId: ($linkId|tonumber),
               slug: $slug,
               appName: $app,
-              themeJson: $themeJson
+              themeJson: $themeJson,
+              currencyId: ($currencyId|tonumber)
             }' \
             > builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json
           echo "Wrote builds/${OWNER_ID}/${PROJECT_ID}/${SLUG}/latest.json"
